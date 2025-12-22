@@ -2,159 +2,209 @@
 
 ## Project Overview
 
-**nhimbe** is an events platform and hub developed by Mukoko (Nyuchi Web Services). It functions as:
-- A standalone web application
+**nhimbe** (pronounced /ˈnhimbɛ/) is an events platform and hub developed by Mukoko (Nyuchi Web Services). It functions as:
+- A standalone web application at nhimbe.com
 - An integration module for the Mukoko Super App
+
+The name comes from the traditional Shona practice of communal work where community members come together to help each other. Tagline: *"Together we gather, together we grow"*
 
 ## Tech Stack
 
-Based on the project configuration, nhimbe uses:
-- **Framework**: Next.js
-- **Language**: TypeScript
-- **Package Manager**: npm/yarn/pnpm (node_modules based)
-- **Deployment**: Vercel-ready
-- **License**: MIT
+| Layer    | Technology                         | Deployment |
+| -------- | ---------------------------------- | ---------- |
+| Frontend | Next.js 16, React 19, Tailwind CSS | Vercel     |
+| Backend  | Cloudflare Workers, TypeScript     | Cloudflare |
+| Database | Cloudflare D1 (planned)            | Cloudflare |
+| Icons    | Lucide React                       | -          |
 
 ## Repository Structure
 
 ```
 nhimbe/
-├── .gitignore          # Git ignore rules (Next.js optimized)
-├── LICENSE             # MIT License
-├── README.md           # Project description
-└── CLAUDE.md           # This file - AI assistant guidelines
+├── src/                          # Next.js frontend
+│   └── app/                      # App Router (pages, layouts)
+│       ├── globals.css           # Global styles with brand colors
+│       ├── layout.tsx            # Root layout with fonts
+│       └── page.tsx              # Landing page
+├── api/                          # Cloudflare Workers backend
+│   ├── src/
+│   │   └── index.ts              # Worker entry point
+│   ├── wrangler.toml             # Cloudflare configuration
+│   ├── tsconfig.json             # TypeScript config for Workers
+│   └── package.json              # API dependencies
+├── public/                       # Static assets
+├── .env.example                  # Frontend env template
+├── CLAUDE.md                     # This file
+├── nhimbe-brand-guidelines.md    # Brand identity specs
+├── package.json                  # Frontend dependencies
+├── tsconfig.json                 # TypeScript config
+└── next.config.ts                # Next.js configuration
 ```
-
-> **Note**: This is a new repository. As the codebase grows, this structure section should be updated to reflect new directories like `src/`, `app/`, `components/`, `lib/`, etc.
 
 ## Development Commands
 
-Once the project is initialized, common commands will include:
+### Frontend (Root directory)
 
 ```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linting
-npm run lint
-
-# Run tests
-npm test
+npm install          # Install dependencies
+npm run dev          # Development server (localhost:3000)
+npm run build        # Production build
+npm run start        # Start production server
+npm run lint         # Run ESLint
 ```
+
+### Backend (api/ directory)
+
+```bash
+cd api
+npm install          # Install dependencies
+npm run dev          # Development server (localhost:8787)
+npm run deploy       # Deploy to Cloudflare
+npm run tail         # View production logs
+```
+
+## Brand Guidelines (Quick Reference)
+
+### Colors (Five African Minerals)
+
+| Role      | Light Mode | Dark Mode |
+| --------- | ---------- | --------- |
+| Primary   | `#004D40`  | `#64FFDA` |
+| Secondary | `#4B0082`  | `#B388FF` |
+| Accent    | `#5D4037`  | `#FFD740` |
+
+### Typography
+
+- **Display/H1**: Noto Serif (400, 700)
+- **Body/UI**: Plus Jakarta Sans (300-800)
+- **Wordmark**: Always lowercase `nhimbe`
+
+### Design Tokens
+
+- Button radius: `12px`
+- Card radius: `16px`
+- Input radius: `8px`
+- Badge radius: `9999px` (pill)
+- Touch target: `44px` minimum
 
 ## Code Conventions
 
 ### File Naming
-- Use kebab-case for file names: `event-card.tsx`, `user-profile.ts`
-- Use PascalCase for React component files if preferred: `EventCard.tsx`
-- Use camelCase for utility files: `formatDate.ts`
+- Components: `kebab-case.tsx` (e.g., `event-card.tsx`)
+- Utilities: `camelCase.ts` (e.g., `formatDate.ts`)
+- Types: `kebab-case.types.ts` (e.g., `event.types.ts`)
 
 ### TypeScript
-- Enable strict mode
-- Define explicit types for function parameters and return values
-- Use interfaces for object shapes, types for unions/primitives
-- Avoid `any` - use `unknown` when type is truly unknown
+- Strict mode enabled
+- Explicit types for function parameters and returns
+- Use `interface` for object shapes, `type` for unions
+- Avoid `any` - use `unknown` when type is uncertain
 
 ### React/Next.js
-- Prefer functional components with hooks
-- Use Next.js App Router conventions (if using Next.js 13+)
-- Colocate components with their styles and tests
-- Use server components by default, client components only when needed
+- Functional components with hooks only
+- Server Components by default, `'use client'` when needed
+- Colocate styles and tests with components
+- Use Next.js App Router conventions
 
-### Styling
-- Follow the styling approach chosen for the project (CSS Modules, Tailwind, etc.)
-- Keep styles scoped to components
+### Tailwind CSS
+- Use CSS variables defined in `globals.css`
+- Reference design tokens: `rounded-[var(--radius-button)]`
+- Follow brand color system: `bg-primary`, `text-malachite`
 
-### State Management
-- Use React hooks for local state
-- Consider Zustand, Jotai, or React Context for global state
-- Avoid prop drilling beyond 2-3 levels
+### API (Cloudflare Workers)
+- RESTful endpoints under `/api/`
+- JSON responses with CORS headers
+- Use environment bindings for D1, KV, etc.
+
+## Environment Variables
+
+### Frontend (.env.local)
+```
+NEXT_PUBLIC_API_URL=http://localhost:8787
+```
+
+### Backend (api/.dev.vars)
+```
+# Secrets go here for local dev
+# Use `wrangler secret put` for production
+```
+
+## API Endpoints
+
+| Method | Endpoint       | Description          |
+| ------ | -------------- | -------------------- |
+| GET    | `/`            | API info             |
+| GET    | `/api/health`  | Health check         |
+| GET    | `/api/events`  | List events          |
+| POST   | `/api/events`  | Create event         |
 
 ## Git Workflow
 
 ### Branch Naming
-- Features: `feature/description` or `claude/description-sessionId`
-- Fixes: `fix/description`
-- Hotfixes: `hotfix/description`
+- `feature/description` - New features
+- `fix/description` - Bug fixes
+- `claude/description-sessionId` - AI-assisted work
 
 ### Commit Messages
-- Use present tense: "Add event creation form"
-- Be descriptive but concise
-- Reference issues when applicable: "Fix date picker bug (#123)"
-
-### Pull Requests
-- Provide clear description of changes
-- Include testing instructions
-- Link related issues
-
-## Environment Variables
-
-Environment files are gitignored. Expected variables may include:
-```
-# .env.local (example structure)
-NEXT_PUBLIC_API_URL=
-DATABASE_URL=
-NEXTAUTH_SECRET=
-```
-
-Never commit sensitive credentials to the repository.
-
-## Testing Guidelines
-
-- Write unit tests for utility functions
-- Write integration tests for API routes
-- Write component tests for critical UI components
-- Aim for meaningful coverage, not 100%
-
-## Security Considerations
-
-- Validate all user inputs
-- Use parameterized queries for database operations
-- Implement proper authentication and authorization
-- Follow OWASP security best practices
-- Never expose sensitive data in client-side code
+- Present tense: "Add event creation form"
+- Reference issues: "Fix date picker bug (#123)"
 
 ## AI Assistant Guidelines
 
 When working on this codebase:
 
-1. **Read before modifying**: Always read existing files before making changes
-2. **Follow existing patterns**: Match the code style already established in the project
-3. **Minimal changes**: Make only the changes necessary to complete the task
-4. **No over-engineering**: Avoid adding unnecessary abstractions or features
-5. **Test awareness**: Consider test implications when modifying code
-6. **Environment safety**: Never hardcode secrets or credentials
+1. **Read before modifying**: Always read existing files first
+2. **Follow brand guidelines**: Use correct colors, fonts, and design tokens
+3. **Minimal changes**: Only make changes necessary for the task
+4. **No over-engineering**: Avoid unnecessary abstractions
+5. **Test builds**: Run `npm run build` before committing
+6. **Environment safety**: Never hardcode secrets
 
-### Common Tasks
+### Common Patterns
 
-- **Adding a feature**: Check existing components for patterns, follow the established directory structure
-- **Fixing a bug**: Understand the root cause before applying fixes
-- **Refactoring**: Only refactor when explicitly requested or when it directly enables the requested change
+**Adding a page:**
+```tsx
+// src/app/events/page.tsx
+export default function EventsPage() {
+  return <div className="bg-background">...</div>
+}
+```
 
-## Integration with Mukoko Super App
+**Adding an API endpoint:**
+```typescript
+// api/src/index.ts - add to fetch handler
+if (url.pathname === "/api/new-endpoint") {
+  return jsonResponse({ data: "..." });
+}
+```
 
-This platform is designed to integrate with the Mukoko Super App ecosystem. When developing:
-- Consider mobile-first design principles
-- Ensure APIs are designed for cross-platform consumption
-- Follow shared authentication patterns if applicable
+**Using brand colors:**
+```tsx
+<button className="bg-primary text-background rounded-[var(--radius-button)]">
+  Click me
+</button>
+```
 
-## Future Updates
+## Deployment
 
-As the project evolves, update this document to reflect:
-- New dependencies and their purposes
-- Additional development commands
-- API documentation references
-- Deployment procedures
-- Architecture decisions
+### Frontend (Vercel)
+1. Connect repo to Vercel
+2. Set `NEXT_PUBLIC_API_URL` in environment variables
+3. Auto-deploys on push to main
+
+### Backend (Cloudflare)
+```bash
+cd api
+wrangler login
+wrangler deploy
+```
+
+## Integration Notes
+
+- Design for mobile-first (Mukoko Super App)
+- APIs must be cross-platform compatible
+- Follow Mukoko shared authentication when available
+- Always include "A Mukoko Product" attribution
 
 ---
 
