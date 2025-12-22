@@ -13,6 +13,24 @@ export const metadata: Metadata = {
     "Africa",
     "celebrations",
   ],
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/apple-touch-icon.svg",
+  },
+  openGraph: {
+    title: "nhimbe - Together we gather, together we grow",
+    description:
+      "The gatherings and events platform within the Mukoko ecosystem.",
+    type: "website",
+    locale: "en_US",
+    siteName: "nhimbe",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "nhimbe - Together we gather, together we grow",
+    description:
+      "The gatherings and events platform within the Mukoko ecosystem.",
+  },
 };
 
 export default function RootLayout({

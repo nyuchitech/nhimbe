@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>nhimbe Logo Generator | A Mukoko Product</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0A0A0A;
+      color: #F5F5F4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #64FFDA;
+    }
+
+    .tagline {
+      font-family: 'Noto Serif', serif;
+      font-style: italic;
+      color: #A8A8A3;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .parent-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #141414;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 12px;
+      color: #A8A8A3;
+    }
+
+    .parent-brand .mukoko {
+      color: #B388FF;
+      font-weight: 600;
+    }
+
+    .concept-box {
+      background: #141414;
+      border-left: 4px solid #64FFDA;
+      padding: 24px;
+      margin: 0 0 40px 0;
+      border-radius: 0 12px 12px 0;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .concept-box h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #64FFDA;
+    }
+
+    .concept-box p {
+      line-height: 1.7;
+      color: #A8A8A3;
+      font-size: 14px;
+    }
+
+    .concept-box strong {
+      color: #F5F5F4;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      width: 100%;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #141414;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px;
+      border-bottom: 1px solid #1E1E1E;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #64FFDA;
+    }
+
+    .card-subtitle {
+      color: #6B6B66;
+      font-size: 12px;
+    }
+
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .canvas-container {
+      padding: 32px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 180px;
+    }
+
+    .canvas-container.light {
+      background: #FAF9F5;
+    }
+
+    .canvas-container.dark {
+      background: #0A0A0A;
+    }
+
+    .canvas-container svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .canvas-label {
+      text-align: center;
+      padding: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6B6B66;
+      background: #1E1E1E;
+    }
+
+    .card-buttons {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px;
+      background: #1E1E1E;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .card-btn {
+      background: rgba(255,255,255,0.1);
+      color: #F5F5F4;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .card-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .card-btn:active {
+      transform: scale(0.95);
+    }
+
+    .card-btn.primary {
+      background: #64FFDA;
+      color: #0A0A0A;
+    }
+
+    .card-btn.primary:hover {
+      background: #8AFFEA;
+    }
+
+    .download-section {
+      background: linear-gradient(135deg, #004D40, #00796B);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 700px;
+      width: 100%;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .download-section h2 {
+      font-size: 24px;
+      color: #F5F5F4;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .download-section p {
+      color: rgba(255,255,255,0.85);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .download-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+
+    .control-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #F5F5F4;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #64FFDA;
+    }
+
+    .select-wrapper::after {
+      content: '▼';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 8px;
+      color: rgba(255,255,255,0.5);
+      pointer-events: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    button {
+      background: #F5F5F4;
+      color: #004D40;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    button:hover {
+      background: #FFFFFF;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #B388FF;
+      color: #0A0A0A;
+    }
+
+    button.secondary:hover {
+      background: #C9A8FF;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .specs {
+      background: #141414;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .specs h3 {
+      color: #64FFDA;
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .spec-item {
+      padding: 12px;
+      background: #1E1E1E;
+      border-radius: 8px;
+    }
+
+    .spec-item strong {
+      color: #6B6B66;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .spec-item span {
+      color: #F5F5F4;
+      font-size: 13px;
+    }
+
+    .color-palette {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 2px solid #2A2A2A;
+    }
+
+    .swatch-label {
+      font-size: 9px;
+      color: #6B6B66;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1E1E1E;
+      color: #F5F5F4;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid #64FFDA;
+    }
+
+    .toast.error {
+      border-left: 4px solid #FF6B6B;
+    }
+
+    .preview-canvas {
+      display: none;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      color: #6B6B66;
+      font-size: 12px;
+    }
+
+    .footer a {
+      color: #64FFDA;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 24px 16px;
+      }
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .download-section {
+        padding: 24px 20px;
+      }
+
+      .control-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="brand-header">
+    <h1>nhimbe</h1>
+    <p class="tagline">"Together we gather, together we grow"</p>
+    <div class="parent-brand">
+      A <span class="mukoko">Mukoko</span> Product
+    </div>
+  </div>
+
+  <div class="concept-box">
+    <h3>Five Pillars — Ubuntu Philosophy</h3>
+    <p>
+      The Nhimbe icon embodies <strong>Ubuntu's 5 pillars</strong>.
+      The <strong>center hexagon</strong> is the core — solid, anchoring everything.
+      <strong>2 smaller hexagons</strong> (outlined) orbit as satellites, connected by a thin diagonal line.
+      <strong>2 profile icons</strong> at the wave ends — people gathering around the core.
+    </p>
+  </div>
+
+  <div class="grid">
+    <!-- Primary Mark -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Primary Mark</h2>
+        <p class="card-subtitle">App icons, avatars, favicons</p>
+      </div>
+      <div class="canvas-grid">
+        <div>
+          <div class="canvas-container light" id="primary-light"></div>
+          <div class="canvas-label">Light Mode</div>
+        </div>
+        <div>
+          <div class="canvas-container dark" id="primary-dark"></div>
+          <div class="canvas-label">Dark Mode</div>
+        </div>
+      </div>
+      <div class="card-buttons">
+        <button class="card-btn" onclick="downloadSVG('primary', false, false)">SVG Light</button>
+        <button class="card-btn" onclick="downloadSVG('primary', true, false)">SVG Dark</button>
+        <button class="card-btn" onclick="downloadSVG('primary', true, true)">Transparent</button>
+        <button class="card-btn primary" onclick="downloadPNG('primary', 512, true, false)">PNG 512</button>
+      </div>
+    </div>
+
+    <!-- Horizontal Lockup -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Horizontal Lockup</h2>
+        <p class="card-subtitle">Headers, navigation, marketing</p>
+      </div>
+      <div class="canvas-grid">
+        <div>
+          <div class="canvas-container light" id="lockup-light"></div>
+          <div class="canvas-label">Light Mode</div>
+        </div>
+        <div>
+          <div class="canvas-container dark" id="lockup-dark"></div>
+          <div class="canvas-label">Dark Mode</div>
+        </div>
+      </div>
+      <div class="card-buttons">
+        <button class="card-btn" onclick="downloadSVG('horizontal', false, false)">SVG Light</button>
+        <button class="card-btn" onclick="downloadSVG('horizontal', true, false)">SVG Dark</button>
+        <button class="card-btn" onclick="downloadSVG('horizontal', true, true)">Transparent</button>
+        <button class="card-btn primary" onclick="downloadPNG('horizontal', 512, true, false)">PNG 512</button>
+      </div>
+    </div>
+
+    <!-- Stacked Lockup -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Stacked Lockup</h2>
+        <p class="card-subtitle">Mobile, square formats</p>
+      </div>
+      <div class="canvas-grid">
+        <div>
+          <div class="canvas-container light" id="stacked-light"></div>
+          <div class="canvas-label">Light Mode</div>
+        </div>
+        <div>
+          <div class="canvas-container dark" id="stacked-dark"></div>
+          <div class="canvas-label">Dark Mode</div>
+        </div>
+      </div>
+      <div class="card-buttons">
+        <button class="card-btn" onclick="downloadSVG('stacked', false, false)">SVG Light</button>
+        <button class="card-btn" onclick="downloadSVG('stacked', true, false)">SVG Dark</button>
+        <button class="card-btn" onclick="downloadSVG('stacked', true, true)">Transparent</button>
+        <button class="card-btn primary" onclick="downloadPNG('stacked', 512, true, false)">PNG 512</button>
+      </div>
+    </div>
+
+    <!-- Wordmark Only -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Wordmark Only</h2>
+        <p class="card-subtitle">Text mentions, navigation</p>
+      </div>
+      <div class="canvas-grid">
+        <div>
+          <div class="canvas-container light" id="wordmark-light"></div>
+          <div class="canvas-label">Light Mode</div>
+        </div>
+        <div>
+          <div class="canvas-container dark" id="wordmark-dark"></div>
+          <div class="canvas-label">Dark Mode</div>
+        </div>
+      </div>
+      <div class="card-buttons">
+        <button class="card-btn" onclick="downloadSVG('wordmark', false, false)">SVG Light</button>
+        <button class="card-btn" onclick="downloadSVG('wordmark', true, false)">SVG Dark</button>
+        <button class="card-btn" onclick="downloadSVG('wordmark', true, true)">Transparent</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="download-section">
+    <h2>Download Assets</h2>
+    <p>
+      Five pillars — the core hexagon anchors, satellites orbit, people gather.
+      Community flows through the wave.
+    </p>
+    <div class="download-controls">
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label">Variant</label>
+          <div class="select-wrapper">
+            <select id="variant-select">
+              <option value="primary">Primary Mark (Icon)</option>
+              <option value="horizontal">Horizontal Lockup</option>
+              <option value="stacked">Stacked Lockup</option>
+              <option value="wordmark">Wordmark Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Mode</label>
+          <div class="select-wrapper">
+            <select id="mode-select">
+              <option value="dark">Dark Mode (#64FFDA)</option>
+              <option value="light">Light Mode (#004D40)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label">Size (PNG)</label>
+          <div class="select-wrapper">
+            <select id="size-select">
+              <option value="64">64px</option>
+              <option value="128">128px</option>
+              <option value="256">256px</option>
+              <option value="512" selected>512px</option>
+              <option value="1024">1024px (App Store)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Format</label>
+          <div class="select-wrapper">
+            <select id="format-select">
+              <option value="svg">SVG (Vector)</option>
+              <option value="png" selected>PNG (Raster)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group" style="grid-column: 1 / -1;">
+          <label class="control-label">Background</label>
+          <div class="select-wrapper">
+            <select id="bg-select">
+              <option value="solid">Solid (Dark/Light)</option>
+              <option value="transparent">Transparent</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button id="download-btn" onclick="downloadCustom()">
+          Download
+        </button>
+        <button class="secondary brand-pack" onclick="downloadBrandPack()">
+          Download Full Brand Pack
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="specs">
+    <h3>Design Specifications</h3>
+    <div class="specs-grid">
+      <div class="spec-item">
+        <strong>Concept</strong>
+        <span>Ubuntu 5 Pillars</span>
+      </div>
+      <div class="spec-item">
+        <strong>Center Hexagon</strong>
+        <span>Core (solid, large)</span>
+      </div>
+      <div class="spec-item">
+        <strong>Outer Hexagons</strong>
+        <span>Satellites (outline, small)</span>
+      </div>
+      <div class="spec-item">
+        <strong>Profile Icons</strong>
+        <span>2 (at wave ends)</span>
+      </div>
+      <div class="spec-item">
+        <strong>Primary Light</strong>
+        <span>#004D40</span>
+      </div>
+      <div class="spec-item">
+        <strong>Primary Dark</strong>
+        <span>#64FFDA</span>
+      </div>
+    </div>
+
+    <div class="color-palette">
+      <div class="color-swatch">
+        <div class="swatch" style="background: #64FFDA;"></div>
+        <span class="swatch-label">Malachite Dark</span>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch" style="background: #004D40;"></div>
+        <span class="swatch-label">Malachite Light</span>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch" style="background: #B388FF;"></div>
+        <span class="swatch-label">Tanzanite</span>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch" style="background: #FFD740;"></div>
+        <span class="swatch-label">Gold</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>nhimbe is a trademark of <a href="https://nyuchi.com">Nyuchi Africa</a></p>
+    <p style="margin-top: 8px;">Part of the <a href="https://mukoko.com">Mukoko</a> family</p>
+  </div>
+
+  <canvas id="export-canvas" class="preview-canvas"></canvas>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    // Brand Colors
+    const COLORS = {
+      light: '#004D40',
+      dark: '#64FFDA',
+      cream: '#FAF9F5',
+      charcoal: '#0A0A0A'
+    };
+
+    // Generate the Nhimbe Community Path icon SVG
+    // 5 pillars: 3 hexagons (on wave peaks + center) + 2 profile icons (at wave ends)
+    function generateIconSVG(size, color, strokeWidth = 2, transparent = false) {
+      const scale = size / 64;
+      const sw = strokeWidth * Math.max(1, scale);
+      const thinSw = sw * 0.5;
+
+      let svg = '';
+
+      // === HEXAGON POSITIONS ===
+      // Center is the CORE (larger), outer hexagons are smaller satellites
+      const hexPositions = [
+        { x: 20, y: 20, r: 4, filled: false },   // Upper peak (small outline)
+        { x: 32, y: 32, r: 7, filled: true },    // Center CORE (large solid)
+        { x: 44, y: 44, r: 4, filled: false }    // Lower peak (small outline)
+      ];
+
+      // === DIAGONAL LINE connecting at hexagon EDGES ===
+      const hex1 = hexPositions[0];
+      const hex3 = hexPositions[2];
+      const angle = Math.atan2((hex3.y - hex1.y), (hex3.x - hex1.x));
+
+      const lineX1 = (hex1.x + Math.cos(angle) * hex1.r) * scale;
+      const lineY1 = (hex1.y + Math.sin(angle) * hex1.r) * scale;
+      const lineX2 = (hex3.x - Math.cos(angle) * hex3.r) * scale;
+      const lineY2 = (hex3.y - Math.sin(angle) * hex3.r) * scale;
+      svg += `<line x1="${lineX1.toFixed(2)}" y1="${lineY1.toFixed(2)}" x2="${lineX2.toFixed(2)}" y2="${lineY2.toFixed(2)}" stroke="${color}" stroke-width="${thinSw}" stroke-linecap="round"/>`;
+
+      // === S-CURVE WAVE (edge to edge, minimal padding) ===
+      const gapRadius = 5;
+      let pathD = '';
+      for (let x = 4 + gapRadius; x <= 60 - gapRadius; x += 0.5) {
+        const t = (x - 4) / 56;
+        const y = 32 + Math.sin(t * Math.PI * 2) * 12;
+        const sx = x * scale;
+        const sy = y * scale;
+        pathD += (pathD === '' ? 'M ' : ' L ') + `${sx.toFixed(2)} ${sy.toFixed(2)}`;
+      }
+      svg += `<path d="${pathD}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+
+      // === 3 HEXAGONS ===
+      hexPositions.forEach(hex => {
+        const hcx = hex.x * scale;
+        const hcy = hex.y * scale;
+        const hr = hex.r * scale;
+        let hexPath = '';
+        for (let i = 0; i < 6; i++) {
+          const a = (i * 60 - 30) * Math.PI / 180;
+          const hx = hcx + Math.cos(a) * hr;
+          const hy = hcy + Math.sin(a) * hr;
+          hexPath += (i === 0 ? 'M ' : ' L ') + `${hx.toFixed(2)} ${hy.toFixed(2)}`;
+        }
+        hexPath += ' Z';
+
+        if (hex.filled) {
+          svg += `<path d="${hexPath}" fill="${color}"/>`;
+        } else {
+          svg += `<path d="${hexPath}" stroke="${color}" stroke-width="${thinSw}" fill="none"/>`;
+        }
+      });
+
+      // === 2 PROFILE ICONS (at wave ends, near edges) ===
+      const personPositions = [
+        { x: 4, y: 32 },
+        { x: 60, y: 32 }
+      ];
+
+      const headR = 2.5 * scale;
+      const shoulderW = 6 * scale;
+      const shoulderH = 3 * scale;
+
+      personPositions.forEach(pos => {
+        const px = pos.x * scale;
+        const py = pos.y * scale;
+
+        const headY = py - headR - 0.5 * scale;
+        svg += `<circle cx="${px.toFixed(2)}" cy="${headY.toFixed(2)}" r="${headR.toFixed(2)}" stroke="${color}" stroke-width="${sw}" fill="none"/>`;
+
+        const shoulderTopY = py + 0.5 * scale;
+        const shoulderBottomY = shoulderTopY + shoulderH;
+        const sLeft = px - shoulderW / 2;
+        const sRight = px + shoulderW / 2;
+        svg += `<path d="M ${sLeft.toFixed(2)} ${shoulderBottomY.toFixed(2)} Q ${sLeft.toFixed(2)} ${shoulderTopY.toFixed(2)} ${px.toFixed(2)} ${shoulderTopY.toFixed(2)} Q ${sRight.toFixed(2)} ${shoulderTopY.toFixed(2)} ${sRight.toFixed(2)} ${shoulderBottomY.toFixed(2)}" stroke="${color}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`;
+      });
+
+      return svg;
+    }
+
+    // Generate full SVG for different variants
+    function generateSVG(variant, isDark, transparent = false) {
+      const color = isDark ? COLORS.dark : COLORS.light;
+      const bg = isDark ? COLORS.charcoal : COLORS.cream;
+
+      let width, height, content, bgRect;
+
+      // Background rect (empty if transparent)
+      bgRect = transparent ? '' : `<rect width="100%" height="100%" fill="${bg}"/>`;
+
+      if (variant === 'primary') {
+        // Standard square - icon fills most of the space
+        width = 120;
+        height = 120;
+        content = `<g transform="translate(4, 16) scale(1.75)">${generateIconSVG(64, color, 1.5)}</g>`;
+      } else if (variant === 'horizontal') {
+        // Rectangle lockup
+        width = 240;
+        height = 64;
+        content = `<g transform="translate(8, 8) scale(0.75)">${generateIconSVG(64, color, 2)}</g>`;
+        content += `<text x="68" y="42" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="28" fill="${color}">nhimbe</text>`;
+      } else if (variant === 'stacked') {
+        width = 100;
+        height = 120;
+        content = `<g transform="translate(10, 8) scale(1.25)">${generateIconSVG(64, color, 1.8)}</g>`;
+        content += `<text x="50" y="108" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="20" fill="${color}" text-anchor="middle">nhimbe</text>`;
+      } else if (variant === 'wordmark') {
+        // Rectangle wordmark
+        width = 120;
+        height = 36;
+        content = `<text x="60" y="26" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="24" fill="${color}" text-anchor="middle">nhimbe</text>`;
+      }
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  ${bgRect}
+  ${content}
+</svg>`;
+    }
+
+    // Render previews
+    function renderPreviews() {
+      const variants = ['primary', 'lockup', 'stacked', 'wordmark'];
+      const variantMap = {
+        'primary': 'primary',
+        'lockup': 'horizontal',
+        'stacked': 'stacked',
+        'wordmark': 'wordmark'
+      };
+
+      variants.forEach(v => {
+        const lightContainer = document.getElementById(`${v}-light`);
+        const darkContainer = document.getElementById(`${v}-dark`);
+
+        if (lightContainer) {
+          lightContainer.innerHTML = generateSVG(variantMap[v], false);
+        }
+        if (darkContainer) {
+          darkContainer.innerHTML = generateSVG(variantMap[v], true);
+        }
+      });
+    }
+
+    // Initialize previews
+    document.addEventListener('DOMContentLoaded', renderPreviews);
+    renderPreviews();
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    // Download helpers
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+
+      if (navigator.userAgent.match(/(iPad|iPhone|iPod)/i)) {
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          const link = document.createElement('a');
+          link.href = reader.result;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => document.body.removeChild(link), 100);
+        };
+        reader.readAsDataURL(blob);
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+      }
+    }
+
+    function downloadBase64(data, filename) {
+      const link = document.createElement('a');
+      link.href = data;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => document.body.removeChild(link), 100);
+    }
+
+    // Download SVG
+    function downloadSVG(variant, isDark, transparent = false) {
+      const mode = isDark ? 'dark' : 'light';
+      const bgSuffix = transparent ? '-transparent' : '';
+      const svg = generateSVG(variant, isDark, transparent);
+      downloadFile(svg, `nhimbe-${variant}-${mode}${bgSuffix}.svg`, 'image/svg+xml');
+      showToast('SVG downloaded!');
+    }
+
+    // Download PNG
+    async function downloadPNG(variant, size, isDark, transparent = false) {
+      const mode = isDark ? 'dark' : 'light';
+      const bgSuffix = transparent ? '-transparent' : '';
+      const svg = generateSVG(variant, isDark, transparent);
+
+      return new Promise((resolve, reject) => {
+        const canvas = document.getElementById('export-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Get original dimensions from SVG
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
+        const svgEl = svgDoc.querySelector('svg');
+        const origW = parseInt(svgEl.getAttribute('width'));
+        const origH = parseInt(svgEl.getAttribute('height'));
+
+        // Calculate scaled dimensions maintaining aspect ratio
+        const scaleFactor = size / Math.max(origW, origH);
+        const w = Math.round(origW * scaleFactor);
+        const h = Math.round(origH * scaleFactor);
+
+        canvas.width = w;
+        canvas.height = h;
+
+        // Clear canvas (important for transparency)
+        ctx.clearRect(0, 0, w, h);
+
+        const img = new Image();
+        const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
+
+        img.onload = function() {
+          ctx.drawImage(img, 0, 0, w, h);
+
+          try {
+            const pngData = canvas.toDataURL('image/png');
+            downloadBase64(pngData, `nhimbe-${variant}-${mode}${bgSuffix}-${size}px.png`);
+            showToast(`PNG downloaded!`);
+            resolve();
+          } catch (e) {
+            showToast('Download failed', 'error');
+            reject(e);
+          }
+        };
+
+        img.onerror = () => {
+          showToast('Failed to generate PNG', 'error');
+          reject();
+        };
+
+        img.crossOrigin = 'anonymous';
+        img.src = `data:image/svg+xml;base64,${svgBase64}`;
+      });
+    }
+
+    // Custom download
+    async function downloadCustom() {
+      const variant = document.getElementById('variant-select').value;
+      const mode = document.getElementById('mode-select').value;
+      const size = parseInt(document.getElementById('size-select').value);
+      const format = document.getElementById('format-select').value;
+      const bgType = document.getElementById('bg-select').value;
+      const isDark = mode === 'dark';
+      const transparent = bgType === 'transparent';
+
+      const btn = document.getElementById('download-btn');
+      btn.innerHTML = '<span class="spinner"></span>...';
+      btn.disabled = true;
+
+      try {
+        if (format === 'svg') {
+          downloadSVG(variant, isDark, transparent);
+        } else {
+          await downloadPNG(variant, size, isDark, transparent);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        btn.textContent = 'Download';
+        btn.disabled = false;
+      }
+    }
+
+    // Download complete brand pack as ZIP
+    async function downloadBrandPack() {
+      const btn = document.querySelector('.brand-pack');
+      if (btn) {
+        btn.innerHTML = '<span class="spinner"></span> Generating...';
+        btn.disabled = true;
+      }
+
+      showToast('Generating brand pack ZIP...');
+
+      const zip = new JSZip();
+      const variants = ['primary', 'horizontal', 'stacked', 'wordmark'];
+      const sizes = [64, 128, 256, 512, 1024];
+
+      // Create folder structure
+      const svgFolder = zip.folder('svg');
+      const svgLightFolder = svgFolder.folder('light');
+      const svgDarkFolder = svgFolder.folder('dark');
+      const svgTransparentFolder = svgFolder.folder('transparent');
+
+      const pngFolder = zip.folder('png');
+      const pngLightFolder = pngFolder.folder('light');
+      const pngDarkFolder = pngFolder.folder('dark');
+      const pngTransparentFolder = pngFolder.folder('transparent');
+
+      // Add SVGs
+      for (const v of variants) {
+        // Light solid
+        svgLightFolder.file(`nhimbe-${v}-light.svg`, generateSVG(v, false, false));
+        // Dark solid
+        svgDarkFolder.file(`nhimbe-${v}-dark.svg`, generateSVG(v, true, false));
+        // Light transparent
+        svgTransparentFolder.file(`nhimbe-${v}-light-transparent.svg`, generateSVG(v, false, true));
+        // Dark transparent
+        svgTransparentFolder.file(`nhimbe-${v}-dark-transparent.svg`, generateSVG(v, true, true));
+      }
+
+      // Add PNGs (primary icon in all sizes)
+      for (const size of sizes) {
+        // Light solid
+        const pngLightSolid = await generatePNGBlob('primary', size, false, false);
+        pngLightFolder.file(`nhimbe-primary-light-${size}px.png`, pngLightSolid);
+
+        // Dark solid
+        const pngDarkSolid = await generatePNGBlob('primary', size, true, false);
+        pngDarkFolder.file(`nhimbe-primary-dark-${size}px.png`, pngDarkSolid);
+
+        // Light transparent
+        const pngLightTrans = await generatePNGBlob('primary', size, false, true);
+        pngTransparentFolder.file(`nhimbe-primary-light-transparent-${size}px.png`, pngLightTrans);
+
+        // Dark transparent
+        const pngDarkTrans = await generatePNGBlob('primary', size, true, true);
+        pngTransparentFolder.file(`nhimbe-primary-dark-transparent-${size}px.png`, pngDarkTrans);
+      }
+
+      // Generate and download ZIP
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nhimbe-brand-pack.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (btn) {
+        btn.textContent = 'Download Full Brand Pack';
+        btn.disabled = false;
+      }
+
+      showToast('Brand pack downloaded!');
+    }
+
+    // Generate PNG as Blob (for ZIP)
+    function generatePNGBlob(variant, size, isDark, transparent) {
+      return new Promise((resolve, reject) => {
+        const svg = generateSVG(variant, isDark, transparent);
+        const canvas = document.getElementById('export-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
+        const svgEl = svgDoc.querySelector('svg');
+        const origW = parseInt(svgEl.getAttribute('width'));
+        const origH = parseInt(svgEl.getAttribute('height'));
+
+        const scaleFactor = size / Math.max(origW, origH);
+        const w = Math.round(origW * scaleFactor);
+        const h = Math.round(origH * scaleFactor);
+
+        canvas.width = w;
+        canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+
+        const img = new Image();
+        const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
+
+        img.onload = function() {
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => resolve(blob), 'image/png');
+        };
+
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.crossOrigin = 'anonymous';
+        img.src = `data:image/svg+xml;base64,${svgBase64}`;
+      });
+    }
+  </script>
+</body>
+</html>
