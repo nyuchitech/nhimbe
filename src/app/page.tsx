@@ -1,20 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Compass, CalendarPlus } from "lucide-react";
+import { Compass, CalendarPlus, MapPin, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
-import { events, categories } from "@/lib/data";
+import { events, categories, cities } from "@/lib/data";
 
 export default function DiscoverPage() {
-  const [activeCategory, setActiveCategory] = useState("All Events");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCity, setActiveCity] = useState("All Cities");
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
 
-  const filteredEvents =
-    activeCategory === "All Events"
-      ? events
-      : events.filter((e) => e.category === activeCategory);
+  // Get unique cities from events
+  const availableCities = useMemo(() => {
+    const citySet = new Set(events.map((e) => `${e.location.city}, ${e.location.country}`));
+    return Array.from(citySet).sort();
+  }, []);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const categoryMatch = activeCategory === "All" || e.category === activeCategory;
+      const cityMatch =
+        activeCity === "All Cities" ||
+        `${e.location.city}, ${e.location.country}` === activeCity;
+      return categoryMatch && cityMatch;
+    });
+  }, [activeCategory, activeCity]);
 
   return (
     <>
@@ -55,10 +68,68 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      {/* Categories */}
+      {/* Filters Section */}
       <section className="py-10 border-b border-elevated">
         <div className="max-w-[1200px] mx-auto px-6">
+          {/* Location Filter */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <button
+                onClick={() => setShowCityDropdown(!showCityDropdown)}
+                className="flex items-center gap-2 bg-surface px-4 py-2.5 rounded-full text-sm font-medium hover:bg-elevated transition-colors"
+              >
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>{activeCity}</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-foreground/60 transition-transform ${
+                    showCityDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showCityDropdown && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-[220px] z-50">
+                  <button
+                    onClick={() => {
+                      setActiveCity("All Cities");
+                      setShowCityDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors ${
+                      activeCity === "All Cities"
+                        ? "text-primary font-semibold"
+                        : "text-foreground"
+                    }`}
+                  >
+                    All Cities
+                  </button>
+                  {availableCities.map((city) => (
+                    <button
+                      key={city}
+                      onClick={() => {
+                        setActiveCity(city);
+                        setShowCityDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors ${
+                        activeCity === city
+                          ? "text-primary font-semibold"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Category Filters */}
           <div className="flex gap-3 flex-wrap justify-center">
+            <CategoryChip
+              label="All"
+              active={activeCategory === "All"}
+              onClick={() => setActiveCategory("All")}
+            />
             {categories.map((category) => (
               <CategoryChip
                 key={category}
@@ -75,7 +146,16 @@ export default function DiscoverPage() {
       <section className="py-16">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-[28px] font-bold">Featured Events</h2>
+            <div>
+              <h2 className="text-[28px] font-bold">
+                {activeCity === "All Cities" ? "Featured Events" : `Events in ${activeCity.split(",")[0]}`}
+              </h2>
+              {activeCategory !== "All" && (
+                <p className="text-foreground/60 text-sm mt-1">
+                  Filtered by: {activeCategory}
+                </p>
+              )}
+            </div>
             <Link
               href="/events"
               className="text-sm text-primary font-medium hover:underline"
@@ -91,7 +171,7 @@ export default function DiscoverPage() {
                 id={event.id}
                 title={event.title}
                 date={event.date}
-                location={event.location.name}
+                location={event.location}
                 category={event.category}
                 coverImage={event.coverImage}
                 coverGradient={event.coverGradient}
@@ -103,8 +183,19 @@ export default function DiscoverPage() {
 
           {filteredEvents.length === 0 && (
             <div className="text-center py-16 text-foreground/60">
-              <p className="text-lg">No events found in this category.</p>
-              <p className="text-sm mt-2">Try selecting a different category or check back later.</p>
+              <p className="text-lg">No events found.</p>
+              <p className="text-sm mt-2">
+                Try selecting a different city or category.
+              </p>
+              <button
+                onClick={() => {
+                  setActiveCity("All Cities");
+                  setActiveCategory("All");
+                }}
+                className="mt-4 text-primary font-medium hover:underline"
+              >
+                Clear filters
+              </button>
             </div>
           )}
         </div>

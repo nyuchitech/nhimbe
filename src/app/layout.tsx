@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { AnimatedBackground } from "@/components/ui/animated-background";
 
 export const metadata: Metadata = {
   title: "nhimbe - Together we gather, together we grow",
@@ -43,8 +44,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
+        <AnimatedBackground enableAnimation={true} intensity={0.3} speed={0.3} />
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 relative z-10">{children}</main>
         <Footer />
       </body>
     </html>
