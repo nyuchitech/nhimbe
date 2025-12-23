@@ -2,12 +2,14 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Theme = "light" | "dark";
+type Theme = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+  cycleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -17,62 +19,65 @@ interface ThemeProviderProps {
   defaultTheme?: Theme;
 }
 
-export function ThemeProvider({ children, defaultTheme = "dark" }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
-  const [mounted, setMounted] = useState(false);
-  const [hasUserPreference, setHasUserPreference] = useState(false);
+function getSystemTheme(): ResolvedTheme {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
-  // Initial theme detection from system or localStorage
+export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
+  const [mounted, setMounted] = useState(false);
+
+  // Initial theme detection from localStorage
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("nhimbe-theme") as Theme | null;
-    if (stored && (stored === "light" || stored === "dark")) {
+    if (stored && (stored === "light" || stored === "dark" || stored === "system")) {
       setTheme(stored);
-      setHasUserPreference(true);
-    } else {
-      // Use system preference as default
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setTheme(prefersDark ? "dark" : "light");
     }
   }, []);
 
-  // Listen for system preference changes (only if user hasn't set a preference)
+  // Resolve the actual theme (light or dark) based on theme setting
   useEffect(() => {
     if (!mounted) return;
 
+    if (theme === "system") {
+      setResolvedTheme(getSystemTheme());
+    } else {
+      setResolvedTheme(theme);
+    }
+  }, [theme, mounted]);
+
+  // Listen for system preference changes when in system mode
+  useEffect(() => {
+    if (!mounted || theme !== "system") return;
+
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
-      // Only auto-switch if user hasn't manually set a preference
-      if (!hasUserPreference) {
-        setTheme(e.matches ? "dark" : "light");
-      }
+      setResolvedTheme(e.matches ? "dark" : "light");
     };
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [mounted, hasUserPreference]);
+  }, [mounted, theme]);
 
   // Update document class and localStorage when theme changes
   useEffect(() => {
     if (!mounted) return;
 
     document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(theme);
+    document.documentElement.classList.add(resolvedTheme);
+    localStorage.setItem("nhimbe-theme", theme);
+  }, [theme, resolvedTheme, mounted]);
 
-    // Only save to localStorage if user has made a manual choice
-    if (hasUserPreference) {
-      localStorage.setItem("nhimbe-theme", theme);
-    }
-  }, [theme, mounted, hasUserPreference]);
-
-  const toggleTheme = () => {
-    setHasUserPreference(true); // User is manually changing theme
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
-
-  const setThemeWithPreference = (newTheme: Theme) => {
-    setHasUserPreference(true);
-    setTheme(newTheme);
+  // Cycle through: dark → light → system → dark
+  const cycleTheme = () => {
+    setTheme((prev) => {
+      if (prev === "dark") return "light";
+      if (prev === "light") return "system";
+      return "dark";
+    });
   };
 
   // Prevent flash of wrong theme
@@ -81,7 +86,7 @@ export function ThemeProvider({ children, defaultTheme = "dark" }: ThemeProvider
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: setThemeWithPreference, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, cycleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

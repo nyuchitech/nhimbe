@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -41,13 +40,13 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Actions */}
+        {/* Actions - all items 36px (h-9) height */}
         <div className="flex items-center gap-3">
           <Link href="/events/create">
-            <Button variant="primary">
-              <Plus className="w-[18px] h-[18px]" />
-              <span className="hidden sm:inline">Create Event</span>
-            </Button>
+            <button className="flex items-center justify-center gap-2 h-9 px-4 rounded-[var(--radius-button)] bg-primary text-background font-semibold text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all">
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">Create</span>
+            </button>
           </Link>
           <ThemeToggle />
           <Avatar initials="TM" />

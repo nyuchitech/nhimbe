@@ -21,7 +21,7 @@ function AnimatedBackgroundInner({
   intensity = 0.2, // Reduced for better text contrast - WCAG AAA
   speed = 0.4,
 }: AnimatedBackgroundProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -40,12 +40,12 @@ function AnimatedBackgroundInner({
 
   // Use static background if animation is disabled or user prefers reduced motion
   if (!enableAnimation || prefersReducedMotion) {
-    return <StaticGradientBackground theme={theme} />;
+    return <StaticGradientBackground theme={resolvedTheme} />;
   }
 
   return (
-    <Suspense fallback={<StaticGradientBackground theme={theme} />}>
-      <GradientBackground theme={theme} intensity={intensity} speed={speed} />
+    <Suspense fallback={<StaticGradientBackground theme={resolvedTheme} />}>
+      <GradientBackground theme={resolvedTheme} intensity={intensity} speed={speed} />
     </Suspense>
   );
 }
