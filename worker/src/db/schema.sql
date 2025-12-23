@@ -1,5 +1,22 @@
 -- nhimbe D1 Database Schema
--- Run with: wrangler d1 execute nhimbe-db --file=./src/db/schema.sql
+-- Run with: wrangler d1 execute mukoko-nhimbe-db --file=./src/db/schema.sql
+
+-- Mineral themes (reference table)
+CREATE TABLE IF NOT EXISTS themes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gradient TEXT NOT NULL,
+  colors TEXT NOT NULL, -- JSON array of 3 colors for Three.js
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Insert default mineral themes
+INSERT OR IGNORE INTO themes (id, name, gradient, colors) VALUES
+  ('malachite', 'Malachite', 'linear-gradient(135deg, #004D40 0%, #00796B 50%, #64FFDA 100%)', '["#004D40", "#00796B", "#64FFDA"]'),
+  ('tanzanite', 'Tanzanite', 'linear-gradient(135deg, #1A0A2E 0%, #4B0082 50%, #B388FF 100%)', '["#1A0A2E", "#4B0082", "#B388FF"]'),
+  ('gold', 'Gold', 'linear-gradient(135deg, #5D4037 0%, #8B5A00 50%, #FFD740 100%)', '["#5D4037", "#8B5A00", "#FFD740"]'),
+  ('tigers-eye', 'Tiger''s Eye', 'linear-gradient(135deg, #4A2C00 0%, #8B4513 50%, #D4A574 100%)', '["#4A2C00", "#8B4513", "#D4A574"]'),
+  ('obsidian', 'Obsidian', 'linear-gradient(135deg, #0A0A0A 0%, #1E1E1E 50%, #3A3A3A 100%)', '["#0A0A0A", "#1E1E1E", "#3A3A3A"]');
 
 -- Events table
 CREATE TABLE IF NOT EXISTS events (
@@ -30,6 +47,9 @@ CREATE TABLE IF NOT EXISTS events (
   cover_image TEXT,
   cover_gradient TEXT,
 
+  -- Theme (mineral gradients: malachite, tanzanite, gold, tigers-eye, obsidian)
+  theme_id TEXT DEFAULT 'malachite',
+
   -- Stats
   attendee_count INTEGER DEFAULT 0,
   friends_count INTEGER DEFAULT 0,
@@ -39,6 +59,8 @@ CREATE TABLE IF NOT EXISTS events (
   is_online BOOLEAN DEFAULT FALSE,
   is_published BOOLEAN DEFAULT TRUE,
   is_cancelled BOOLEAN DEFAULT FALSE,
+  require_approval BOOLEAN DEFAULT FALSE,
+  visibility TEXT DEFAULT 'public', -- public, private
 
   -- Host (stored as JSON)
   host_name TEXT NOT NULL,
@@ -95,7 +117,7 @@ CREATE TABLE IF NOT EXISTS registrations (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   -- Status
-  status TEXT DEFAULT 'registered', -- registered, cancelled, attended
+  status TEXT DEFAULT 'registered', -- pending, registered, approved, rejected, cancelled, attended
 
   -- Ticket info
   ticket_type TEXT,
