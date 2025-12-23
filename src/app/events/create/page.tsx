@@ -56,6 +56,7 @@ export default function CreateEventPage() {
   const [selectedTheme, setSelectedTheme] = useState(0);
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [eventName, setEventName] = useState("");
+  const [requireApproval, setRequireApproval] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
 
   const scrollThemes = (direction: "left" | "right") => {
@@ -208,10 +209,18 @@ export default function CreateEventPage() {
             <Users className="w-5 h-5 text-text-secondary" />
             <span className="flex-1">Require Approval</span>
             <button
-              className="w-11 h-6 rounded-full bg-elevated transition-colors relative"
-              onClick={() => {}}
+              role="switch"
+              aria-checked={requireApproval}
+              onClick={() => setRequireApproval(!requireApproval)}
+              className={`relative w-[51px] h-[31px] rounded-full transition-colors duration-200 ${
+                requireApproval ? "bg-primary" : "bg-elevated"
+              }`}
             >
-              <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-text-tertiary transition-transform" />
+              <div
+                className={`absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-200 ${
+                  requireApproval ? "translate-x-[22px]" : "translate-x-[2px]"
+                }`}
+              />
             </button>
           </div>
 
