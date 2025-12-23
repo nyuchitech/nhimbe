@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { href: "/", label: "Discover" },
@@ -16,7 +15,7 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-elevated">
+    <header className="sticky top-0 z-50">
       <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="text-[28px] font-bold text-primary">
@@ -40,16 +39,29 @@ export function Header() {
           ))}
         </nav>
 
-        {/* Actions - all items 36px (h-9) height */}
-        <div className="flex items-center gap-3">
-          <Link href="/events/create">
-            <button className="flex items-center justify-center gap-2 h-9 px-4 rounded-[var(--radius-button)] bg-primary text-background font-semibold text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all">
-              <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Create</span>
-            </button>
+        {/* Actions - pill-shaped icon group with 44px touch targets */}
+        <div className="flex items-center bg-primary rounded-full p-1 gap-1">
+          <Link
+            href="/events/create"
+            className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
+            aria-label="Create event"
+          >
+            <Plus className="w-6 h-6 text-background" />
           </Link>
-          <ThemeToggle />
-          <Avatar initials="TM" />
+          <Link
+            href="/search"
+            className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
+            aria-label="Search events"
+          >
+            <Search className="w-6 h-6 text-background" />
+          </Link>
+          <Link
+            href="/profile"
+            className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20 hover:bg-background/30 transition-colors overflow-hidden"
+            aria-label="Profile"
+          >
+            <Avatar initials="TM" size="sm" className="w-9 h-9" />
+          </Link>
         </div>
       </div>
     </header>
