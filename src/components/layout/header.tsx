@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { href: "/", label: "Discover" },
@@ -32,7 +33,7 @@ export function Header() {
               className={`text-sm font-medium transition-colors ${
                 pathname === link.href
                   ? "text-primary"
-                  : "text-foreground/60 hover:text-foreground"
+                  : "text-text-secondary hover:text-foreground"
               }`}
             >
               {link.label}
@@ -41,13 +42,14 @@ export function Header() {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link href="/events/create">
             <Button variant="primary">
               <Plus className="w-[18px] h-[18px]" />
               <span className="hidden sm:inline">Create Event</span>
             </Button>
           </Link>
+          <ThemeToggle />
           <Avatar initials="TM" />
         </div>
       </div>

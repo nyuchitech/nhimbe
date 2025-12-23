@@ -2,6 +2,7 @@
 
 import { useState, useEffect, lazy, Suspense } from "react";
 import { StaticGradientBackground } from "./gradient-background";
+import { useTheme } from "@/components/theme-provider";
 
 // Lazy load the heavy Three.js component
 const GradientBackground = lazy(() =>
@@ -14,19 +15,16 @@ interface AnimatedBackgroundProps {
   speed?: number;
 }
 
-export function AnimatedBackground({
+// Inner component that uses the theme context
+function AnimatedBackgroundInner({
   enableAnimation = true,
-  intensity = 0.35,
+  intensity = 0.2, // Reduced for better text contrast - WCAG AAA
   speed = 0.4,
 }: AnimatedBackgroundProps) {
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [mounted, setMounted] = useState(false);
+  const { theme } = useTheme();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-
-    // Check for reduced motion preference
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(motionQuery.matches);
 
@@ -35,25 +33,10 @@ export function AnimatedBackground({
     };
     motionQuery.addEventListener("change", handleMotionChange);
 
-    // Check for color scheme preference
-    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    setTheme(darkQuery.matches ? "dark" : "light");
-
-    const handleThemeChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? "dark" : "light");
-    };
-    darkQuery.addEventListener("change", handleThemeChange);
-
     return () => {
       motionQuery.removeEventListener("change", handleMotionChange);
-      darkQuery.removeEventListener("change", handleThemeChange);
     };
   }, []);
-
-  // Show static background on server or before mount
-  if (!mounted) {
-    return <StaticGradientBackground theme="dark" />;
-  }
 
   // Use static background if animation is disabled or user prefers reduced motion
   if (!enableAnimation || prefersReducedMotion) {
@@ -65,4 +48,20 @@ export function AnimatedBackground({
       <GradientBackground theme={theme} intensity={intensity} speed={speed} />
     </Suspense>
   );
+}
+
+// Wrapper that handles SSR and mounting
+export function AnimatedBackground(props: AnimatedBackgroundProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Show static background on server or before mount
+  if (!mounted) {
+    return <StaticGradientBackground theme="dark" />;
+  }
+
+  return <AnimatedBackgroundInner {...props} />;
 }

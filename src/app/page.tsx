@@ -34,17 +34,17 @@ export default function DiscoverPage() {
       {/* Hero Section */}
       <section className="py-20 text-center">
         <div className="max-w-[1200px] mx-auto px-6">
-          <p className="font-serif italic text-lg text-foreground/60 mb-4">
+          <p className="font-serif italic text-lg text-text-secondary mb-4">
             &ldquo;Together we gather, together we grow&rdquo;
           </p>
 
-          <h1 className="font-serif text-4xl md:text-[56px] font-bold leading-tight mb-6">
+          <h1 className="font-serif text-4xl md:text-[56px] font-bold leading-tight mb-6 text-foreground">
             Discover <span className="text-primary">gatherings</span>
             <br />
             that move you
           </h1>
 
-          <p className="text-lg text-foreground/60 max-w-[600px] mx-auto mb-10 leading-relaxed">
+          <p className="text-lg text-text-secondary max-w-[600px] mx-auto mb-10 leading-relaxed">
             From tech meetups to cultural celebrations, find events that bring
             your community together. Powered by Ubuntu philosophy.
           </p>
@@ -62,7 +62,7 @@ export default function DiscoverPage() {
             </Link>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 bg-surface px-4 py-2 rounded-full text-sm text-foreground/60 mt-12">
+          <div className="inline-flex items-center gap-1.5 bg-surface px-4 py-2 rounded-full text-sm text-text-tertiary mt-12">
             A <span className="text-secondary font-semibold">Mukoko</span> Product
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function DiscoverPage() {
                 <MapPin className="w-4 h-4 text-primary" />
                 <span>{activeCity}</span>
                 <ChevronDown
-                  className={`w-4 h-4 text-foreground/60 transition-transform ${
+                  className={`w-4 h-4 text-text-tertiary transition-transform ${
                     showCityDropdown ? "rotate-180" : ""
                   }`}
                 />
@@ -151,7 +151,7 @@ export default function DiscoverPage() {
                 {activeCity === "All Cities" ? "Featured Events" : `Events in ${activeCity.split(",")[0]}`}
               </h2>
               {activeCategory !== "All" && (
-                <p className="text-foreground/60 text-sm mt-1">
+                <p className="text-text-tertiary text-sm mt-1">
                   Filtered by: {activeCategory}
                 </p>
               )}
@@ -182,9 +182,9 @@ export default function DiscoverPage() {
           </div>
 
           {filteredEvents.length === 0 && (
-            <div className="text-center py-16 text-foreground/60">
+            <div className="text-center py-16 text-text-secondary">
               <p className="text-lg">No events found.</p>
-              <p className="text-sm mt-2">
+              <p className="text-sm mt-2 text-text-tertiary">
                 Try selecting a different city or category.
               </p>
               <button
