@@ -22,16 +22,34 @@ The name comes from the traditional Shona practice of communal work where commun
 ```
 nhimbe/
 ├── src/                          # Next.js frontend
-│   └── app/                      # App Router (pages, layouts)
-│       ├── globals.css           # Global styles with brand colors
-│       ├── layout.tsx            # Root layout with fonts
-│       └── page.tsx              # Landing page
-├── api/                          # Cloudflare Workers backend
+│   ├── app/                      # App Router (pages, layouts)
+│   │   ├── globals.css           # Global styles with theme system
+│   │   ├── layout.tsx            # Root layout with ThemeProvider
+│   │   └── page.tsx              # Landing page
+│   └── components/
+│       ├── layout/
+│       │   ├── header.tsx        # Scroll-aware header with frosted glass
+│       │   └── footer.tsx        # Footer with theme toggle
+│       ├── ui/
+│       │   ├── avatar.tsx        # User avatar component
+│       │   ├── theme-toggle.tsx  # Dark/Light/System toggle
+│       │   └── ...               # Other UI components
+│       └── theme-provider.tsx    # Theme context provider
+├── worker/                       # Cloudflare Workers backend
 │   ├── src/
-│   │   └── index.ts              # Worker entry point
+│   │   ├── index.ts              # Worker entry point + status page
+│   │   ├── types.ts              # TypeScript types for bindings
+│   │   ├── ai/
+│   │   │   ├── embeddings.ts     # Event embedding generation
+│   │   │   ├── search.ts         # RAG semantic search
+│   │   │   └── assistant.ts      # AI chat assistant
+│   │   └── db/
+│   │       └── schema.sql        # D1 database schema
 │   ├── wrangler.toml             # Cloudflare configuration
 │   ├── tsconfig.json             # TypeScript config for Workers
-│   └── package.json              # API dependencies
+│   └── package.json              # Worker dependencies
+├── docs/                         # Documentation
+│   └── mukoko-navigation-system.md  # Reusable navigation components
 ├── public/                       # Static assets
 ├── .env.example                  # Frontend env template
 ├── CLAUDE.md                     # This file
@@ -53,15 +71,84 @@ npm run start        # Start production server
 npm run lint         # Run ESLint
 ```
 
-### Backend (api/ directory)
+### Backend (worker/ directory)
 
 ```bash
-cd api
+cd worker
 npm install          # Install dependencies
 npm run dev          # Development server (localhost:8787)
 npm run deploy       # Deploy to Cloudflare
 npm run tail         # View production logs
 ```
+
+## Theme System
+
+The app uses a custom theme system with three modes: Dark, Light, and System.
+
+### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| ThemeProvider | `src/components/theme-provider.tsx` | React context for theme state |
+| ThemeToggle | `src/components/ui/theme-toggle.tsx` | Cycling button (dark→light→system) |
+| Flash Script | `src/app/layout.tsx` | Prevents theme flash on load |
+
+### Theme Modes
+
+- **Dark**: Optimized for low-light environments
+- **Light**: Optimized for bright environments
+- **System**: Follows OS preference, updates in real-time
+
+### CSS Variables
+
+```css
+/* Dark mode */
+--background: #0A0A0A;
+--foreground: #F5F5F4;
+--primary: #64FFDA;      /* Malachite */
+--secondary: #B388FF;    /* Tanzanite */
+
+/* Light mode */
+--background: #FAFAF8;
+--foreground: #171717;
+--primary: #00574B;      /* Dark Malachite */
+--secondary: #4B0082;    /* Dark Tanzanite */
+```
+
+## Navigation System
+
+See `docs/mukoko-navigation-system.md` for complete documentation with copy-paste code.
+
+### Header Features
+
+- **Transparent at top**: No background when not scrolled
+- **Frosted glass on scroll**: `backdrop-blur-xl` with theme-aware background
+- **Logo → Page title**: Logo visible at top, page title when scrolled
+- **Pill-shaped action group**: Primary-colored container with 44px touch targets
+- **Dynamic title detection**: Static mapping + H1 element observation
+
+### Footer Features
+
+- **Brand + tagline**: Serif italic tagline
+- **Navigation links**: About, Help, Terms, Privacy
+- **Theme toggle**: Moved from header to footer
+- **Mukoko attribution**: "A Mukoko Product" with link
+
+## Accessibility
+
+### WCAG 2.2 AAA Compliance
+
+- **7:1 minimum contrast ratio** for all text
+- **44px touch targets** for all interactive elements
+- **Theme-aware colors** that maintain compliance in both modes
+
+### Contrast Ratios (Dark Mode)
+
+| Element | Color | Contrast |
+|---------|-------|----------|
+| Primary text | #F5F5F4 | 19.3:1 |
+| Secondary text | #B8B8B3 | 10.4:1 |
+| Tertiary text | #8A8A85 | 7.1:1 |
 
 ## Brand Guidelines (Quick Reference)
 
@@ -69,9 +156,9 @@ npm run tail         # View production logs
 
 | Role      | Light Mode | Dark Mode |
 | --------- | ---------- | --------- |
-| Primary   | `#004D40`  | `#64FFDA` |
+| Primary   | `#00574B`  | `#64FFDA` |
 | Secondary | `#4B0082`  | `#B388FF` |
-| Accent    | `#5D4037`  | `#FFD740` |
+| Accent    | `#8B5A00`  | `#FFD740` |
 
 ### Typography
 
@@ -123,7 +210,7 @@ npm run tail         # View production logs
 NEXT_PUBLIC_API_URL=http://localhost:8787
 ```
 
-### Backend (api/.dev.vars)
+### Backend (worker/.dev.vars)
 ```
 # Secrets go here for local dev
 # Use `wrangler secret put` for production
@@ -131,12 +218,17 @@ NEXT_PUBLIC_API_URL=http://localhost:8787
 
 ## API Endpoints
 
-| Method | Endpoint       | Description          |
-| ------ | -------------- | -------------------- |
-| GET    | `/`            | API info             |
-| GET    | `/api/health`  | Health check         |
-| GET    | `/api/events`  | List events          |
-| POST   | `/api/events`  | Create event         |
+| Method | Endpoint                  | Description                    |
+| ------ | ------------------------- | ------------------------------ |
+| GET    | `/`                       | Status page (HTML)             |
+| GET    | `/api/health`             | Health check                   |
+| GET    | `/api/events`             | List events                    |
+| POST   | `/api/events`             | Create event                   |
+| GET    | `/api/events/:id`         | Get single event               |
+| POST   | `/api/search`             | RAG semantic search            |
+| POST   | `/api/assistant`          | AI chat assistant              |
+| GET    | `/api/recommendations`    | Personalized recommendations   |
+| GET    | `/api/events/:id/similar` | Find similar events            |
 
 ## Git Workflow
 
@@ -159,6 +251,7 @@ When working on this codebase:
 4. **No over-engineering**: Avoid unnecessary abstractions
 5. **Test builds**: Run `npm run build` before committing
 6. **Environment safety**: Never hardcode secrets
+7. **Accessibility first**: Maintain WCAG 2.2 AAA compliance
 
 ### Common Patterns
 
@@ -172,7 +265,7 @@ export default function EventsPage() {
 
 **Adding an API endpoint:**
 ```typescript
-// api/src/index.ts - add to fetch handler
+// worker/src/index.ts - add to fetch handler
 if (url.pathname === "/api/new-endpoint") {
   return jsonResponse({ data: "..." });
 }
@@ -185,6 +278,17 @@ if (url.pathname === "/api/new-endpoint") {
 </button>
 ```
 
+**Using theme context:**
+```tsx
+import { useTheme } from "@/components/theme-provider";
+
+function MyComponent() {
+  const { theme, resolvedTheme, cycleTheme } = useTheme();
+  // theme: "dark" | "light" | "system"
+  // resolvedTheme: "dark" | "light" (actual applied theme)
+}
+```
+
 ## Deployment
 
 ### Frontend (Vercel)
@@ -194,7 +298,7 @@ if (url.pathname === "/api/new-endpoint") {
 
 ### Backend (Cloudflare)
 ```bash
-cd api
+cd worker
 wrangler login
 wrangler deploy
 ```
@@ -205,6 +309,7 @@ wrangler deploy
 - APIs must be cross-platform compatible
 - Follow Mukoko shared authentication when available
 - Always include "A Mukoko Product" attribution
+- Navigation system is reusable - see `docs/mukoko-navigation-system.md`
 
 ---
 

@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { AnimatedBackground } from "@/components/ui/animated-background";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "nhimbe - Together we gather, together we grow",
@@ -36,18 +37,41 @@ export const metadata: Metadata = {
   },
 };
 
+// Script to prevent flash of wrong theme - runs before React hydration
+const themeScript = `
+  (function() {
+    try {
+      var stored = localStorage.getItem('nhimbe-theme');
+      var theme;
+      if (stored === 'light' || stored === 'dark') {
+        theme = stored;
+      } else {
+        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.classList.add(theme);
+    } catch (e) {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <AnimatedBackground enableAnimation={true} intensity={0.3} speed={0.3} />
-        <Header />
-        <main className="flex-1 relative z-10">{children}</main>
-        <Footer />
+        <ThemeProvider defaultTheme="system">
+          <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
+          <Header />
+          <main className="flex-1 relative z-10">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

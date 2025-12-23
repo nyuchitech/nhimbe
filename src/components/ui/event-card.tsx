@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, Settings } from "lucide-react";
 
 interface EventCardProps {
   id: string;
@@ -11,6 +11,7 @@ interface EventCardProps {
   coverGradient?: string;
   attendeeCount: number;
   friendsCount?: number;
+  isHosting?: boolean;
 }
 
 export function EventCard({
@@ -23,6 +24,7 @@ export function EventCard({
   coverGradient,
   attendeeCount,
   friendsCount,
+  isHosting,
 }: EventCardProps) {
   const coverStyle = coverImage
     ? {
@@ -35,12 +37,12 @@ export function EventCard({
       <div className="rounded-[var(--radius-card)] overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
         {/* Cover */}
         <div className="h-[200px] relative" style={coverStyle}>
-          {/* Date Badge */}
-          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center">
+          {/* Date Badge - theme-aware */}
+          <div className="absolute top-4 left-4 bg-background/90 dark:bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center border border-foreground/10">
             <div className="text-2xl font-extrabold text-primary leading-none">
               {date.day}
             </div>
-            <div className="text-[11px] font-semibold text-foreground/60 uppercase tracking-wide">
+            <div className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wide">
               {date.month}
             </div>
           </div>
@@ -77,6 +79,17 @@ export function EventCard({
               <span className="bg-primary/15 text-primary px-3 py-1.5 rounded-full text-xs font-semibold">
                 {friendsCount} friend{friendsCount > 1 ? "s" : ""}
               </span>
+            )}
+
+            {isHosting && (
+              <Link
+                href={`/events/${id}/manage`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface hover:bg-elevated text-sm font-medium text-text-secondary hover:text-foreground transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Manage
+              </Link>
             )}
           </div>
         </div>

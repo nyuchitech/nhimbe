@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# API / Cloudflare Workers
-api/node_modules
-api/.wrangler
-api/.dev.vars
+# Cloudflare Workers
+worker/node_modules
+worker/.wrangler
+worker/.dev.vars

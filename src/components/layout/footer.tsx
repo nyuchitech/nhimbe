@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const footerLinks = [
   { href: "/about", label: "About" },
@@ -14,7 +17,7 @@ export function Footer() {
         {/* Brand */}
         <div className="flex items-center gap-4">
           <span className="text-2xl font-bold text-primary">nhimbe</span>
-          <span className="font-serif italic text-sm text-foreground/60">
+          <span className="font-serif italic text-sm text-text-secondary">
             &ldquo;Together we gather, together we grow&rdquo;
           </span>
         </div>
@@ -25,7 +28,7 @@ export function Footer() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-foreground/60 hover:text-foreground transition-colors"
+              className="text-sm text-text-secondary hover:text-foreground transition-colors"
             >
               {link.label}
             </Link>
@@ -33,7 +36,8 @@ export function Footer() {
         </nav>
 
         {/* Right */}
-        <div className="flex items-center gap-6 text-sm text-foreground/60">
+        <div className="flex items-center gap-6 text-sm text-text-tertiary">
+          <ThemeToggle />
           <span>
             A{" "}
             <Link href="https://mukoko.com" className="text-secondary font-semibold hover:underline">
