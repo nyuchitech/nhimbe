@@ -87,6 +87,7 @@ export default function MyEventsPage() {
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}
+              isHosting={activeTab === "hosting"}
             />
           ))}
         </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, Settings } from "lucide-react";
 
 interface EventCardProps {
   id: string;
@@ -11,6 +11,7 @@ interface EventCardProps {
   coverGradient?: string;
   attendeeCount: number;
   friendsCount?: number;
+  isHosting?: boolean;
 }
 
 export function EventCard({
@@ -23,6 +24,7 @@ export function EventCard({
   coverGradient,
   attendeeCount,
   friendsCount,
+  isHosting,
 }: EventCardProps) {
   const coverStyle = coverImage
     ? {
@@ -77,6 +79,17 @@ export function EventCard({
               <span className="bg-primary/15 text-primary px-3 py-1.5 rounded-full text-xs font-semibold">
                 {friendsCount} friend{friendsCount > 1 ? "s" : ""}
               </span>
+            )}
+
+            {isHosting && (
+              <Link
+                href={`/events/${id}/manage`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface hover:bg-elevated text-sm font-medium text-text-secondary hover:text-foreground transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Manage
+              </Link>
             )}
           </div>
         </div>
