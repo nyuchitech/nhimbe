@@ -1,5 +1,6 @@
 # nhimbe API - Cloudflare Workers Configuration
-name = "nhimbe-api"
+# Part of the Mukoko ecosystem
+name = "mukoko-nhimbe-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
@@ -19,25 +20,25 @@ binding = "AI"
 # Vectorize Index for RAG Search
 [[vectorize]]
 binding = "VECTORIZE"
-index_name = "nhimbe-events"
+index_name = "mukoko-nhimbe-events"
 
 # D1 Database
 [[d1_databases]]
 binding = "DB"
-database_name = "nhimbe-db"
-database_id = "local" # Replace with actual ID after: wrangler d1 create nhimbe-db
+database_name = "mukoko-nhimbe-db"
+database_id = "local" # Replace with actual ID after: wrangler d1 create mukoko-nhimbe-db
 
 # KV Namespace for caching
 [[kv_namespaces]]
 binding = "CACHE"
-id = "local" # Replace with actual ID after: wrangler kv:namespace create CACHE
+id = "local" # Replace with actual ID after: wrangler kv:namespace create mukoko-nhimbe-cache
 
 # Production environment
 [env.production]
-name = "nhimbe-api"
+name = "mukoko-nhimbe-api"
 vars = { ENVIRONMENT = "production" }
 
 # Staging environment
 [env.staging]
-name = "nhimbe-api-staging"
+name = "mukoko-nhimbe-api-staging"
 vars = { ENVIRONMENT = "staging" }
