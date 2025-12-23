@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  /* nhimbe Brand Colors - Dark Mode (default for the app) */
+  --background: #0A0A0A;
+  --foreground: #F5F5F4;
+  --surface: #141414;
+  --elevated: #1E1E1E;
+  --charcoal: #0A0A0A;
+  --cream: #FAF9F5;
+
+  /* Text hierarchy */
+  --text-primary: #F5F5F4;
+  --text-secondary: #A8A8A3;
+  --text-tertiary: #6B6B66;
+
+  /* Five African Minerals Palette - Dark Mode */
+  --malachite: #64FFDA;
+  --tanzanite: #B388FF;
+  --gold: #FFD740;
+
+  /* Light mode versions (for contrast) */
+  --malachite-light: #004D40;
+  --tanzanite-light: #4B0082;
+  --gold-light: #5D4037;
+
+  /* Semantic Colors */
+  --primary: var(--malachite);
+  --secondary: var(--tanzanite);
+  --accent: var(--gold);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-charcoal: var(--charcoal);
+  --color-cream: var(--cream);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-malachite: var(--malachite);
+  --color-tanzanite: var(--tanzanite);
+  --color-gold: var(--gold);
+
+  /* Typography */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif", ui-serif, Georgia, serif;
+
+  /* Design Tokens */
+  --radius-button: 12px;
+  --radius-card: 16px;
+  --radius-input: 8px;
+  --radius-badge: 9999px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Touch target minimum size */
+button,
+input,
+select,
+textarea {
+  min-height: 44px;
+}
+
+/* Link styling */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--elevated);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
