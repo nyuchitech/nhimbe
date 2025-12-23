@@ -12,21 +12,65 @@ const navLinks = [
   { href: "/calendar", label: "Calendar" },
 ];
 
+// Static page titles mapping
+const pageTitles: Record<string, string> = {
+  "/": "Discover",
+  "/my-events": "My Events",
+  "/calendar": "Calendar",
+  "/about": "About",
+  "/help": "Help Center",
+  "/terms": "Terms of Service",
+  "/privacy": "Privacy Policy",
+  "/events/create": "Create Event",
+  "/search": "Search",
+  "/profile": "Profile",
+};
+
 export function Header() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [pageTitle, setPageTitle] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
 
-    // Check initial scroll position
     handleScroll();
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Get page title from static mapping or from the page's H1 element
+  useEffect(() => {
+    const staticTitle = pageTitles[pathname];
+    if (staticTitle) {
+      setPageTitle(staticTitle);
+      return;
+    }
+
+    // For dynamic pages, try to get the title from the first H1
+    const getPageTitle = () => {
+      const h1 = document.querySelector("h1");
+      if (h1) {
+        setPageTitle(h1.textContent || null);
+      } else {
+        setPageTitle(null);
+      }
+    };
+
+    // Wait for content to render
+    const timer = setTimeout(getPageTitle, 100);
+
+    // Also observe for H1 changes (for dynamic content)
+    const observer = new MutationObserver(getPageTitle);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [pathname]);
 
   return (
     <header
@@ -37,9 +81,32 @@ export function Header() {
       }`}
     >
       <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="text-[28px] font-bold text-primary">
-          nhimbe
+        {/* Logo / Page Title */}
+        <Link href="/" className="min-w-0 flex-shrink">
+          <div className="relative h-[34px] flex items-center">
+            {/* Logo - visible when not scrolled */}
+            <span
+              className={`text-[28px] font-bold text-primary transition-all duration-300 ${
+                isScrolled && pageTitle
+                  ? "opacity-0 absolute"
+                  : "opacity-100"
+              }`}
+            >
+              nhimbe
+            </span>
+            {/* Page title - visible when scrolled */}
+            {pageTitle && (
+              <span
+                className={`text-lg font-semibold text-foreground truncate max-w-[200px] sm:max-w-[300px] transition-all duration-300 ${
+                  isScrolled
+                    ? "opacity-100"
+                    : "opacity-0 absolute"
+                }`}
+              >
+                {pageTitle}
+              </span>
+            )}
+          </div>
         </Link>
 
         {/* Nav Links */}
@@ -60,7 +127,7 @@ export function Header() {
         </nav>
 
         {/* Actions - pill-shaped icon group with 44px touch targets */}
-        <div className="flex items-center bg-primary rounded-full p-1 gap-1">
+        <div className="flex items-center bg-primary rounded-full p-1 gap-1 flex-shrink-0">
           <Link
             href="/events/create"
             className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
