@@ -1,6 +1,7 @@
 /**
  * nhimbe API - Cloudflare Workers
  * Events platform with AI-powered search and recommendations
+ * Part of the Mukoko ecosystem
  */
 
 import type {
@@ -12,6 +13,8 @@ import type {
 import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search";
 import { chat, generateSuggestions } from "./ai/assistant";
 import { indexEvent, indexEvents, removeEventFromIndex } from "./ai/embeddings";
+
+const VERSION = "0.2.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,18 +32,22 @@ const worker: ExportedHandler<Env> = {
     }
 
     try {
-      // Root endpoint
+      // Root endpoint - Status Page
       if (url.pathname === "/") {
-        return jsonResponse({
-          name: "nhimbe API",
-          version: "0.2.0",
-          status: "healthy",
-          environment: env.ENVIRONMENT,
-          features: ["events", "search", "ai-assistant", "recommendations"],
-        });
+        const accept = request.headers.get("Accept") || "";
+        if (accept.includes("application/json")) {
+          return jsonResponse({
+            name: "nhimbe API",
+            version: VERSION,
+            status: "healthy",
+            environment: env.ENVIRONMENT,
+            features: ["events", "search", "ai-assistant", "recommendations"],
+          });
+        }
+        return statusPage(env);
       }
 
-      // Health check
+      // Health check (JSON only)
       if (url.pathname === "/api/health") {
         return jsonResponse({
           status: "ok",
@@ -110,6 +117,373 @@ const worker: ExportedHandler<Env> = {
 };
 
 export default worker;
+
+// ============================================
+// Status Page
+// ============================================
+
+function statusPage(env: Env): Response {
+  const services = [
+    { name: "Workers AI", status: !!env.AI, description: "LLM & Embeddings" },
+    { name: "Vectorize", status: !!env.VECTORIZE, description: "Vector Search" },
+    { name: "D1 Database", status: !!env.DB, description: "SQLite Storage" },
+    { name: "KV Cache", status: !!env.CACHE, description: "Edge Caching" },
+  ];
+
+  const endpoints = [
+    { method: "GET", path: "/api/health", description: "Health check" },
+    { method: "GET", path: "/api/events", description: "List events" },
+    { method: "GET", path: "/api/events/:id", description: "Get event by ID" },
+    { method: "POST", path: "/api/events", description: "Create event" },
+    { method: "PUT", path: "/api/events/:id", description: "Update event" },
+    { method: "DELETE", path: "/api/events/:id", description: "Delete event" },
+    { method: "POST", path: "/api/search", description: "AI-powered semantic search" },
+    { method: "POST", path: "/api/assistant", description: "AI chat assistant" },
+    { method: "GET", path: "/api/recommendations", description: "Get recommendations" },
+    { method: "GET", path: "/api/similar/:id", description: "Find similar events" },
+    { method: "GET", path: "/api/users/:id", description: "Get user" },
+    { method: "POST", path: "/api/users", description: "Create user" },
+    { method: "GET", path: "/api/registrations", description: "List registrations" },
+    { method: "POST", path: "/api/registrations", description: "Register for event" },
+  ];
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nhimbe API - Mukoko Ecosystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #0A0A0A;
+      --surface: #141414;
+      --elevated: #1E1E1E;
+      --foreground: #F5F5F4;
+      --text-secondary: #A8A8A3;
+      --text-tertiary: #6B6B66;
+      --malachite: #64FFDA;
+      --tanzanite: #B388FF;
+      --gold: #FFD740;
+      --success: #4ADE80;
+      --error: #F87171;
+      --radius: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--malachite);
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-family: 'Noto Serif', serif;
+      font-style: italic;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .version {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--elevated);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      color: var(--text-tertiary);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--elevated);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--malachite), var(--tanzanite));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .service {
+      background: var(--elevated);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .service-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .service-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-dot.offline {
+      background: var(--error);
+      box-shadow: 0 0 8px var(--error);
+    }
+
+    .service-desc {
+      font-size: 0.8rem;
+      color: var(--text-tertiary);
+    }
+
+    .endpoints-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .endpoint {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--elevated);
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+    }
+
+    .method {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .method.get { background: rgba(100, 255, 218, 0.2); color: var(--malachite); }
+    .method.post { background: rgba(179, 136, 255, 0.2); color: var(--tanzanite); }
+    .method.put { background: rgba(255, 215, 64, 0.2); color: var(--gold); }
+    .method.delete { background: rgba(248, 113, 113, 0.2); color: var(--error); }
+
+    .path {
+      flex: 1;
+      color: var(--foreground);
+    }
+
+    .endpoint-desc {
+      color: var(--text-tertiary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.8rem;
+    }
+
+    footer {
+      text-align: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--elevated);
+      margin-top: 48px;
+    }
+
+    .mukoko-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .mukoko-badge a {
+      color: var(--tanzanite);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .mukoko-badge a:hover {
+      text-decoration: underline;
+    }
+
+    .copyright {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--text-tertiary);
+    }
+
+    @media (max-width: 640px) {
+      .endpoint {
+        flex-wrap: wrap;
+      }
+      .endpoint-desc {
+        width: 100%;
+        margin-top: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">nhimbe</div>
+      <p class="tagline">"Together we gather, together we grow"</p>
+      <span class="version">API v${VERSION} • ${env.ENVIRONMENT}</span>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <h2 class="card-title">Service Status</h2>
+      </div>
+      <div class="services-grid">
+        ${services
+          .map(
+            (s) => `
+          <div class="service">
+            <div class="service-header">
+              <span class="service-name">${s.name}</span>
+              <span class="status-dot ${s.status ? "online" : "offline"}"></span>
+            </div>
+            <span class="service-desc">${s.description}</span>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📡</div>
+        <h2 class="card-title">API Endpoints</h2>
+      </div>
+      <div class="endpoints-list">
+        ${endpoints
+          .map(
+            (e) => `
+          <div class="endpoint">
+            <span class="method ${e.method.toLowerCase()}">${e.method}</span>
+            <span class="path">${e.path}</span>
+            <span class="endpoint-desc">${e.description}</span>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🤖</div>
+        <h2 class="card-title">AI Features</h2>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">
+        This API is powered by Cloudflare Workers AI for intelligent event discovery.
+      </p>
+      <div class="services-grid">
+        <div class="service">
+          <div class="service-header">
+            <span class="service-name">Semantic Search</span>
+          </div>
+          <span class="service-desc">Natural language event search using RAG</span>
+        </div>
+        <div class="service">
+          <div class="service-header">
+            <span class="service-name">AI Assistant</span>
+          </div>
+          <span class="service-desc">Conversational event discovery</span>
+        </div>
+        <div class="service">
+          <div class="service-header">
+            <span class="service-name">Recommendations</span>
+          </div>
+          <span class="service-desc">Personalized event suggestions</span>
+        </div>
+        <div class="service">
+          <div class="service-header">
+            <span class="service-name">Similar Events</span>
+          </div>
+          <span class="service-desc">Find related gatherings</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="mukoko-badge">
+        A <a href="https://mukoko.com">Mukoko</a> Product
+      </div>
+      <p class="copyright">© ${new Date().getFullYear()} Nyuchi Africa. All rights reserved.</p>
+    </footer>
+  </div>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html;charset=UTF-8",
+    },
+  });
+}
 
 // ============================================
 // Events Handlers

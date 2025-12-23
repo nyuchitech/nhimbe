@@ -26,12 +26,19 @@ nhimbe/
 │       ├── globals.css           # Global styles with brand colors
 │       ├── layout.tsx            # Root layout with fonts
 │       └── page.tsx              # Landing page
-├── api/                          # Cloudflare Workers backend
+├── worker/                       # Cloudflare Workers backend
 │   ├── src/
-│   │   └── index.ts              # Worker entry point
+│   │   ├── index.ts              # Worker entry point
+│   │   ├── types.ts              # TypeScript types for bindings
+│   │   ├── ai/
+│   │   │   ├── embeddings.ts     # Event embedding generation
+│   │   │   ├── search.ts         # RAG semantic search
+│   │   │   └── assistant.ts      # AI chat assistant
+│   │   └── db/
+│   │       └── schema.sql        # D1 database schema
 │   ├── wrangler.toml             # Cloudflare configuration
 │   ├── tsconfig.json             # TypeScript config for Workers
-│   └── package.json              # API dependencies
+│   └── package.json              # Worker dependencies
 ├── public/                       # Static assets
 ├── .env.example                  # Frontend env template
 ├── CLAUDE.md                     # This file
@@ -53,10 +60,10 @@ npm run start        # Start production server
 npm run lint         # Run ESLint
 ```
 
-### Backend (api/ directory)
+### Backend (worker/ directory)
 
 ```bash
-cd api
+cd worker
 npm install          # Install dependencies
 npm run dev          # Development server (localhost:8787)
 npm run deploy       # Deploy to Cloudflare
@@ -123,7 +130,7 @@ npm run tail         # View production logs
 NEXT_PUBLIC_API_URL=http://localhost:8787
 ```
 
-### Backend (api/.dev.vars)
+### Backend (worker/.dev.vars)
 ```
 # Secrets go here for local dev
 # Use `wrangler secret put` for production
@@ -131,12 +138,17 @@ NEXT_PUBLIC_API_URL=http://localhost:8787
 
 ## API Endpoints
 
-| Method | Endpoint       | Description          |
-| ------ | -------------- | -------------------- |
-| GET    | `/`            | API info             |
-| GET    | `/api/health`  | Health check         |
-| GET    | `/api/events`  | List events          |
-| POST   | `/api/events`  | Create event         |
+| Method | Endpoint                | Description                    |
+| ------ | ----------------------- | ------------------------------ |
+| GET    | `/`                     | Status page (HTML)             |
+| GET    | `/api/health`           | Health check                   |
+| GET    | `/api/events`           | List events                    |
+| POST   | `/api/events`           | Create event                   |
+| GET    | `/api/events/:id`       | Get single event               |
+| POST   | `/api/search`           | RAG semantic search            |
+| POST   | `/api/assistant`        | AI chat assistant              |
+| GET    | `/api/recommendations`  | Personalized recommendations   |
+| GET    | `/api/events/:id/similar` | Find similar events          |
 
 ## Git Workflow
 
@@ -172,7 +184,7 @@ export default function EventsPage() {
 
 **Adding an API endpoint:**
 ```typescript
-// api/src/index.ts - add to fetch handler
+// worker/src/index.ts - add to fetch handler
 if (url.pathname === "/api/new-endpoint") {
   return jsonResponse({ data: "..." });
 }
@@ -194,7 +206,7 @@ if (url.pathname === "/api/new-endpoint") {
 
 ### Backend (Cloudflare)
 ```bash
-cd api
+cd worker
 wrangler login
 wrangler deploy
 ```
