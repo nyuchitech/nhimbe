@@ -12,6 +12,26 @@ ENVIRONMENT = "development"
 port = 8787
 local_protocol = "http"
 
+# Workers AI Binding
+[ai]
+binding = "AI"
+
+# Vectorize Index for RAG Search
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "nhimbe-events"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "nhimbe-db"
+database_id = "local" # Replace with actual ID after: wrangler d1 create nhimbe-db
+
+# KV Namespace for caching
+[[kv_namespaces]]
+binding = "CACHE"
+id = "local" # Replace with actual ID after: wrangler kv:namespace create CACHE
+
 # Production environment
 [env.production]
 name = "nhimbe-api"
@@ -21,14 +41,3 @@ vars = { ENVIRONMENT = "production" }
 [env.staging]
 name = "nhimbe-api-staging"
 vars = { ENVIRONMENT = "staging" }
-
-# D1 Database (uncomment when ready)
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "nhimbe-db"
-# database_id = "<your-database-id>"
-
-# KV Namespace (uncomment when ready)
-# [[kv_namespaces]]
-# binding = "CACHE"
-# id = "<your-kv-id>"
