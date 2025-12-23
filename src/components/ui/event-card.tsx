@@ -37,12 +37,12 @@ export function EventCard({
       <div className="rounded-[var(--radius-card)] overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
         {/* Cover */}
         <div className="h-[200px] relative" style={coverStyle}>
-          {/* Date Badge */}
-          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center">
+          {/* Date Badge - theme-aware */}
+          <div className="absolute top-4 left-4 bg-background/90 dark:bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center border border-foreground/10">
             <div className="text-2xl font-extrabold text-primary leading-none">
               {date.day}
             </div>
-            <div className="text-[11px] font-semibold text-foreground/60 uppercase tracking-wide">
+            <div className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wide">
               {date.month}
             </div>
           </div>
