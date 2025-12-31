@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nhimbe** (pronounced /ˈnhimbɛ/) is an events platform developed by Mukoko (Nyuchi Web Services). It functions as a standalone web app at nhimbe.com and integrates with the Mukoko Super App. The name comes from the Shona tradition of communal work.
+**nhimbe** (pronounced /ˈnhimbɛ/) is an events platform developed by Mukoko (Nyuchi Web Services). It functions as a standalone web app at nhimbe.com and integrates with the Mukoko Super App. The name comes from the Shona tradition of communal work. Tagline: *"Together we gather, together we grow"*
 
 ## Tech Stack
 
@@ -36,25 +36,50 @@ npm run tail         # View production logs
 ### Frontend (`src/`)
 
 - **App Router**: Pages in `src/app/`, using Next.js conventions
-- **Theme System**: Three modes (dark/light/system) via `ThemeProvider` context in `src/components/theme-provider.tsx`. Theme stored in localStorage as `nhimbe-theme`. Flash prevention script in `layout.tsx`.
-- **Components**: Layout components in `src/components/layout/`, reusable UI in `src/components/ui/`
+- **API Client**: All API calls go through `src/lib/api.ts`
+- **Theme System**: Three modes (dark/light/system) via `ThemeProvider` context
+- **Components**: Layout in `src/components/layout/`, reusable UI in `src/components/ui/`
+
+### Pages
+
+| Route | File | Description |
+|-------|------|-------------|
+| `/` | `page.tsx` | Landing with featured events |
+| `/events` | `events/page.tsx` | Browse all events with filters |
+| `/events/[id]` | `events/[id]/page.tsx` | Event details, RSVP, share |
+| `/events/[id]/manage` | `events/[id]/manage/page.tsx` | Host dashboard |
+| `/events/create` | `events/create/page.tsx` | Create new event |
+| `/search` | `search/page.tsx` | Search with recent/trending |
+| `/profile` | `profile/page.tsx` | User settings, sign out |
+| `/my-events` | `my-events/page.tsx` | User's events |
+| `/calendar` | `calendar/page.tsx` | Calendar view |
 
 ### Backend (`worker/`)
 
-- **Single entry point**: All routes handled in `worker/src/index.ts` via path matching
-- **AI Features**: RAG semantic search, AI assistant, recommendations in `worker/src/ai/`
+- **Single entry point**: All routes in `worker/src/index.ts`
+- **AI Features**: RAG search, assistant, recommendations in `worker/src/ai/`
 - **Database**: D1 SQLite schema in `worker/src/db/schema.sql`
-- **Bindings**: `Env` type in `worker/src/types.ts` defines AI, VECTORIZE, DB, CACHE bindings
 
-### API Route Pattern
+### API Endpoints
 
-Routes are matched with string/regex in the worker fetch handler:
-
-```typescript
-if (url.pathname === "/api/events" && method === "GET") { ... }
-if (url.pathname.startsWith("/api/events")) { ... }
-const match = url.pathname.match(/^\/api\/events\/([^/]+)$/);
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/events` | List events (with city/category filters) |
+| POST | `/api/events` | Create event |
+| GET | `/api/events/:id` | Get single event |
+| PUT | `/api/events/:id` | Update event |
+| DELETE | `/api/events/:id` | Delete event |
+| POST | `/api/events/:id/view` | Track event view |
+| GET | `/api/registrations?event_id=` | Get event registrations |
+| POST | `/api/registrations` | Register for event |
+| PUT | `/api/registrations/:id` | Update registration status |
+| DELETE | `/api/registrations/:id` | Cancel registration |
+| GET | `/api/users/:id` | Get user |
+| POST | `/api/users` | Create user |
+| GET | `/api/categories` | List categories |
+| GET | `/api/cities` | List cities |
+| POST | `/api/search` | AI semantic search |
+| POST | `/api/assistant` | AI chat assistant |
 
 ## Theme & Brand System
 
@@ -93,13 +118,23 @@ WCAG 2.2 AAA compliant with 7:1+ contrast ratios. All interactive elements have 
 
 ### Styling
 
-- Use Tailwind with CSS variables: `bg-primary`, `text-malachite`, `rounded-[var(--radius-button)]`
+- Use Tailwind with CSS variables: `bg-primary`, `text-malachite`
 - Theme-aware: colors automatically adapt via CSS variables
 
-### Worker API
+### API Usage
 
-- All responses via `jsonResponse()` helper with CORS headers
-- Convert DB rows to typed objects with `dbRowToEvent()` pattern
+```tsx
+import { getEvents, createEvent, registerForEvent } from "@/lib/api";
+
+// Fetch events
+const { events } = await getEvents({ city: "Harare", limit: 20 });
+
+// Create event
+const { event } = await createEvent({ title: "...", ... });
+
+// RSVP
+await registerForEvent({ event_id: "...", user_id: "..." });
+```
 
 ## Environment Variables
 
@@ -135,8 +170,23 @@ import { useTheme } from "@/components/theme-provider";
 const { theme, resolvedTheme, cycleTheme } = useTheme();
 ```
 
+### Client-Side Interactivity
+
+For interactive features in Server Components, create a separate client component:
+
+```tsx
+// my-button.tsx
+"use client";
+export function MyButton() { ... }
+
+// page.tsx (Server Component)
+import { MyButton } from "./my-button";
+```
+
 ## Important Notes
 
 - Wordmark is always lowercase: `nhimbe`
 - Include "A Mukoko Product" attribution in footers
 - Mobile-first design (Mukoko Super App integration)
+- User data stored in localStorage as `nhimbe_user`
+- All destructive actions require confirmation modals
