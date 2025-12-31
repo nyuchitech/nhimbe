@@ -1,23 +1,45 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Compass, CalendarPlus, MapPin, ChevronDown } from "lucide-react";
+import { Compass, CalendarPlus, MapPin, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
-import { events, categories, cities } from "@/lib/data";
+import { getEvents, getCategories, type Event } from "@/lib/api";
 
 export default function DiscoverPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeCity, setActiveCity] = useState("All Cities");
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  // Fetch events and categories on mount
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [eventsResponse, categoriesData] = await Promise.all([
+          getEvents({ limit: 50 }),
+          getCategories(),
+        ]);
+        setEvents(eventsResponse.events);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   // Get unique cities from events
   const availableCities = useMemo(() => {
     const citySet = new Set(events.map((e) => `${e.location.city}, ${e.location.country}`));
     return Array.from(citySet).sort();
-  }, []);
+  }, [events]);
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
@@ -27,7 +49,7 @@ export default function DiscoverPage() {
         `${e.location.city}, ${e.location.country}` === activeCity;
       return categoryMatch && cityMatch;
     });
-  }, [activeCategory, activeCity]);
+  }, [events, activeCategory, activeCity]);
 
   return (
     <>
@@ -164,39 +186,47 @@ export default function DiscoverPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                id={event.id}
-                title={event.title}
-                date={event.date}
-                location={event.location}
-                category={event.category}
-                coverImage={event.coverImage}
-                coverGradient={event.coverGradient}
-                attendeeCount={event.attendeeCount}
-                friendsCount={event.friendsCount}
-              />
-            ))}
-          </div>
-
-          {filteredEvents.length === 0 && (
-            <div className="text-center py-16 text-text-secondary">
-              <p className="text-lg">No events found.</p>
-              <p className="text-sm mt-2 text-text-tertiary">
-                Try selecting a different city or category.
-              </p>
-              <button
-                onClick={() => {
-                  setActiveCity("All Cities");
-                  setActiveCategory("All");
-                }}
-                className="mt-4 text-primary font-medium hover:underline"
-              >
-                Clear filters
-              </button>
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    date={event.date}
+                    location={event.location}
+                    category={event.category}
+                    coverImage={event.coverImage}
+                    coverGradient={event.coverGradient}
+                    attendeeCount={event.attendeeCount}
+                    friendsCount={event.friendsCount}
+                  />
+                ))}
+              </div>
+
+              {filteredEvents.length === 0 && (
+                <div className="text-center py-16 text-text-secondary">
+                  <p className="text-lg">No events found.</p>
+                  <p className="text-sm mt-2 text-text-tertiary">
+                    Try selecting a different city or category.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveCity("All Cities");
+                      setActiveCategory("All");
+                    }}
+                    className="mt-4 text-primary font-medium hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

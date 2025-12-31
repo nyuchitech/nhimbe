@@ -1,21 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { CalendarPlus, Ticket, Users, Clock } from "lucide-react";
+import { CalendarPlus, Ticket, Users, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/ui/event-card";
-import { events } from "@/lib/data";
+import { getEvents, type Event } from "@/lib/api";
 
 type TabType = "attending" | "hosting" | "past";
 
 export default function MyEventsPage() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("attending");
 
-  // Mock data - in a real app, this would come from user's data
-  const attendingEvents = events.slice(0, 3);
-  const hostingEvents = events.slice(3, 5);
-  const pastEvents = events.slice(5, 7);
+  // Fetch events on mount
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const response = await getEvents({ limit: 50 });
+        setEvents(response.events);
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  // TODO: Replace with real user data from authentication
+  // For now, split events for demonstration
+  const now = new Date();
+  const attendingEvents = events.filter((e) => new Date(e.date.iso) >= now).slice(0, 3);
+  const hostingEvents = events.filter((e) => new Date(e.date.iso) >= now).slice(0, 2);
+  const pastEvents = events.filter((e) => new Date(e.date.iso) < now);
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode; count: number }[] = [
     { id: "attending", label: "Attending", icon: <Ticket className="w-4 h-4" />, count: attendingEvents.length },
@@ -73,7 +92,11 @@ export default function MyEventsPage() {
       </div>
 
       {/* Events Grid */}
-      {currentEvents.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      ) : currentEvents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentEvents.map((event) => (
             <EventCard

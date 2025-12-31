@@ -26,12 +26,21 @@ index_name = "mukoko-nhimbe-events"
 [[d1_databases]]
 binding = "DB"
 database_name = "mukoko-nhimbe-db"
-database_id = "local" # Replace with actual ID after: wrangler d1 create mukoko-nhimbe-db
+database_id = "039aa68b-2f13-4c16-9c39-f6ed85283174"
 
 # KV Namespace for caching
 [[kv_namespaces]]
 binding = "CACHE"
-id = "local" # Replace with actual ID after: wrangler kv:namespace create mukoko-nhimbe-cache
+id = "bbe12fb2c88247b4a498da713416b7d7"
+
+# R2 Bucket for media storage
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mukoko-nhimbe-media"
+
+# Cloudflare Images binding for transformations
+[images]
+binding = "IMAGES"
 
 # Production environment
 [env.production]

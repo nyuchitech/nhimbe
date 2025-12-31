@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, CalendarDays, MapPin, Users, Share2, QrCode } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Users, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getEventById, events } from "@/lib/data";
+import { findEvent, getEvents } from "@/lib/api";
 import { EventQRCode } from "./event-qr-code";
+import { AddToCalendarButton, GetDirectionsButton, ShareButton } from "./event-actions";
+import { RSVPButton } from "./rsvp-button";
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-// Generate static params for all events
+// Generate static params for all events (fetched at build time)
 export async function generateStaticParams() {
-  return events.map((event) => ({
-    id: event.id,
-  }));
+  try {
+    const response = await getEvents({ limit: 100 });
+    return response.events.map((event) => ({
+      id: event.id,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // Dynamic OpenGraph metadata
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const event = getEventById(id);
+  const event = await findEvent(id);
 
   if (!event) {
     return {
@@ -91,7 +98,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
-  const event = getEventById(id);
+  const event = await findEvent(id);
 
   if (!event) {
     notFound();
@@ -241,9 +248,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <h4 className="font-semibold">{event.date.full}</h4>
                 <p className="text-sm text-foreground/60">{event.date.time}</p>
               </div>
-              <button className="text-primary text-sm font-semibold hover:underline">
-                Add to Calendar
-              </button>
+              <AddToCalendarButton event={event} />
             </div>
 
             {/* Location Row */}
@@ -257,9 +262,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   {event.location.address}, {event.location.city}, {event.location.country}
                 </p>
               </div>
-              <button className="text-primary text-sm font-semibold hover:underline">
-                Get Directions
-              </button>
+              <GetDirectionsButton event={event} />
             </div>
 
             {/* Description */}
@@ -295,9 +298,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   "Free"
                 )}
               </div>
-              <Button variant="primary" className="w-full py-4 text-base">
-                {event.price ? "Get Tickets" : "RSVP Now"}
-              </Button>
+              <RSVPButton eventId={event.id} price={event.price} />
             </div>
 
             {/* QR Code Card */}
@@ -308,10 +309,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </div>
               <EventQRCode shortCode={event.shortCode} title={event.title} />
               <div className="mt-4 flex gap-2">
-                <Button variant="secondary" className="flex-1 py-2.5 text-sm">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
+                <ShareButton event={event} />
               </div>
             </div>
 

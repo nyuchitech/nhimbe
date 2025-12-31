@@ -3,14 +3,35 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, Search } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
+import { Plus, Search, User } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Discover" },
   { href: "/my-events", label: "My Events" },
   { href: "/calendar", label: "Calendar" },
 ];
+
+// Get user initials from localStorage or return null for guest
+function getUserInitials(): string | null {
+  if (typeof window === "undefined") return null;
+  const userData = localStorage.getItem("nhimbe_user");
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      if (user.name) {
+        return user.name
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 // Static page titles mapping
 const pageTitles: Record<string, string> = {
@@ -30,6 +51,7 @@ export function Header() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [userInitials, setUserInitials] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +61,18 @@ export function Header() {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Get user initials on mount and when storage changes
+  useEffect(() => {
+    setUserInitials(getUserInitials());
+
+    // Listen for storage changes (e.g., sign out)
+    const handleStorageChange = () => {
+      setUserInitials(getUserInitials());
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Get page title from static mapping or from the page's H1 element
@@ -147,7 +181,13 @@ export function Header() {
             className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20 hover:bg-background/30 transition-colors overflow-hidden"
             aria-label="Profile"
           >
-            <Avatar initials="TM" size="sm" className="w-9 h-9" />
+            {userInitials ? (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-background">
+                {userInitials}
+              </div>
+            ) : (
+              <User className="w-5 h-5 text-background" />
+            )}
           </Link>
         </div>
       </div>

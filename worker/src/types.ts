@@ -153,13 +153,126 @@ export interface KVListResult {
   cursor?: string;
 }
 
+// R2 Bucket Types
+export interface R2Bucket {
+  head(key: string): Promise<R2Object | null>;
+  get(key: string): Promise<R2ObjectBody | null>;
+  put(
+    key: string,
+    value: ReadableStream | ArrayBuffer | string | Blob,
+    options?: R2PutOptions
+  ): Promise<R2Object>;
+  delete(keys: string | string[]): Promise<void>;
+  list(options?: R2ListOptions): Promise<R2Objects>;
+}
+
+export interface R2Object {
+  key: string;
+  version: string;
+  size: number;
+  etag: string;
+  httpEtag: string;
+  uploaded: Date;
+  httpMetadata?: R2HTTPMetadata;
+  customMetadata?: Record<string, string>;
+}
+
+export interface R2ObjectBody extends R2Object {
+  body: ReadableStream;
+  bodyUsed: boolean;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  text(): Promise<string>;
+  json<T>(): Promise<T>;
+  blob(): Promise<Blob>;
+}
+
+export interface R2PutOptions {
+  httpMetadata?: R2HTTPMetadata;
+  customMetadata?: Record<string, string>;
+}
+
+export interface R2HTTPMetadata {
+  contentType?: string;
+  contentLanguage?: string;
+  contentDisposition?: string;
+  contentEncoding?: string;
+  cacheControl?: string;
+  cacheExpiry?: Date;
+}
+
+export interface R2ListOptions {
+  prefix?: string;
+  cursor?: string;
+  delimiter?: string;
+  limit?: number;
+  include?: ("httpMetadata" | "customMetadata")[];
+}
+
+export interface R2Objects {
+  objects: R2Object[];
+  truncated: boolean;
+  cursor?: string;
+  delimitedPrefixes: string[];
+}
+
+// Cloudflare Images Types
+export interface ImagesBinding {
+  input(stream: ReadableStream): ImageInput;
+}
+
+export interface ImageInput {
+  transform(options: ImageTransformOptions): ImageTransformed;
+}
+
+export interface ImageTransformed {
+  draw(image: ImageInput | ReadableStream, options?: ImageDrawOptions): ImageTransformed;
+  output(options?: ImageOutputOptions): Promise<ReadableStream>;
+}
+
+export interface ImageTransformOptions {
+  width?: number;
+  height?: number;
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+  gravity?: "auto" | "left" | "right" | "top" | "bottom" | "center";
+  quality?: number;
+  blur?: number;
+  rotate?: 90 | 180 | 270;
+  sharpen?: number;
+  brightness?: number;
+  contrast?: number;
+  format?: "avif" | "webp" | "json" | "jpeg" | "png";
+}
+
+export interface ImageDrawOptions {
+  opacity?: number;
+  repeat?: boolean | "x" | "y";
+  top?: number;
+  left?: number;
+  bottom?: number;
+  right?: number;
+  width?: number;
+  height?: number;
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+  gravity?: "auto" | "left" | "right" | "top" | "bottom" | "center";
+  rotate?: number;
+}
+
+export interface ImageOutputOptions {
+  format?: "avif" | "webp" | "json" | "jpeg" | "png";
+  quality?: number;
+}
+
 // Environment Bindings
 export interface Env {
   ENVIRONMENT: string;
+  API_KEY: string;
+  ALLOWED_ORIGIN?: string;
   AI: Ai;
   VECTORIZE: VectorizeIndex;
   DB: D1Database;
   CACHE: KVNamespace;
+  MEDIA: R2Bucket;
+  IMAGES: ImagesBinding;
 }
 
 // Event Types (matching frontend)
