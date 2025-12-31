@@ -62,8 +62,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      <head suppressHydrationWarning>
+        <script
+          id="nhimbe-theme-script"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
         <ThemeProvider defaultTheme="system">
