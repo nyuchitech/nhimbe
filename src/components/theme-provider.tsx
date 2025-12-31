@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore, useCallback, ReactNode } from "react";
 
 type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -19,74 +19,76 @@ interface ThemeProviderProps {
   defaultTheme?: Theme;
 }
 
+// Subscribe to localStorage changes for theme
+function subscribeToThemeStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
+// Get stored theme from localStorage
+function getStoredTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  const stored = localStorage.getItem("nhimbe-theme");
+  if (stored === "light" || stored === "dark" || stored === "system") {
+    return stored;
+  }
+  return "system";
+}
+
+// Subscribe to system theme changes
+function subscribeToSystemTheme(callback: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+// Get current system theme
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "dark";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
-  const [mounted, setMounted] = useState(false);
+  // Use useSyncExternalStore for localStorage - React 19 compliant
+  const storedTheme = useSyncExternalStore(
+    subscribeToThemeStorage,
+    getStoredTheme,
+    () => defaultTheme // Server snapshot
+  );
 
-  // Initial theme detection from localStorage
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("nhimbe-theme") as Theme | null;
-    if (stored && (stored === "light" || stored === "dark" || stored === "system")) {
-      setTheme(stored);
-    }
+  // Use useSyncExternalStore for system preference
+  const systemTheme = useSyncExternalStore(
+    subscribeToSystemTheme,
+    getSystemTheme,
+    () => "dark" as ResolvedTheme // Server snapshot
+  );
+
+  // Calculate resolved theme
+  const resolvedTheme: ResolvedTheme = storedTheme === "system" ? systemTheme : storedTheme;
+
+  // Set theme function - updates localStorage which triggers re-render via useSyncExternalStore
+  const setTheme = useCallback((newTheme: Theme) => {
+    localStorage.setItem("nhimbe-theme", newTheme);
+    // Trigger storage event for useSyncExternalStore to pick up
+    window.dispatchEvent(new Event("storage"));
   }, []);
 
-  // Resolve the actual theme (light or dark) based on theme setting
+  // Cycle through: dark → light → system → dark
+  const cycleTheme = useCallback(() => {
+    const currentTheme = getStoredTheme();
+    if (currentTheme === "dark") setTheme("light");
+    else if (currentTheme === "light") setTheme("system");
+    else setTheme("dark");
+  }, [setTheme]);
+
+  // Update document class when resolved theme changes
   useEffect(() => {
-    if (!mounted) return;
-
-    if (theme === "system") {
-      setResolvedTheme(getSystemTheme());
-    } else {
-      setResolvedTheme(theme);
-    }
-  }, [theme, mounted]);
-
-  // Listen for system preference changes when in system mode
-  useEffect(() => {
-    if (!mounted || theme !== "system") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      setResolvedTheme(e.matches ? "dark" : "light");
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [mounted, theme]);
-
-  // Update document class and localStorage when theme changes
-  useEffect(() => {
-    if (!mounted) return;
-
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(resolvedTheme);
-    localStorage.setItem("nhimbe-theme", theme);
-  }, [theme, resolvedTheme, mounted]);
-
-  // Cycle through: dark → light → system → dark
-  const cycleTheme = () => {
-    setTheme((prev) => {
-      if (prev === "dark") return "light";
-      if (prev === "light") return "system";
-      return "dark";
-    });
-  };
-
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return null;
-  }
+  }, [resolvedTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, cycleTheme }}>
+    <ThemeContext.Provider value={{ theme: storedTheme, resolvedTheme, setTheme, cycleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

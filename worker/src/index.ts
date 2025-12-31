@@ -41,7 +41,7 @@ function isAllowedOrigin(request: Request, env: Env): boolean {
 }
 
 const worker: ExportedHandler<Env> = {
-  async fetch(request, env, _ctx): Promise<Response> {
+  async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
 
     // Handle CORS preflight

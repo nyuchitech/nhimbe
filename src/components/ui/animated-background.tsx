@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { lazy, Suspense, useSyncExternalStore } from "react";
 import { StaticGradientBackground } from "./gradient-background";
 import { useTheme } from "@/components/theme-provider";
 
@@ -15,6 +15,28 @@ interface AnimatedBackgroundProps {
   speed?: number;
 }
 
+// Subscribe to reduced motion preference changes
+function subscribeToMotionPreference(callback: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mediaQuery.addEventListener("change", callback);
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
+// Get current reduced motion preference
+function getMotionPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Check if we're mounted (client-side)
+function subscribeToMount() {
+  return () => {};
+}
+
+function getIsMounted(): boolean {
+  return typeof window !== "undefined";
+}
+
 // Inner component that uses the theme context
 function AnimatedBackgroundInner({
   enableAnimation = true,
@@ -22,21 +44,13 @@ function AnimatedBackgroundInner({
   speed = 0.4,
 }: AnimatedBackgroundProps) {
   const { resolvedTheme } = useTheme();
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  useEffect(() => {
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(motionQuery.matches);
-
-    const handleMotionChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-    motionQuery.addEventListener("change", handleMotionChange);
-
-    return () => {
-      motionQuery.removeEventListener("change", handleMotionChange);
-    };
-  }, []);
+  // Use useSyncExternalStore for reduced motion preference - React 19 compliant
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToMotionPreference,
+    getMotionPreference,
+    () => false // Server snapshot
+  );
 
   // Use static background if animation is disabled or user prefers reduced motion
   if (!enableAnimation || prefersReducedMotion) {
@@ -52,11 +66,12 @@ function AnimatedBackgroundInner({
 
 // Wrapper that handles SSR and mounting
 export function AnimatedBackground(props: AnimatedBackgroundProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Use useSyncExternalStore to detect client-side mounting
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    getIsMounted,
+    () => false // Server snapshot
+  );
 
   // Show static background on server or before mount
   if (!mounted) {

@@ -172,7 +172,7 @@ export default function ManageEventPage() {
           text: `Check out ${event.title} on nhimbe`,
           url,
         });
-      } catch (err) {
+      } catch {
         // User cancelled or share failed, fall back to copy
         handleCopyLink();
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus, Search, User } from "lucide-react";
@@ -47,11 +47,68 @@ const pageTitles: Record<string, string> = {
   "/profile": "Profile",
 };
 
+// Subscribe to storage changes for useSyncExternalStore
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
+// Create a subscription for H1 element changes
+function createH1Subscription(pathname: string) {
+  return function subscribeToH1(callback: () => void) {
+    // Check static title first - no subscription needed
+    if (pageTitles[pathname]) {
+      return () => {};
+    }
+
+    // For dynamic pages, observe DOM changes
+    const observer = new MutationObserver(callback);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Also trigger after a delay for initial render
+    const timer = setTimeout(callback, 100);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  };
+}
+
+function getPageTitleSnapshot(pathname: string): string | null {
+  // Check static mapping first
+  const staticTitle = pageTitles[pathname];
+  if (staticTitle) return staticTitle;
+
+  // For dynamic pages, get from H1
+  if (typeof window === "undefined") return null;
+  const h1 = document.querySelector("h1");
+  return h1?.textContent || null;
+}
+
 export function Header() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [pageTitle, setPageTitle] = useState<string | null>(null);
-  const [userInitials, setUserInitials] = useState<string | null>(null);
+
+  // Use useSyncExternalStore for localStorage - React 19 compliant
+  const userInitials = useSyncExternalStore(
+    subscribeToStorage,
+    getUserInitials,
+    () => null // Server snapshot
+  );
+
+  // Memoize the subscription function based on pathname
+  const subscribeToH1 = useMemo(() => createH1Subscription(pathname), [pathname]);
+
+  // Get page title snapshot
+  const getSnapshot = useMemo(() => () => getPageTitleSnapshot(pathname), [pathname]);
+
+  // Use useSyncExternalStore for page title - React 19 compliant
+  const pageTitle = useSyncExternalStore(
+    subscribeToH1,
+    getSnapshot,
+    () => pageTitles[pathname] || null // Server snapshot
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,49 +119,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Get user initials on mount and when storage changes
-  useEffect(() => {
-    setUserInitials(getUserInitials());
-
-    // Listen for storage changes (e.g., sign out)
-    const handleStorageChange = () => {
-      setUserInitials(getUserInitials());
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  // Get page title from static mapping or from the page's H1 element
-  useEffect(() => {
-    const staticTitle = pageTitles[pathname];
-    if (staticTitle) {
-      setPageTitle(staticTitle);
-      return;
-    }
-
-    // For dynamic pages, try to get the title from the first H1
-    const getPageTitle = () => {
-      const h1 = document.querySelector("h1");
-      if (h1) {
-        setPageTitle(h1.textContent || null);
-      } else {
-        setPageTitle(null);
-      }
-    };
-
-    // Wait for content to render
-    const timer = setTimeout(getPageTitle, 100);
-
-    // Also observe for H1 changes (for dynamic content)
-    const observer = new MutationObserver(getPageTitle);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-    };
-  }, [pathname]);
 
   return (
     <header

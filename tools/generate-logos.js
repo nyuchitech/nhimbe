@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * nhimbe Logo Generator Script
  * Generates SVG logo files for the nhimbe brand

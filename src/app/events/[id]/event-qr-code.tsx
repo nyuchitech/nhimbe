@@ -49,6 +49,7 @@ export function EventQRCode({ shortCode, title }: EventQRCodeProps) {
 
       {/* Fallback for browsers without canvas */}
       <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getQRCodeURL(fullUrl, 140)}
           alt={`QR code for ${title}`}
