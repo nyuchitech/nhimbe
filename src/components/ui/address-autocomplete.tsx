@@ -74,9 +74,10 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize state based on API key availability to avoid setState in effect
+  const [isLoading, setIsLoading] = useState(!!GOOGLE_MAPS_API_KEY);
   const [isFocused, setIsFocused] = useState(false);
-  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [apiKeyMissing] = useState(!GOOGLE_MAPS_API_KEY);
 
   const handlePlaceChanged = useCallback(() => {
     if (!autocompleteRef.current) return;
@@ -129,10 +130,8 @@ export function AddressAutocomplete({
   useEffect(() => {
     let mounted = true;
 
-    // Check if API key is configured
+    // Skip if API key is not configured (already handled via initial state)
     if (!GOOGLE_MAPS_API_KEY) {
-      setApiKeyMissing(true);
-      setIsLoading(false);
       return;
     }
 
@@ -150,7 +149,6 @@ export function AddressAutocomplete({
       autocompleteRef.current.addListener("place_changed", handlePlaceChanged);
     }).catch(() => {
       if (mounted) {
-        setApiKeyMissing(true);
         setIsLoading(false);
       }
     });

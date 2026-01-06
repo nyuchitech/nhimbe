@@ -44,7 +44,7 @@ export function EventCardHorizontal({
       <div className="flex gap-4 p-2 -m-2 rounded-xl hover:bg-surface/50 transition-colors">
         {/* Square Image Thumbnail */}
         <div
-          className="w-[72px] h-[72px] flex-shrink-0 rounded-lg overflow-hidden"
+          className="w-[72px] h-[72px] shrink-0 rounded-lg overflow-hidden"
           style={
             !coverImage
               ? { background: coverGradient || "linear-gradient(135deg, #004D40, #00796B)" }

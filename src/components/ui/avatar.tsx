@@ -23,7 +23,7 @@ export function Avatar({ initials, src, size = "md", className = "" }: AvatarPro
 
   return (
     <div
-      className={`${sizes[size]} rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center font-bold text-background cursor-pointer ${className}`}
+      className={`${sizes[size]} rounded-full bg-linear-to-br from-secondary to-primary flex items-center justify-center font-bold text-background cursor-pointer ${className}`}
     >
       {initials}
     </div>

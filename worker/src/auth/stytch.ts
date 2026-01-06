@@ -167,9 +167,10 @@ export function extractBearerToken(request: Request): string | null {
 /**
  * Middleware helper to get authenticated user from request
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getAuthenticatedUser(
   request: Request,
-  env: StytchEnv
+  _env: StytchEnv
 ): Promise<StytchUser | null> {
   const token = extractBearerToken(request);
   if (!token) {

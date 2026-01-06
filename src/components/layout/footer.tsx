@@ -18,7 +18,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-elevated py-12 mt-20">
-      <div className="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="max-w-300 mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
         {/* Brand */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-surface border border-elevated flex items-center justify-center overflow-hidden">

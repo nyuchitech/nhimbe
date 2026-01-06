@@ -303,10 +303,10 @@ export default function CreateEventPage() {
   };
 
   return (
-    <div className="max-w-[600px] mx-auto px-4 pb-24">
+    <div className="max-w-150 mx-auto px-4 pb-24">
       {/* Cover Preview with Image Upload */}
       <div
-        className="relative h-[200px] rounded-2xl overflow-hidden mb-4 group"
+        className="relative h-50 rounded-2xl overflow-hidden mb-4 group"
         style={{
           background: coverImage
             ? `url(${coverImage}) center/cover`
@@ -314,7 +314,7 @@ export default function CreateEventPage() {
         }}
       >
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
 
         {/* Image upload controls */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
@@ -351,7 +351,7 @@ export default function CreateEventPage() {
         <div className="flex-1 bg-surface rounded-xl p-2 flex items-center gap-3">
           {/* Theme Preview */}
           <div
-            className="w-10 h-10 rounded-lg flex-shrink-0"
+            className="w-10 h-10 rounded-lg shrink-0"
             style={{ background: mineralThemes[selectedTheme].gradient }}
           />
 
@@ -543,7 +543,7 @@ export default function CreateEventPage() {
 
       {/* Create Button - Fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t border-elevated">
-        <div className="max-w-[600px] mx-auto">
+        <div className="max-w-150 mx-auto">
           <button
             onClick={handleSubmit}
             disabled={submitting || uploading}
@@ -569,7 +569,7 @@ export default function CreateEventPage() {
       {/* Date Modal */}
       {showDateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Date & Time</h3>
               <button onClick={() => setShowDateModal(false)}>
@@ -620,7 +620,7 @@ export default function CreateEventPage() {
       {/* Location Modal */}
       {showLocationModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6 max-h-[80vh] overflow-y-auto">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Event Location</h3>
               <button onClick={() => setShowLocationModal(false)}>
@@ -767,7 +767,7 @@ export default function CreateEventPage() {
       {/* Category Modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6 max-h-[80vh] overflow-y-auto">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6 max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Category & Tags</h3>
               <button onClick={() => setShowCategoryModal(false)}>
@@ -835,7 +835,7 @@ export default function CreateEventPage() {
       {/* Description Modal */}
       {showDescriptionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-semibold">Description</h3>
@@ -875,7 +875,7 @@ export default function CreateEventPage() {
       {/* Price Modal */}
       {showPriceModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Ticket Price</h3>
               <button onClick={() => setShowPriceModal(false)}>
@@ -923,7 +923,7 @@ export default function CreateEventPage() {
       {/* Capacity Modal */}
       {showCapacityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6">
+          <div className="bg-background rounded-t-2xl w-full max-w-150 p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Capacity</h3>
               <button onClick={() => setShowCapacityModal(false)}>

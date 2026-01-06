@@ -27,19 +27,19 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
 
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
-      <div className="max-w-[1000px] mx-auto px-6 py-10">
+      <div className="max-w-250 mx-auto px-6 py-10">
         {/* Back Link */}
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-6"
         >
-          <ArrowLeft className="w-[18px] h-[18px]" />
+          <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
         </Link>
 
         {/* Cover Image */}
         <div
-          className="h-[400px] rounded-[var(--radius-card)] relative mb-8 overflow-hidden"
+          className="h-100 rounded-(--radius-card) relative mb-8 overflow-hidden"
           style={coverStyle}
         >
           {event.coverImage && (
@@ -51,7 +51,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               priority
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
 
           <div className="absolute top-6 left-6 flex gap-3 z-10">
             {/* Date Badge */}
@@ -197,10 +197,10 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
           </div>
 
           {/* Sidebar */}
-          <aside className="lg:sticky lg:top-[100px] self-start space-y-6">
+          <aside className="lg:sticky lg:top-25 self-start space-y-6">
             {/* Ticket Card */}
             <div
-              className="rounded-[var(--radius-card)] p-6"
+              className="rounded-(--radius-card) p-6"
               style={{ backgroundColor: "var(--event-surface)" }}
             >
               <h3 className="text-sm text-foreground/60 mb-2">
@@ -223,11 +223,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
 
             {/* QR Code Card */}
             <div
-              className="rounded-[var(--radius-card)] p-5"
+              className="rounded-(--radius-card) p-5"
               style={{ backgroundColor: "var(--event-surface)" }}
             >
               <div className="flex items-center gap-2.5 mb-4">
-                <QrCode className="w-[18px] h-[18px]" style={{ color: "var(--event-primary)" }} />
+                <QrCode className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
                 <h4 className="font-semibold text-sm">Share Event</h4>
               </div>
               <EventQRCode shortCode={event.shortCode} title={event.title} />
@@ -239,11 +239,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             {/* Friends Card */}
             {event.friends && event.friends.length > 0 && (
               <div
-                className="rounded-[var(--radius-card)] p-5"
+                className="rounded-(--radius-card) p-5"
                 style={{ backgroundColor: "var(--event-surface)" }}
               >
                 <div className="flex items-center gap-2.5 mb-4">
-                  <Users className="w-[18px] h-[18px]" style={{ color: "var(--event-primary)" }} />
+                  <Users className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
                   <h4 className="font-semibold text-sm">
                     {event.friends.length} friend{event.friends.length > 1 ? "s" : ""} going
                   </h4>
@@ -252,7 +252,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   {event.friends.map((friend, index) => (
                     <div key={index} className="flex flex-col items-center gap-2">
                       <div
-                        className="w-[52px] h-[52px] rounded-full border-2"
+                        className="w-13 h-[52px] rounded-full border-2"
                         style={{
                           background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))`,
                           borderColor: "var(--event-primary)",

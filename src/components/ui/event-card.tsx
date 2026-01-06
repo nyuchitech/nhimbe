@@ -34,9 +34,9 @@ export function EventCard({
 
   return (
     <Link href={`/events/${id}`} className="block">
-      <div className="rounded-[var(--radius-card)] overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
+      <div className="rounded-(--radius-card) overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
         {/* Cover */}
-        <div className="h-[200px] relative" style={coverStyle}>
+        <div className="h-50 relative" style={coverStyle}>
           {/* Date Badge - theme-aware */}
           <div className="absolute top-4 left-4 bg-background/90 dark:bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center border border-foreground/10">
             <div className="text-2xl font-extrabold text-primary leading-none">
@@ -66,9 +66,9 @@ export function EventCard({
             <div className="flex items-center">
               {/* Attendee Avatars */}
               <div className="flex -space-x-2.5">
-                <div className="w-8 h-8 rounded-full border-2 border-surface bg-gradient-to-br from-secondary to-primary" />
-                <div className="w-8 h-8 rounded-full border-2 border-surface bg-gradient-to-br from-accent to-[#FF6B6B]" />
-                <div className="w-8 h-8 rounded-full border-2 border-surface bg-gradient-to-br from-primary to-[#00B0FF]" />
+                <div className="w-8 h-8 rounded-full border-2 border-surface bg-linear-to-br from-secondary to-primary" />
+                <div className="w-8 h-8 rounded-full border-2 border-surface bg-linear-to-br from-accent to-[#FF6B6B]" />
+                <div className="w-8 h-8 rounded-full border-2 border-surface bg-linear-to-br from-primary to-[#00B0FF]" />
               </div>
               <span className="text-sm text-foreground/60 ml-2">
                 +{attendeeCount} going

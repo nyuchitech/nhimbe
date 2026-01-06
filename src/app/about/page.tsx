@@ -29,7 +29,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-12">
+    <div className="max-w-200 mx-auto px-6 py-12">
       {/* Hero */}
       <div className="text-center mb-16">
         <h1 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4">

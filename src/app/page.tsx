@@ -109,7 +109,7 @@ export default function DiscoverPage() {
       {/* Timezone & Weather Bar */}
       {currentTime && (
         <div className="border-b border-elevated/50">
-          <div className="max-w-[1200px] mx-auto px-6 py-2 flex items-center justify-end gap-4 text-sm text-text-tertiary">
+          <div className="max-w-300 mx-auto px-6 py-2 flex items-center justify-end gap-4 text-sm text-text-tertiary">
             {weather && (
               <div className="flex items-center gap-2">
                 <WeatherIcon icon={weather.icon} />
@@ -126,7 +126,7 @@ export default function DiscoverPage() {
 
       {/* Hero Section */}
       <section className="py-16 md:py-24">
-        <div className="max-w-[1200px] mx-auto px-6">
+        <div className="max-w-300 mx-auto px-6">
           <p className="font-serif italic text-lg text-text-secondary mb-4">
             &ldquo;Together we gather, together we grow&rdquo;
           </p>
@@ -135,7 +135,7 @@ export default function DiscoverPage() {
             <br />
             that move you
           </h1>
-          <p className="text-lg text-text-secondary max-w-[600px] mb-8">
+          <p className="text-lg text-text-secondary max-w-150 mb-8">
             From tech meetups to cultural celebrations, find events that bring your community together. Powered by Ubuntu philosophy.
           </p>
           <Link
@@ -150,7 +150,7 @@ export default function DiscoverPage() {
 
       {/* Popular Events Section */}
       <section className="pb-16">
-        <div className="max-w-[1200px] mx-auto px-6">
+        <div className="max-w-300 mx-auto px-6">
           {/* Section Header with City Selector */}
           <div className="flex items-start justify-between mb-8">
             <div>
@@ -172,7 +172,7 @@ export default function DiscoverPage() {
                 </button>
 
                 {showCityDropdown && (
-                  <div className="absolute top-full left-0 mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-[200px] z-50">
+                  <div className="absolute top-full left-0 mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-50 z-50">
                     {availableCities.map((city) => (
                       <button
                         key={city}
@@ -293,7 +293,7 @@ export default function DiscoverPage() {
 
       {/* CTA Section */}
       <section className="py-16 border-t border-elevated">
-        <div className="max-w-[1200px] mx-auto px-6 text-center">
+        <div className="max-w-300 mx-auto px-6 text-center">
           <p className="font-serif italic text-lg text-text-secondary mb-4">
             &ldquo;Together we gather, together we grow&rdquo;
           </p>

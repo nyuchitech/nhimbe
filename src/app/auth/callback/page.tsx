@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,13 +14,8 @@ function AuthCallbackContent() {
   const searchParams = useSearchParams();
   const { refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
 
-  useEffect(() => {
-    handleOAuthCallback();
-  }, []);
-
-  const handleOAuthCallback = async () => {
+  const handleOAuthCallback = useCallback(async () => {
     try {
       const code = searchParams.get("code");
       const state = searchParams.get("state");
@@ -30,14 +25,12 @@ function AuthCallbackContent() {
       // Check for OAuth error
       if (errorParam) {
         setError(errorDescription || "Authentication was cancelled or failed");
-        setIsProcessing(false);
         return;
       }
 
       // Verify we have a code
       if (!code) {
         setError("No authorization code received");
-        setIsProcessing(false);
         return;
       }
 
@@ -45,7 +38,6 @@ function AuthCallbackContent() {
       const storedState = localStorage.getItem("oauth_state");
       if (state !== storedState) {
         setError("Invalid state parameter. Please try signing in again.");
-        setIsProcessing(false);
         return;
       }
 
@@ -99,9 +91,12 @@ function AuthCallbackContent() {
     } catch (err) {
       console.error("OAuth callback failed:", err);
       setError(err instanceof Error ? err.message : "Authentication failed");
-      setIsProcessing(false);
     }
-  };
+  }, [searchParams, refreshUser, router]);
+
+  useEffect(() => {
+    handleOAuthCallback();
+  }, [handleOAuthCallback]);
 
   if (error) {
     return (

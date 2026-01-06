@@ -30,7 +30,7 @@ export function EventMap({ venue, address, city, country }: EventMapProps) {
     // Fallback UI when map fails to load
     return (
       <div
-        className="rounded-[var(--radius-card)] overflow-hidden"
+        className="rounded-(--radius-card) overflow-hidden"
         style={{ backgroundColor: "var(--event-surface)" }}
       >
         <div className="p-6 text-center">
@@ -58,7 +58,7 @@ export function EventMap({ venue, address, city, country }: EventMapProps) {
 
   return (
     <div
-      className="rounded-[var(--radius-card)] overflow-hidden"
+      className="rounded-(--radius-card) overflow-hidden"
       style={{ backgroundColor: "var(--event-surface)" }}
     >
       {/* Map Header */}
@@ -82,7 +82,7 @@ export function EventMap({ venue, address, city, country }: EventMapProps) {
       </div>
 
       {/* Map Embed */}
-      <div className="relative aspect-[16/9] w-full">
+      <div className="relative aspect-video w-full">
         <iframe
           src={embedUrl}
           className="absolute inset-0 w-full h-full"

@@ -223,7 +223,7 @@ export default function OnboardingForm() {
                 />
               </div>
               <p className="text-sm text-text-secondary">
-                This is how you'll appear to other attendees and hosts.
+                This is how you&apos;ll appear to other attendees and hosts.
               </p>
             </div>
           )}

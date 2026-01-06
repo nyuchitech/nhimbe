@@ -103,10 +103,10 @@ function ProfileContent() {
   ];
 
   return (
-    <div className="max-w-[600px] mx-auto px-6 py-8">
+    <div className="max-w-150 mx-auto px-6 py-8">
       {/* Profile Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-2xl font-bold text-background">
+        <div className="w-20 h-20 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-2xl font-bold text-background">
           {initials}
         </div>
         <div className="flex-1">
@@ -161,13 +161,13 @@ function ProfileContent() {
                         role="switch"
                         aria-checked={isOn}
                         onClick={item.onChange}
-                        className={`relative w-[51px] h-[31px] rounded-full transition-colors ${
+                        className={`relative w-12.75 h-7.75 rounded-full transition-colors ${
                           isOn ? "bg-primary" : "bg-elevated"
                         }`}
                       >
                         <div
-                          className={`absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-200 ${
-                            isOn ? "translate-x-[22px]" : "translate-x-[2px]"
+                          className={`absolute top-0.5 w-6.75 h-6.75 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                            isOn ? "translate-x-5.5" : "translate-x-0.5"
                           }`}
                         />
                       </button>

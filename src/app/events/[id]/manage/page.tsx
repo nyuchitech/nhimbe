@@ -107,7 +107,7 @@ export default function ManageEventPage() {
 
   if (!event) {
     return (
-      <div className="max-w-[800px] mx-auto px-6 py-12 text-center">
+      <div className="max-w-200 mx-auto px-6 py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Event not found</h1>
         <Link href="/my-events">
           <Button variant="primary">Back to My Events</Button>
@@ -217,7 +217,7 @@ export default function ManageEventPage() {
   ];
 
   return (
-    <div className="max-w-[1000px] mx-auto px-6 py-8">
+    <div className="max-w-250 mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link
@@ -407,7 +407,7 @@ export default function ManageEventPage() {
                 className="flex items-center gap-4 p-4"
               >
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-sm font-bold text-background">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-secondary to-primary flex items-center justify-center text-sm font-bold text-background">
                   {registration.avatar}
                 </div>
 
@@ -486,13 +486,13 @@ export default function ManageEventPage() {
                   role="switch"
                   aria-checked={requireApproval}
                   onClick={() => setRequireApproval(!requireApproval)}
-                  className={`relative w-[51px] h-[31px] rounded-full transition-colors ${
+                  className={`relative w-12.75 h-7.75 rounded-full transition-colors ${
                     requireApproval ? "bg-primary" : "bg-elevated"
                   }`}
                 >
                   <div
-                    className={`absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-200 ${
-                      requireApproval ? "translate-x-[22px]" : "translate-x-[2px]"
+                    className={`absolute top-0.5 w-6.75 h-6.75 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                      requireApproval ? "translate-x-5.5" : "translate-x-0.5"
                     }`}
                   />
                 </button>

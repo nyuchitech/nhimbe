@@ -197,7 +197,7 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 top-full mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-[200px] z-50">
+        <div className="absolute right-0 top-full mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-50 z-50">
           <button
             onClick={handleDownloadICS}
             className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"

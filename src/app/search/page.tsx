@@ -66,7 +66,7 @@ export default function SearchPage() {
   const popularCategories = categories.slice(0, 6);
 
   return (
-    <div className="max-w-[800px] mx-auto px-6 py-8">
+    <div className="max-w-200 mx-auto px-6 py-8">
       {/* Search Input */}
       <div className="relative mb-8">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-text-tertiary" />
@@ -114,7 +114,7 @@ export default function SearchPage() {
                 >
                   {/* Event Cover */}
                   <div
-                    className="w-16 h-16 rounded-lg flex-shrink-0"
+                    className="w-16 h-16 rounded-lg shrink-0"
                     style={{
                       background: event.coverImage
                         ? `url(${event.coverImage}) center/cover`
@@ -213,7 +213,7 @@ export default function SearchPage() {
                   className="flex items-center gap-4 p-4 bg-surface rounded-xl hover:bg-elevated transition-colors"
                 >
                   <div
-                    className="w-12 h-12 rounded-lg flex-shrink-0"
+                    className="w-12 h-12 rounded-lg shrink-0"
                     style={{
                       background: event.coverImage
                         ? `url(${event.coverImage}) center/cover`

@@ -73,15 +73,16 @@ export function Header() {
   const iconSrc = resolvedTheme === "dark" ? "/nhimbe-icon-dark.png" : "/nhimbe-icon-light.png";
 
   // Get user initials from auth context
+  const userName = user?.name;
   const userInitials = useMemo(() => {
-    if (!user?.name) return null;
-    return user.name
+    if (!userName) return null;
+    return userName
       .split(" ")
       .map((n: string) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  }, [user?.name]);
+  }, [userName]);
 
   // Memoize the subscription function based on pathname
   const subscribeToH1 = useMemo(() => createH1Subscription(pathname), [pathname]);
@@ -114,11 +115,11 @@ export function Header() {
           : ""
       }`}
     >
-      <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-300 mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo / Page Title */}
-        <Link href="/" className="min-w-0 flex-shrink flex items-center gap-3">
+        <Link href="/" className="min-w-0 shrink flex items-center gap-3">
           {/* App Icon */}
-          <div className="w-[34px] h-[34px] rounded-lg bg-surface border border-elevated flex items-center justify-center overflow-hidden">
+          <div className="w-8.5 h-8.5 rounded-lg bg-surface border border-elevated flex items-center justify-center overflow-hidden">
             <Image
               src={iconSrc}
               alt="nhimbe"
@@ -126,7 +127,7 @@ export function Header() {
               height={34}
             />
           </div>
-          <div className="relative h-[34px] flex items-center">
+          <div className="relative h-8.5 flex items-center">
             {/* Logo text - visible when not scrolled */}
             <span
               className={`text-[24px] font-bold text-primary transition-all duration-300 ${
@@ -140,7 +141,7 @@ export function Header() {
             {/* Page title - visible when scrolled */}
             {pageTitle && (
               <span
-                className={`text-lg font-semibold text-foreground truncate max-w-[200px] sm:max-w-[300px] transition-all duration-300 ${
+                className={`text-lg font-semibold text-foreground truncate max-w-50 sm:max-w-75 transition-all duration-300 ${
                   isScrolled
                     ? "opacity-100"
                     : "opacity-0 absolute"
@@ -170,7 +171,7 @@ export function Header() {
         </nav>
 
         {/* Actions - pill-shaped icon group with 44px touch targets */}
-        <div className="flex items-center bg-primary rounded-full p-1 gap-1 flex-shrink-0">
+        <div className="flex items-center bg-primary rounded-full p-1 gap-1 shrink-0">
           <Link
             href="/events/create"
             className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
@@ -198,7 +199,7 @@ export function Header() {
               aria-label="Profile"
             >
               {userInitials ? (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-primary-foreground">
                   {userInitials}
                 </div>
               ) : (

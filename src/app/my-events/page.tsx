@@ -49,7 +49,7 @@ export default function MyEventsPage() {
   }[activeTab];
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-12">
+    <div className="max-w-300 mx-auto px-6 py-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>

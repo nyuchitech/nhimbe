@@ -86,7 +86,7 @@ export default function CalendarPage() {
     year === today.getFullYear();
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-12">
+    <div className="max-w-300 mx-auto px-6 py-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
@@ -151,7 +151,7 @@ export default function CalendarPage() {
               {calendarDays.map((day, index) => (
                 <div
                   key={index}
-                  className={`min-h-[120px] p-2 border-b border-r border-elevated ${
+                  className={`min-h-30 p-2 border-b border-r border-elevated ${
                     day === null ? "bg-elevated/30" : ""
                   } ${index % 7 === 6 ? "border-r-0" : ""}`}
                 >
