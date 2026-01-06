@@ -13,6 +13,8 @@ import type {
 import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search";
 import { chat, generateSuggestions } from "./ai/assistant";
 import { indexEvent, indexEvents, removeEventFromIndex } from "./ai/embeddings";
+import { generateDescription, regenerateDescription, getWizardSteps, type DescriptionContext } from "./ai/description-generator";
+import { getAuthenticatedUser, exchangeCodeForTokens, getUserInfo } from "./auth/stytch";
 
 const VERSION = "0.2.0";
 
@@ -104,6 +106,31 @@ const worker: ExportedHandler<Env> = {
       // AI Assistant endpoint
       if (url.pathname === "/api/assistant") {
         return handleAssistant(request, env);
+      }
+
+      // AI Description Generator endpoints
+      if (url.pathname === "/api/ai/description/wizard-steps") {
+        return handleDescriptionWizardSteps(request);
+      }
+      if (url.pathname === "/api/ai/description/generate") {
+        return handleGenerateDescription(request, env);
+      }
+      if (url.pathname === "/api/ai/description/regenerate") {
+        return handleRegenerateDescription(request, env);
+      }
+
+      // Auth endpoints
+      if (url.pathname === "/api/auth/token") {
+        return handleAuthToken(request, env);
+      }
+      if (url.pathname === "/api/auth/me") {
+        return handleAuthMe(request, env);
+      }
+      if (url.pathname === "/api/auth/onboarding") {
+        return handleAuthOnboarding(request, env);
+      }
+      if (url.pathname === "/api/auth/logout") {
+        return handleAuthLogout(request);
       }
 
       // Recommendations endpoint
@@ -564,10 +591,10 @@ async function handleEvents(
         date_day, date_month, date_full, date_time, date_iso,
         location_venue, location_address, location_city, location_country,
         category, tags, cover_image, cover_gradient,
-        attendee_count, capacity, is_online,
+        attendee_count, capacity, is_online, meeting_url, meeting_platform,
         host_name, host_handle, host_initials, host_event_count,
         price_amount, price_currency, price_label
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       shortCode,
@@ -590,6 +617,8 @@ async function handleEvents(
       body.attendeeCount || 0,
       body.capacity,
       body.isOnline || false,
+      body.meetingUrl,
+      body.meetingPlatform,
       body.host?.name,
       body.host?.handle,
       body.host?.initials,
@@ -615,6 +644,8 @@ async function handleEvents(
       attendeeCount: body.attendeeCount || 0,
       capacity: body.capacity,
       isOnline: body.isOnline,
+      meetingUrl: body.meetingUrl,
+      meetingPlatform: body.meetingPlatform,
       host: body.host!,
       price: body.price,
     };
@@ -714,6 +745,55 @@ async function handleAssistant(request: Request, env: Env): Promise<Response> {
   const response = await chat(env.AI, env.VECTORIZE, env.DB, body);
 
   return jsonResponse(response);
+}
+
+// ============================================
+// AI Description Generator Handlers
+// ============================================
+
+async function handleDescriptionWizardSteps(request: Request): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  let category: string | undefined;
+  if (request.method === "POST") {
+    const body = await request.json() as { category?: string };
+    category = body.category;
+  }
+
+  const steps = getWizardSteps(category);
+  return jsonResponse({ steps });
+}
+
+async function handleGenerateDescription(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const body = await request.json() as DescriptionContext;
+
+  if (!body.eventType && !body.targetAudience && !body.keyTakeaways) {
+    return jsonResponse({ error: "Please provide at least one detail about your event" }, 400);
+  }
+
+  const result = await generateDescription(env.AI, body);
+  return jsonResponse(result);
+}
+
+async function handleRegenerateDescription(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const body = await request.json() as DescriptionContext & { feedback: string };
+
+  if (!body.feedback) {
+    return jsonResponse({ error: "Feedback is required for regeneration" }, 400);
+  }
+
+  const result = await regenerateDescription(env.AI, body, body.feedback);
+  return jsonResponse(result);
 }
 
 // ============================================
@@ -868,6 +948,268 @@ async function handleUsers(
   }
 
   return jsonResponse({ error: "Not Found" }, 404);
+}
+
+// ============================================
+// Auth Handlers
+// ============================================
+
+async function handleAuthMe(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "GET") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const stytchUser = await getAuthenticatedUser(request, env);
+  if (!stytchUser) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  // Look up user in our database by Stytch user ID
+  interface DbUserRow {
+    id: string;
+    email: string;
+    name: string;
+    handle: string | null;
+    avatar_url: string | null;
+    city: string | null;
+    country: string | null;
+    interests: string | null;
+    onboarding_completed: number | null;
+    stytch_user_id: string | null;
+  }
+  const result = await env.DB.prepare(
+    "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(stytchUser.userId, stytchUser.email).first() as DbUserRow | null;
+
+  if (!result) {
+    return jsonResponse({ error: "User not found" }, 404);
+  }
+
+  const user = {
+    id: result.id,
+    email: result.email,
+    name: result.name,
+    handle: result.handle,
+    avatarUrl: result.avatar_url,
+    city: result.city,
+    country: result.country,
+    interests: JSON.parse(result.interests || "[]"),
+    onboardingCompleted: !!(result.onboarding_completed),
+    stytchUserId: result.stytch_user_id,
+  };
+
+  return jsonResponse({ user });
+}
+
+async function handleAuthOnboarding(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const stytchUser = await getAuthenticatedUser(request, env);
+  if (!stytchUser) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const body = await request.json() as {
+    name: string;
+    city: string;
+    country: string;
+    interests: string[];
+  };
+
+  if (!body.name || !body.city || !body.country) {
+    return jsonResponse({ error: "Name, city, and country are required" }, 400);
+  }
+
+  // Check if user already exists
+  const existingUser = await env.DB.prepare(
+    "SELECT id FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(stytchUser.userId, stytchUser.email).first() as { id: string } | null;
+
+  let userId: string;
+
+  if (existingUser) {
+    // Update existing user
+    userId = existingUser.id;
+    await env.DB.prepare(`
+      UPDATE users SET
+        name = ?,
+        stytch_user_id = ?,
+        city = ?,
+        country = ?,
+        interests = ?,
+        email_verified = 1,
+        onboarding_completed = 1,
+        last_login_at = datetime('now'),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      body.name,
+      stytchUser.userId,
+      body.city,
+      body.country,
+      JSON.stringify(body.interests || []),
+      userId
+    ).run();
+  } else {
+    // Create new user
+    userId = generateId();
+    const handle = generateHandle(body.name);
+
+    await env.DB.prepare(`
+      INSERT INTO users (
+        id, email, name, handle, stytch_user_id,
+        city, country, interests,
+        email_verified, onboarding_completed, last_login_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'))
+    `).bind(
+      userId,
+      stytchUser.email,
+      body.name,
+      handle,
+      stytchUser.userId,
+      body.city,
+      body.country,
+      JSON.stringify(body.interests || [])
+    ).run();
+  }
+
+  // Fetch the created/updated user
+  interface UserRow {
+    id: string;
+    email: string;
+    name: string;
+    handle: string;
+    avatar_url: string | null;
+    city: string;
+    country: string;
+    interests: string;
+    stytch_user_id: string;
+  }
+  const result = await env.DB.prepare(
+    "SELECT * FROM users WHERE id = ?"
+  ).bind(userId).first() as UserRow;
+
+  const user = {
+    id: result.id,
+    email: result.email,
+    name: result.name,
+    handle: result.handle,
+    avatarUrl: result.avatar_url,
+    city: result.city,
+    country: result.country,
+    interests: JSON.parse(result.interests || "[]"),
+    onboardingCompleted: true,
+    stytchUserId: result.stytch_user_id,
+  };
+
+  return jsonResponse({ user, message: "Onboarding completed" }, 201);
+}
+
+async function handleAuthToken(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  const body = await request.json() as {
+    code: string;
+    redirect_uri: string;
+  };
+
+  if (!body.code || !body.redirect_uri) {
+    return jsonResponse({ error: "Code and redirect_uri are required" }, 400);
+  }
+
+  // Exchange authorization code for tokens
+  const tokens = await exchangeCodeForTokens(body.code, body.redirect_uri, env);
+  if (!tokens) {
+    return jsonResponse({ error: "Failed to exchange authorization code" }, 400);
+  }
+
+  // Get user info from the access token
+  const userInfo = await getUserInfo(tokens.access_token);
+  if (!userInfo) {
+    return jsonResponse({ error: "Failed to get user info" }, 400);
+  }
+
+  // Look up or prepare user data
+  interface DbUser {
+    id: string;
+    email: string;
+    name: string | null;
+    handle: string | null;
+    avatar_url: string | null;
+    city: string | null;
+    country: string | null;
+    interests: string | null;
+    onboarding_completed: number | null;
+    stytch_user_id: string | null;
+  }
+
+  let user = null;
+  const existingUser = await env.DB.prepare(
+    "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(userInfo.sub, userInfo.email).first() as DbUser | null;
+
+  if (existingUser) {
+    // Update last login
+    await env.DB.prepare(
+      "UPDATE users SET last_login_at = datetime('now'), stytch_user_id = ? WHERE id = ?"
+    ).bind(userInfo.sub, existingUser.id).run();
+
+    user = {
+      id: existingUser.id,
+      email: existingUser.email,
+      name: existingUser.name || userInfo.name || `${userInfo.given_name || ""} ${userInfo.family_name || ""}`.trim(),
+      handle: existingUser.handle,
+      avatarUrl: existingUser.avatar_url,
+      city: existingUser.city,
+      country: existingUser.country,
+      interests: JSON.parse(existingUser.interests || "[]"),
+      onboardingCompleted: !!(existingUser.onboarding_completed),
+      stytchUserId: userInfo.sub,
+    };
+  } else {
+    // New user - will need onboarding
+    user = {
+      id: null,
+      email: userInfo.email,
+      name: userInfo.name || `${userInfo.given_name || ""} ${userInfo.family_name || ""}`.trim() || "",
+      handle: null,
+      avatarUrl: null,
+      city: null,
+      country: null,
+      interests: [],
+      onboardingCompleted: false,
+      stytchUserId: userInfo.sub,
+    };
+  }
+
+  return jsonResponse({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    token_type: tokens.token_type,
+    expires_in: tokens.expires_in,
+    user,
+  });
+}
+
+function handleAuthLogout(request: Request): Response {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  // For OAuth tokens, we can't revoke them server-side easily
+  // The client should clear local storage
+  // In the future, we could implement token revocation with Stytch
+  return jsonResponse({ message: "Logged out successfully" });
+}
+
+function generateHandle(name: string): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const suffix = Math.random().toString(36).substring(2, 6);
+  return `@${base}${suffix}`;
 }
 
 // ============================================
@@ -1453,6 +1795,8 @@ function dbRowToEvent(row: Record<string, unknown>): Event {
     friendsCount: row.friends_count as number | undefined,
     capacity: row.capacity as number | undefined,
     isOnline: row.is_online as boolean | undefined,
+    meetingUrl: row.meeting_url as string | undefined,
+    meetingPlatform: row.meeting_platform as "zoom" | "google_meet" | "teams" | "other" | undefined,
     host: {
       name: row.host_name as string,
       handle: row.host_handle as string,

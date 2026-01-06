@@ -3,21 +3,17 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-// Five African Minerals color palette
+// Subtle color palette - on brand, minimal
 const COLORS = {
   light: {
-    malachite: "#004D40", // Primary - Teal
-    amethyst: "#4B0082", // Secondary - Deep Purple
-    amber: "#5D4037", // Accent - Warm Brown
-    gold: "#8B4513", // Complementary
-    jade: "#00796B", // Secondary teal
+    primary: "#00574B",    // Primary teal
+    secondary: "#004D40",  // Darker teal
+    background: "#FAFAF8", // Light background
   },
   dark: {
-    malachite: "#64FFDA", // Primary - Bright Teal
-    amethyst: "#B388FF", // Secondary - Light Purple
-    amber: "#FFD740", // Accent - Gold
-    gold: "#FF6B6B", // Complementary - Coral
-    jade: "#00BFA5", // Secondary teal
+    primary: "#64FFDA",    // Primary teal (malachite)
+    secondary: "#00BFA5",  // Secondary teal
+    background: "#0A0A0A", // Dark background
   },
 };
 
@@ -29,8 +25,8 @@ interface GradientBackgroundProps {
 
 export function GradientBackground({
   theme = "dark",
-  intensity = 0.4,
-  speed = 0.5,
+  intensity = 0.15,
+  speed = 0.3,
 }: GradientBackgroundProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -55,9 +51,10 @@ export function GradientBackground({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Shader material for gradient animation
     const colors = COLORS[theme];
-    const colorArray = Object.values(colors).map((c) => new THREE.Color(c));
+    const primaryColor = new THREE.Color(colors.primary);
+    const secondaryColor = new THREE.Color(colors.secondary);
+    const bgColor = new THREE.Color(colors.background);
 
     const vertexShader = `
       varying vec2 vUv;
@@ -67,19 +64,18 @@ export function GradientBackground({
       }
     `;
 
+    // Contour lines shader - subtle flowing lines
     const fragmentShader = `
       uniform float uTime;
       uniform float uIntensity;
-      uniform vec3 uColor1;
-      uniform vec3 uColor2;
-      uniform vec3 uColor3;
-      uniform vec3 uColor4;
-      uniform vec3 uColor5;
+      uniform vec3 uPrimaryColor;
+      uniform vec3 uSecondaryColor;
+      uniform vec3 uBgColor;
       uniform vec2 uResolution;
 
       varying vec2 vUv;
 
-      // Simplex noise functions
+      // Simplex noise
       vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -112,36 +108,38 @@ export function GradientBackground({
         float aspectRatio = uResolution.x / uResolution.y;
         uv.x *= aspectRatio;
 
-        // Create flowing noise patterns
-        float t = uTime * 0.15;
-        float noise1 = snoise(uv * 1.5 + vec2(t * 0.5, t * 0.3));
-        float noise2 = snoise(uv * 2.0 + vec2(-t * 0.4, t * 0.6));
-        float noise3 = snoise(uv * 0.8 + vec2(t * 0.3, -t * 0.5));
+        float t = uTime * 0.1;
 
-        // Combine noises for smooth transitions
-        float n = (noise1 + noise2 * 0.5 + noise3 * 0.3) / 1.8;
-        n = n * 0.5 + 0.5; // Normalize to 0-1
+        // Create flowing contour field
+        float noise1 = snoise(uv * 0.8 + vec2(t * 0.2, t * 0.15));
+        float noise2 = snoise(uv * 1.2 + vec2(-t * 0.15, t * 0.1));
+        float field = (noise1 + noise2 * 0.5) / 1.5;
 
-        // Create color gradient based on noise
-        vec3 color;
-        if (n < 0.2) {
-          color = mix(uColor1, uColor2, n / 0.2);
-        } else if (n < 0.4) {
-          color = mix(uColor2, uColor3, (n - 0.2) / 0.2);
-        } else if (n < 0.6) {
-          color = mix(uColor3, uColor4, (n - 0.4) / 0.2);
-        } else if (n < 0.8) {
-          color = mix(uColor4, uColor5, (n - 0.6) / 0.2);
-        } else {
-          color = mix(uColor5, uColor1, (n - 0.8) / 0.2);
-        }
+        // Create contour lines
+        float contourFreq = 8.0;
+        float contourValue = fract(field * contourFreq);
 
-        // Add blur effect through subtle noise overlay
-        float blur = snoise(uv * 10.0 + t) * 0.02;
-        color += blur;
+        // Smooth contour lines
+        float lineWidth = 0.08;
+        float line = smoothstep(0.0, lineWidth, contourValue) * smoothstep(lineWidth * 2.0, lineWidth, contourValue);
 
-        // Apply intensity
-        color = mix(vec3(${theme === "dark" ? "0.04, 0.04, 0.04" : "1.0, 1.0, 1.0"}), color, uIntensity);
+        // Secondary contour lines (offset)
+        float contourValue2 = fract((field + 0.5) * contourFreq);
+        float line2 = smoothstep(0.0, lineWidth * 0.5, contourValue2) * smoothstep(lineWidth, lineWidth * 0.5, contourValue2);
+
+        // Combine lines with different opacities
+        float primaryLine = line * 0.6;
+        float secondaryLine = line2 * 0.3;
+
+        // Color mixing
+        vec3 color = uBgColor;
+        color = mix(color, uPrimaryColor, primaryLine * uIntensity);
+        color = mix(color, uSecondaryColor, secondaryLine * uIntensity * 0.5);
+
+        // Add subtle gradient glow in corners
+        float glow = smoothstep(1.5, 0.0, length(uv - vec2(0.2, 0.8))) * 0.15;
+        glow += smoothstep(1.5, 0.0, length(uv - vec2(aspectRatio * 0.8, 0.2))) * 0.1;
+        color = mix(color, uPrimaryColor, glow * uIntensity);
 
         gl_FragColor = vec4(color, 1.0);
       }
@@ -153,11 +151,9 @@ export function GradientBackground({
       uniforms: {
         uTime: { value: 0 },
         uIntensity: { value: intensity },
-        uColor1: { value: colorArray[0] },
-        uColor2: { value: colorArray[1] },
-        uColor3: { value: colorArray[2] },
-        uColor4: { value: colorArray[3] },
-        uColor5: { value: colorArray[4] },
+        uPrimaryColor: { value: primaryColor },
+        uSecondaryColor: { value: secondaryColor },
+        uBgColor: { value: bgColor },
         uResolution: { value: new THREE.Vector2(width, height) },
       },
     });
@@ -212,15 +208,11 @@ export function StaticGradientBackground({ theme = "dark" }: { theme?: "light" |
   const colors = COLORS[theme];
   const gradient =
     theme === "dark"
-      ? `radial-gradient(ellipse at 20% 30%, ${colors.malachite}30 0%, transparent 50%),
-         radial-gradient(ellipse at 80% 20%, ${colors.amethyst}25 0%, transparent 50%),
-         radial-gradient(ellipse at 60% 80%, ${colors.amber}20 0%, transparent 50%),
-         radial-gradient(ellipse at 10% 70%, ${colors.jade}15 0%, transparent 50%),
-         linear-gradient(135deg, #0A0A0A 0%, #111111 100%)`
-      : `radial-gradient(ellipse at 20% 30%, ${colors.malachite}20 0%, transparent 50%),
-         radial-gradient(ellipse at 80% 20%, ${colors.amethyst}15 0%, transparent 50%),
-         radial-gradient(ellipse at 60% 80%, ${colors.amber}10 0%, transparent 50%),
-         radial-gradient(ellipse at 10% 70%, ${colors.jade}10 0%, transparent 50%),
+      ? `radial-gradient(ellipse at 20% 80%, ${colors.primary}15 0%, transparent 50%),
+         radial-gradient(ellipse at 80% 20%, ${colors.secondary}10 0%, transparent 50%),
+         linear-gradient(135deg, #0A0A0A 0%, #0F0F0F 100%)`
+      : `radial-gradient(ellipse at 20% 80%, ${colors.primary}10 0%, transparent 50%),
+         radial-gradient(ellipse at 80% 20%, ${colors.secondary}08 0%, transparent 50%),
          linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%)`;
 
   return (

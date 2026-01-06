@@ -17,8 +17,37 @@ import {
   Pencil,
   Loader2,
   X,
+  ImagePlus,
+  Trash2,
 } from "lucide-react";
-import { createEvent, getCategories, getCities, type CreateEventInput } from "@/lib/api";
+import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type CreateEventInput } from "@/lib/api";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { Switch } from "@/components/ui/switch";
+import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
+
+// Default categories if API returns none
+const DEFAULT_CATEGORIES = [
+  "Community",
+  "Music",
+  "Art",
+  "Tech",
+  "Business",
+  "Food & Drink",
+  "Sports",
+  "Wellness",
+  "Education",
+  "Networking",
+];
+
+// Default cities if API returns none
+const DEFAULT_CITIES = [
+  { city: "Harare", country: "Zimbabwe" },
+  { city: "Bulawayo", country: "Zimbabwe" },
+  { city: "Cape Town", country: "South Africa" },
+  { city: "Johannesburg", country: "South Africa" },
+  { city: "Nairobi", country: "Kenya" },
+  { city: "Lagos", country: "Nigeria" },
+];
 
 // Mineral gradient themes - all will have Three.js background
 const mineralThemes = [
@@ -61,7 +90,12 @@ export default function CreateEventPage() {
   const [eventName, setEventName] = useState("");
   const [requireApproval, setRequireApproval] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cover image state
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   // Form state
   const [description, setDescription] = useState("");
@@ -75,8 +109,11 @@ export default function CreateEventPage() {
   // Location state
   const [venue, setVenue] = useState("");
   const [address, setAddress] = useState("");
+  const [addressSearch, setAddressSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<{ city: string; country: string } | null>(null);
   const [isOnline, setIsOnline] = useState(false);
+  const [meetingUrl, setMeetingUrl] = useState("");
+  const [meetingPlatform, setMeetingPlatform] = useState<"zoom" | "google_meet" | "teams" | "other">("zoom");
 
   // Date/Time state
   const [eventDate, setEventDate] = useState("");
@@ -101,10 +138,14 @@ export default function CreateEventPage() {
     async function loadData() {
       try {
         const [cats, citiesData] = await Promise.all([getCategories(), getCities()]);
-        setCategories(cats);
-        setCities(citiesData);
+        // Use defaults if API returns empty
+        setCategories(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
+        setCities(citiesData.length > 0 ? citiesData : DEFAULT_CITIES);
       } catch (err) {
         console.error("Failed to load form data:", err);
+        // Fallback to defaults on error
+        setCategories(DEFAULT_CATEGORIES);
+        setCities(DEFAULT_CITIES);
       }
     }
     loadData();
@@ -124,6 +165,35 @@ export default function CreateEventPage() {
 
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
+  };
+
+  // Handle cover image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Please upload an image file");
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image must be less than 5MB");
+        return;
+      }
+      setCoverImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCoverImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverImage(null);
+    setCoverImageFile(null);
   };
 
   const formatDateForDisplay = () => {
@@ -154,11 +224,31 @@ export default function CreateEventPage() {
       setError("Please add a location or mark as online event");
       return;
     }
+    if (isOnline && !meetingUrl.trim()) {
+      setError("Please add a meeting URL for online events");
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
 
     try {
+      // Upload cover image to R2 if provided
+      let uploadedCoverImageUrl: string | undefined;
+      if (coverImageFile) {
+        setUploading(true);
+        try {
+          const uploadResult = await uploadMedia(coverImageFile);
+          uploadedCoverImageUrl = getMediaUrl(uploadResult.key);
+        } catch (uploadErr) {
+          setError(uploadErr instanceof Error ? uploadErr.message : "Failed to upload cover image");
+          setSubmitting(false);
+          setUploading(false);
+          return;
+        }
+        setUploading(false);
+      }
+
       const dateObj = new Date(eventDate);
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -187,9 +277,12 @@ export default function CreateEventPage() {
             },
         category,
         tags,
-        coverGradient: mineralThemes[selectedTheme].gradient,
+        coverImage: uploadedCoverImageUrl,
+        coverGradient: uploadedCoverImageUrl ? undefined : mineralThemes[selectedTheme].gradient,
         capacity: capacity || undefined,
         isOnline,
+        meetingUrl: isOnline ? meetingUrl.trim() : undefined,
+        meetingPlatform: isOnline ? meetingPlatform : undefined,
         host: {
           // TODO: Get from authenticated user
           name: "Event Host",
@@ -211,15 +304,45 @@ export default function CreateEventPage() {
 
   return (
     <div className="max-w-[600px] mx-auto px-4 pb-24">
-      {/* Cover Preview with Three.js effect indicator */}
+      {/* Cover Preview with Image Upload */}
       <div
-        className="relative h-[200px] rounded-2xl overflow-hidden mb-4"
-        style={{ background: mineralThemes[selectedTheme].gradient }}
+        className="relative h-[200px] rounded-2xl overflow-hidden mb-4 group"
+        style={{
+          background: coverImage
+            ? `url(${coverImage}) center/cover`
+            : mineralThemes[selectedTheme].gradient,
+        }}
       >
-        {/* Three.js overlay indicator */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+
+        {/* Image upload controls */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+          {coverImage ? (
+            <button
+              onClick={removeCoverImage}
+              className="flex items-center gap-2 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-xl backdrop-blur-sm transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Remove Image
+            </button>
+          ) : (
+            <label className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl backdrop-blur-sm cursor-pointer transition-colors">
+              <ImagePlus className="w-4 h-4" />
+              Upload Cover Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+
+        {/* Status badge */}
         <div className="absolute bottom-3 right-3 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs text-white/80">
-          ✨ Animated
+          {coverImage ? "📷 Custom Image" : "✨ Animated Theme"}
         </div>
       </div>
 
@@ -392,20 +515,10 @@ export default function CreateEventPage() {
           <div className="px-4 py-3.5 flex items-center gap-3">
             <Users className="w-5 h-5 text-text-secondary" />
             <span className="flex-1">Require Approval</span>
-            <button
-              role="switch"
-              aria-checked={requireApproval}
-              onClick={() => setRequireApproval(!requireApproval)}
-              className={`relative w-[51px] h-[31px] rounded-full transition-colors duration-200 ${
-                requireApproval ? "bg-primary" : "bg-elevated"
-              }`}
-            >
-              <div
-                className={`absolute top-[2px] w-[27px] h-[27px] rounded-full bg-white shadow-md transition-transform duration-200 ${
-                  requireApproval ? "translate-x-[22px]" : "translate-x-[2px]"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={requireApproval}
+              onCheckedChange={setRequireApproval}
+            />
           </div>
 
           {/* Capacity */}
@@ -433,10 +546,15 @@ export default function CreateEventPage() {
         <div className="max-w-[600px] mx-auto">
           <button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-4 rounded-xl bg-primary text-background font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={submitting || uploading}
+            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {submitting ? (
+            {uploading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Uploading image...
+              </>
+            ) : submitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Creating...
@@ -490,7 +608,7 @@ export default function CreateEventPage() {
               </div>
               <button
                 onClick={() => setShowDateModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>
@@ -511,17 +629,89 @@ export default function CreateEventPage() {
             </div>
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 bg-surface rounded-xl">
-                <input
-                  type="checkbox"
-                  id="isOnline"
+                <Globe className="w-5 h-5 text-text-secondary" />
+                <span className="flex-1">Online Event</span>
+                <Switch
                   checked={isOnline}
-                  onChange={(e) => setIsOnline(e.target.checked)}
-                  className="w-5 h-5"
+                  onCheckedChange={setIsOnline}
                 />
-                <label htmlFor="isOnline" className="flex-1">Online Event</label>
               </div>
+              {isOnline && (
+                <>
+                  {/* Meeting Platform */}
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Meeting Platform</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: "zoom", label: "Zoom" },
+                        { value: "google_meet", label: "Google Meet" },
+                        { value: "teams", label: "Microsoft Teams" },
+                        { value: "other", label: "Other" },
+                      ].map((platform) => (
+                        <button
+                          key={platform.value}
+                          onClick={() => setMeetingPlatform(platform.value as typeof meetingPlatform)}
+                          className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                            meetingPlatform === platform.value
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-surface text-foreground hover:bg-elevated"
+                          }`}
+                        >
+                          {platform.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Meeting URL */}
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Meeting URL</label>
+                    <input
+                      type="url"
+                      value={meetingUrl}
+                      onChange={(e) => setMeetingUrl(e.target.value)}
+                      placeholder={
+                        meetingPlatform === "zoom"
+                          ? "https://zoom.us/j/..."
+                          : meetingPlatform === "google_meet"
+                          ? "https://meet.google.com/..."
+                          : meetingPlatform === "teams"
+                          ? "https://teams.microsoft.com/..."
+                          : "https://..."
+                      }
+                      className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+                    />
+                    <p className="text-xs text-text-tertiary mt-2">
+                      Attendees will see this link after registering
+                    </p>
+                  </div>
+                </>
+              )}
               {!isOnline && (
                 <>
+                  {/* Google Places Autocomplete */}
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Search Location</label>
+                    <AddressAutocomplete
+                      value={addressSearch}
+                      onChange={setAddressSearch}
+                      onPlaceSelect={(components) => {
+                        setVenue(components.venue);
+                        setAddress(components.address);
+                        if (components.city && components.country) {
+                          setSelectedCity({ city: components.city, country: components.country });
+                        }
+                      }}
+                      placeholder="Search for a venue or address..."
+                    />
+                  </div>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="flex-1 h-px bg-elevated" />
+                    <span className="text-xs text-text-tertiary">or enter manually</span>
+                    <div className="flex-1 h-px bg-elevated" />
+                  </div>
+
                   <div>
                     <label className="block text-sm text-text-secondary mb-2">Venue Name</label>
                     <input
@@ -551,7 +741,7 @@ export default function CreateEventPage() {
                           onClick={() => setSelectedCity(c)}
                           className={`px-4 py-3 rounded-xl text-left ${
                             selectedCity?.city === c.city
-                              ? "bg-primary text-background"
+                              ? "bg-primary text-primary-foreground"
                               : "bg-surface hover:bg-elevated"
                           }`}
                         >
@@ -565,7 +755,7 @@ export default function CreateEventPage() {
               )}
               <button
                 onClick={() => setShowLocationModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>
@@ -594,7 +784,7 @@ export default function CreateEventPage() {
                       onClick={() => setCategory(cat)}
                       className={`px-4 py-3 rounded-xl text-left ${
                         category === cat
-                          ? "bg-primary text-background"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-surface hover:bg-elevated"
                       }`}
                     >
@@ -614,7 +804,7 @@ export default function CreateEventPage() {
                     placeholder="Add a tag..."
                     className="flex-1 px-4 py-3 bg-surface rounded-xl border-none outline-none"
                   />
-                  <button onClick={addTag} className="px-4 py-3 bg-primary text-background rounded-xl">
+                  <button onClick={addTag} className="px-4 py-3 bg-primary text-primary-foreground rounded-xl">
                     Add
                   </button>
                 </div>
@@ -633,7 +823,7 @@ export default function CreateEventPage() {
               </div>
               <button
                 onClick={() => setShowCategoryModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>
@@ -647,7 +837,15 @@ export default function CreateEventPage() {
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
           <div className="bg-background rounded-t-2xl w-full max-w-[600px] p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Description</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold">Description</h3>
+                <AIDescriptionBadge
+                  eventName={eventName}
+                  category={category}
+                  isOnline={isOnline}
+                  onDescriptionGenerated={(desc) => setDescription(desc)}
+                />
+              </div>
               <button onClick={() => setShowDescriptionModal(false)}>
                 <X className="w-6 h-6" />
               </button>
@@ -660,9 +858,12 @@ export default function CreateEventPage() {
                 rows={6}
                 className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none resize-none"
               />
+              <p className="text-xs text-text-tertiary">
+                Tip: Click &quot;Ask Shamwari&quot; to let our AI friend help write your description
+              </p>
               <button
                 onClick={() => setShowDescriptionModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>
@@ -710,7 +911,7 @@ export default function CreateEventPage() {
               <p className="text-sm text-text-tertiary">Set to 0 for a free event</p>
               <button
                 onClick={() => setShowPriceModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>
@@ -744,7 +945,7 @@ export default function CreateEventPage() {
               <p className="text-sm text-text-tertiary">Leave empty for unlimited capacity</p>
               <button
                 onClick={() => setShowCapacityModal(false)}
-                className="w-full py-3 bg-primary text-background rounded-xl font-semibold"
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 Done
               </button>

@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@stytch/nextjs": "^21.18.1",
+    "@stytch/vanilla-js": "^5.44.1",
     "@types/three": "^0.182.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
@@ -20,7 +22,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/google.maps": "^3.58.1",
+    "@types/node": "^25.0.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

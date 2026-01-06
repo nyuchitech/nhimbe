@@ -248,7 +248,7 @@ export default function ManageEventPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab.id
-                ? "bg-primary text-background"
+                ? "bg-primary text-primary-foreground"
                 : "text-text-secondary hover:text-foreground"
             }`}
           >
@@ -367,7 +367,7 @@ export default function ManageEventPage() {
               onClick={() => setRegistrationFilter("all")}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 registrationFilter === "all"
-                  ? "bg-primary text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-surface text-text-secondary hover:bg-elevated"
               }`}
             >
@@ -377,7 +377,7 @@ export default function ManageEventPage() {
               onClick={() => setRegistrationFilter("pending")}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 registrationFilter === "pending"
-                  ? "bg-primary text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-surface text-text-secondary hover:bg-elevated"
               }`}
             >
@@ -387,7 +387,7 @@ export default function ManageEventPage() {
               onClick={() => setRegistrationFilter("approved")}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 registrationFilter === "approved"
-                  ? "bg-primary text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-surface text-text-secondary hover:bg-elevated"
               }`}
             >

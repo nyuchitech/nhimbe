@@ -58,9 +58,21 @@ function AnimatedBackgroundInner({
   }
 
   return (
-    <Suspense fallback={<StaticGradientBackground theme={resolvedTheme} />}>
-      <GradientBackground theme={resolvedTheme} intensity={intensity} speed={speed} />
-    </Suspense>
+    <>
+      <Suspense fallback={<StaticGradientBackground theme={resolvedTheme} />}>
+        <GradientBackground theme={resolvedTheme} intensity={intensity} speed={speed} />
+      </Suspense>
+      {/* Frosted glass overlay */}
+      <div
+        className="fixed inset-0 -z-[9] pointer-events-none backdrop-blur-[1px]"
+        style={{
+          background: resolvedTheme === "dark"
+            ? "rgba(10, 10, 10, 0.3)"
+            : "rgba(250, 250, 248, 0.4)",
+        }}
+        aria-hidden="true"
+      />
+    </>
   );
 }
 

@@ -9,8 +9,11 @@
     "types": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241205.0",
+    "@cloudflare/workers-types": "^4.20260103.0",
     "typescript": "^5.7.2",
     "wrangler": "^4.56.0"
+  },
+  "dependencies": {
+    "stytch": "^12.43.1"
   }
 }

@@ -62,6 +62,10 @@ CREATE TABLE IF NOT EXISTS events (
   require_approval BOOLEAN DEFAULT FALSE,
   visibility TEXT DEFAULT 'public', -- public, private
 
+  -- Online meeting (for virtual events)
+  meeting_url TEXT,
+  meeting_platform TEXT, -- zoom, google_meet, teams, other
+
   -- Host (stored as JSON)
   host_name TEXT NOT NULL,
   host_handle TEXT NOT NULL,

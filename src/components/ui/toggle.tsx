@@ -27,10 +27,10 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(
 
     const variants = {
       default: pressed
-        ? "bg-primary text-background"
+        ? "bg-primary text-primary-foreground"
         : "bg-transparent hover:bg-surface",
       outline: pressed
-        ? "bg-primary text-background border border-primary"
+        ? "bg-primary text-primary-foreground border border-primary"
         : "bg-transparent border border-elevated hover:bg-surface hover:border-foreground/30",
     };
 

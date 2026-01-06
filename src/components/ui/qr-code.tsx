@@ -115,18 +115,33 @@ function generateQRMatrix(data: string): boolean[][] {
 }
 
 function addFinderPattern(matrix: boolean[][], startX: number, startY: number): void {
+  const size = matrix.length;
+
   for (let y = 0; y < 7; y++) {
     for (let x = 0; x < 7; x++) {
       const isOuter = y === 0 || y === 6 || x === 0 || x === 6;
       const isInner = y >= 2 && y <= 4 && x >= 2 && x <= 4;
-      matrix[startY + y][startX + x] = isOuter || isInner;
+      if (startY + y < size && startX + x < size) {
+        matrix[startY + y][startX + x] = isOuter || isInner;
+      }
     }
   }
 
-  // Add separator
+  // Add separator (white border around finder pattern)
   for (let i = 0; i < 8; i++) {
-    if (startX + 7 < matrix.length) matrix[startY + Math.min(i, 7)][startX + 7] = false;
-    if (startY + 7 < matrix.length) matrix[startY + 7][startX + Math.min(i, 7)] = false;
+    const sepX = startX + 7;
+    const sepY = startY + 7;
+    const rowIdx = startY + i;
+    const colIdx = startX + i;
+
+    // Vertical separator
+    if (sepX >= 0 && sepX < size && rowIdx >= 0 && rowIdx < size) {
+      matrix[rowIdx][sepX] = false;
+    }
+    // Horizontal separator
+    if (sepY >= 0 && sepY < size && colIdx >= 0 && colIdx < size) {
+      matrix[sepY][colIdx] = false;
+    }
   }
 }
 

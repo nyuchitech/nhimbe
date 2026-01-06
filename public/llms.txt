@@ -1,0 +1,67 @@
+# nhimbe - African Events Platform
+
+> Together we gather, together we grow
+
+nhimbe (pronounced /ˈnhimbɛ/) is an events and gatherings platform connecting communities across Africa. The name comes from the Shona tradition of communal work, embodying the Ubuntu philosophy: "I am because we are."
+
+## About
+
+nhimbe is part of the Mukoko ecosystem, developed by Nyuchi Web Services. We help people discover events, connect with communities, and celebrate together across African cities including:
+
+- Harare, Zimbabwe
+- Bulawayo, Zimbabwe
+- Victoria Falls, Zimbabwe
+- Johannesburg, South Africa
+- Cape Town, South Africa
+- Nairobi, Kenya
+- Lagos, Nigeria
+- Accra, Ghana
+
+## Features
+
+- **Event Discovery**: Browse events by category, city, or search
+- **Event Creation**: Host your own gatherings with AI-powered description assistance (Shamwari)
+- **RSVP & Registration**: Easy event registration and ticketing
+- **Calendar Integration**: Add events to your calendar
+- **QR Code Sharing**: Share events easily with short URLs
+- **Weather Integration**: See weather forecasts for event locations
+- **Map Integration**: View venues on Google Maps
+
+## Event Categories
+
+- Tech
+- Culture
+- Wellness
+- Social
+- Professional
+- Music
+- Food & Drink
+- Sports
+- Community
+- Education
+
+## AI Features
+
+nhimbe includes an AI assistant called **Shamwari** (meaning "friend" in Shona) that helps event hosts create compelling descriptions through a guided wizard.
+
+## API
+
+nhimbe provides a public API for event discovery:
+
+- `GET /api/events` - List all events
+- `GET /api/events/:id` - Get event details
+- `GET /api/categories` - List event categories
+- `GET /api/cities` - List available cities
+- `POST /api/search` - AI-powered semantic search
+
+## Contact
+
+- Website: https://www.nhimbe.com
+- Parent Company: https://mukoko.com
+
+## Useful Links
+
+- Events: https://www.nhimbe.com/events
+- Create Event: https://www.nhimbe.com/events/create
+- Search: https://www.nhimbe.com/search
+- About: https://www.nhimbe.com/about

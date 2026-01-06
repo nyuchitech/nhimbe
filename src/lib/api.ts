@@ -50,6 +50,8 @@ export interface Event {
   friendsCount?: number;
   capacity?: number;
   isOnline?: boolean;
+  meetingUrl?: string;
+  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
   price?: EventPrice;
   friends?: { name: string; gradient: string }[];
@@ -159,6 +161,8 @@ export interface CreateEventInput {
   coverGradient?: string;
   capacity?: number;
   isOnline?: boolean;
+  meetingUrl?: string;
+  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
   price?: EventPrice;
 }
@@ -311,4 +315,126 @@ export async function trackEventView(eventId: string, userId?: string): Promise<
   } catch {
     // Silently fail - analytics shouldn't break the UI
   }
+}
+
+// ============================================
+// Media Upload (R2)
+// ============================================
+
+export interface UploadMediaResponse {
+  key: string;
+  url: string;
+  message: string;
+}
+
+/**
+ * Upload an image to R2 storage
+ * @param file - The file to upload (must be an image)
+ * @returns The storage key and URL of the uploaded file
+ */
+export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
+  const url = `${API_URL}/api/media/upload`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Upload failed" }));
+    throw new Error(error.error || `Upload failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get the full URL for a media file
+ * @param key - The storage key returned from uploadMedia
+ * @param options - Optional image transformation options
+ */
+export function getMediaUrl(key: string, options?: { width?: number; height?: number; format?: "webp" | "avif" | "jpeg" | "png" }): string {
+  let url = `${API_URL}/api/media/${key}`;
+
+  if (options) {
+    const params = new URLSearchParams();
+    if (options.width) params.set("w", options.width.toString());
+    if (options.height) params.set("h", options.height.toString());
+    if (options.format) params.set("format", options.format);
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+  }
+
+  return url;
+}
+
+// ============================================
+// AI Description Generator
+// ============================================
+
+export interface DescriptionWizardStep {
+  question: string;
+  placeholder: string;
+  helpText?: string;
+}
+
+export interface DescriptionContext {
+  eventType?: string;
+  targetAudience?: string;
+  keyTakeaways?: string;
+  highlights?: string;
+  eventName?: string;
+  category?: string;
+  isOnline?: boolean;
+}
+
+export interface GeneratedDescription {
+  description: string;
+  suggestions?: string[];
+}
+
+/**
+ * Get wizard steps for the description generator
+ */
+export async function getDescriptionWizardSteps(category?: string): Promise<{ steps: DescriptionWizardStep[] }> {
+  const url = `${API_URL}/api/ai/description/wizard-steps`;
+
+  if (category) {
+    return apiFetch<{ steps: DescriptionWizardStep[] }>(url, {
+      method: "POST",
+      body: JSON.stringify({ category }),
+    });
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Failed to get wizard steps");
+  }
+  return response.json();
+}
+
+/**
+ * Generate an event description using AI
+ */
+export async function generateEventDescription(context: DescriptionContext): Promise<GeneratedDescription> {
+  return apiFetch<GeneratedDescription>(`${API_URL}/api/ai/description/generate`, {
+    method: "POST",
+    body: JSON.stringify(context),
+  });
+}
+
+/**
+ * Regenerate description with feedback
+ */
+export async function regenerateEventDescription(
+  context: DescriptionContext,
+  feedback: string
+): Promise<GeneratedDescription> {
+  return apiFetch<GeneratedDescription>(`${API_URL}/api/ai/description/regenerate`, {
+    method: "POST",
+    body: JSON.stringify({ ...context, feedback }),
+  });
 }

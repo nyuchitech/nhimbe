@@ -160,7 +160,7 @@ export default function CalendarPage() {
                       <div
                         className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium mb-1 ${
                           isToday(day)
-                            ? "bg-primary text-background"
+                            ? "bg-primary text-primary-foreground"
                             : "text-foreground"
                         }`}
                       >

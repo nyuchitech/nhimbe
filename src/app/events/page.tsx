@@ -80,7 +80,7 @@ export default function EventsPage() {
         </div>
         <Link
           href="/events/create"
-          className="px-6 py-3 bg-primary text-background rounded-xl font-semibold hover:opacity-90 transition-opacity"
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity"
         >
           Create Event
         </Link>
@@ -157,7 +157,7 @@ export default function EventsPage() {
           <SlidersHorizontal className="w-4 h-4" />
           Filters
           {activeFiltersCount > 0 && (
-            <span className="px-1.5 py-0.5 bg-primary text-background text-xs rounded-full">
+            <span className="px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
               {activeFiltersCount}
             </span>
           )}

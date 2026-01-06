@@ -19,6 +19,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import { useAuth } from "@/components/auth/auth-context";
 
 type MenuItem = {
   icon: LucideIcon;
@@ -36,38 +38,39 @@ type MenuSection = {
   items: MenuItem[];
 };
 
-export default function ProfilePage() {
+function ProfileContent() {
   const router = useRouter();
   const { theme, cycleTheme, resolvedTheme } = useTheme();
+  const { user, signOut } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
-  const handleSignOut = () => {
-    // Clear any local storage or session data
-    localStorage.removeItem("nhimbe_user");
-    localStorage.removeItem("nhimbe_token");
-    // Redirect to home page
+  const handleSignOut = async () => {
+    await signOut();
     router.push("/");
   };
 
-  // TODO: Replace with real user data from authentication
-  const user = {
-    name: "Guest User",
-    email: "guest@example.com",
-    location: "Harare, Zimbabwe",
-    joinedDate: "December 2024",
-    initials: "GU",
-    eventsAttended: 0,
-    eventsHosted: 0,
-    following: 0,
-  };
+  // Get user initials
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "??";
+
+  // Format join date
+  const joinedDate = user?.id
+    ? new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "Unknown";
 
   const menuItems: MenuSection[] = [
     {
       section: "Events",
       items: [
-        { icon: Ticket, label: "My Tickets", href: "/my-events", badge: user.eventsAttended },
-        { icon: Users, label: "Events I'm Hosting", href: "/my-events?tab=hosting", badge: user.eventsHosted },
+        { icon: Ticket, label: "My Tickets", href: "/my-events" },
+        { icon: Users, label: "Events I'm Hosting", href: "/my-events?tab=hosting" },
         { icon: Heart, label: "Saved Events", href: "/my-events?tab=saved" },
       ],
     },
@@ -104,33 +107,38 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-2xl font-bold text-background">
-          {user.initials}
+          {initials}
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
-          <p className="text-text-secondary">{user.email}</p>
-          <div className="flex items-center gap-1 text-sm text-text-tertiary mt-1">
-            <MapPin className="w-3.5 h-3.5" />
-            {user.location}
-          </div>
+          <h1 className="text-2xl font-bold text-foreground">{user?.name || "User"}</h1>
+          <p className="text-text-secondary">{user?.email}</p>
+          {(user?.city || user?.country) && (
+            <div className="flex items-center gap-1 text-sm text-text-tertiary mt-1">
+              <MapPin className="w-3.5 h-3.5" />
+              {[user?.city, user?.country].filter(Boolean).join(", ")}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-foreground">{user.eventsAttended}</div>
-          <div className="text-sm text-text-secondary">Attended</div>
+      {/* Interests */}
+      {user?.interests && user.interests.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+            Interests
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {user.interests.map((interest) => (
+              <span
+                key={interest}
+                className="px-3 py-1.5 bg-surface rounded-xl text-sm font-medium"
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="bg-surface rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-foreground">{user.eventsHosted}</div>
-          <div className="text-sm text-text-secondary">Hosted</div>
-        </div>
-        <div className="bg-surface rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-foreground">{user.following}</div>
-          <div className="text-sm text-text-secondary">Following</div>
-        </div>
-      </div>
+      )}
 
       {/* Menu Sections */}
       <div className="space-y-6">
@@ -219,7 +227,7 @@ export default function ProfilePage() {
       <div className="mt-8 text-center">
         <div className="flex items-center justify-center gap-1 text-sm text-text-tertiary">
           <Calendar className="w-4 h-4" />
-          Member since {user.joinedDate}
+          Member since {joinedDate}
         </div>
       </div>
 
@@ -249,5 +257,13 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <AuthGuard>
+      <ProfileContent />
+    </AuthGuard>
   );
 }

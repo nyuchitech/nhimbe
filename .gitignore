@@ -44,3 +44,4 @@ next-env.d.ts
 worker/node_modules
 worker/.wrangler
 worker/.dev.vars
+.env*.local

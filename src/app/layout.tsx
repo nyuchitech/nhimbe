@@ -4,37 +4,90 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { AnimatedBackground } from "@/components/ui/animated-background";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth/auth-context";
 
 export const metadata: Metadata = {
-  title: "nhimbe - Together we gather, together we grow",
+  metadataBase: new URL("https://www.nhimbe.com"),
+  title: {
+    default: "nhimbe - Together we gather, together we grow",
+    template: "%s | nhimbe",
+  },
   description:
-    "nhimbe is the gatherings and events platform within the Mukoko ecosystem. Discover events, connect with your community, and celebrate together.",
+    "Discover events and gatherings across Africa. nhimbe connects communities through cultural celebrations, tech meetups, music festivals, and more. A Mukoko product.",
   keywords: [
     "events",
     "gatherings",
     "community",
     "Mukoko",
     "Africa",
+    "Zimbabwe",
+    "Harare",
+    "South Africa",
+    "Kenya",
+    "Nigeria",
+    "Ghana",
+    "tech events",
+    "cultural events",
+    "music festivals",
+    "networking",
     "celebrations",
+    "Ubuntu",
   ],
-  icons: {
-    icon: "/favicon.svg",
-    apple: "/apple-touch-icon.svg",
+  authors: [{ name: "Mukoko", url: "https://mukoko.com" }],
+  creator: "Mukoko (Nyuchi Web Services)",
+  publisher: "nhimbe",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
   },
+  icons: {
+    icon: "/nhimbe-icon-light.png",
+    apple: "/nhimbe-icon-light.png",
+    shortcut: "/nhimbe-icon-light.png",
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "nhimbe - Together we gather, together we grow",
     description:
-      "The gatherings and events platform within the Mukoko ecosystem.",
+      "Discover events and gatherings across Africa. Connect with your community and celebrate together.",
     type: "website",
     locale: "en_US",
+    url: "https://www.nhimbe.com",
     siteName: "nhimbe",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "nhimbe - African Events Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "nhimbe - Together we gather, together we grow",
     description:
-      "The gatherings and events platform within the Mukoko ecosystem.",
+      "Discover events and gatherings across Africa. A Mukoko product.",
+    site: "@nhimbe_app",
+    creator: "@mukoko_app",
+    images: ["/og-image.png"],
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://www.nhimbe.com",
+  },
+  category: "events",
 };
 
 // Script to prevent flash of wrong theme - runs before React hydration
@@ -70,12 +123,14 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <ThemeProvider defaultTheme="system">
-          <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
-          <Header />
-          <main className="flex-1 relative z-10">{children}</main>
-          <Footer />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider defaultTheme="system">
+            <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
+            <Header />
+            <main className="flex-1 relative z-10">{children}</main>
+            <Footer />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

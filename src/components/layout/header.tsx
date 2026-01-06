@@ -2,36 +2,17 @@
 
 import { useState, useEffect, useSyncExternalStore, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Plus, Search, User } from "lucide-react";
+import { Plus, Search, User, LogIn } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/components/auth/auth-context";
 
 const navLinks = [
   { href: "/", label: "Discover" },
   { href: "/my-events", label: "My Events" },
   { href: "/calendar", label: "Calendar" },
 ];
-
-// Get user initials from localStorage or return null for guest
-function getUserInitials(): string | null {
-  if (typeof window === "undefined") return null;
-  const userData = localStorage.getItem("nhimbe_user");
-  if (userData) {
-    try {
-      const user = JSON.parse(userData);
-      if (user.name) {
-        return user.name
-          .split(" ")
-          .map((n: string) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2);
-      }
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 // Static page titles mapping
 const pageTitles: Record<string, string> = {
@@ -45,13 +26,9 @@ const pageTitles: Record<string, string> = {
   "/events/create": "Create Event",
   "/search": "Search",
   "/profile": "Profile",
+  "/auth/signin": "Sign In",
+  "/onboarding": "Welcome",
 };
-
-// Subscribe to storage changes for useSyncExternalStore
-function subscribeToStorage(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
 
 // Create a subscription for H1 element changes
 function createH1Subscription(pathname: string) {
@@ -89,13 +66,22 @@ function getPageTitleSnapshot(pathname: string): string | null {
 export function Header() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  // Use useSyncExternalStore for localStorage - React 19 compliant
-  const userInitials = useSyncExternalStore(
-    subscribeToStorage,
-    getUserInitials,
-    () => null // Server snapshot
-  );
+  // Get the appropriate icon based on theme (dark icon visible on dark bg, light icon visible on light bg)
+  const iconSrc = resolvedTheme === "dark" ? "/nhimbe-icon-dark.png" : "/nhimbe-icon-light.png";
+
+  // Get user initials from auth context
+  const userInitials = useMemo(() => {
+    if (!user?.name) return null;
+    return user.name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }, [user?.name]);
 
   // Memoize the subscription function based on pathname
   const subscribeToH1 = useMemo(() => createH1Subscription(pathname), [pathname]);
@@ -130,11 +116,20 @@ export function Header() {
     >
       <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo / Page Title */}
-        <Link href="/" className="min-w-0 flex-shrink">
+        <Link href="/" className="min-w-0 flex-shrink flex items-center gap-3">
+          {/* App Icon */}
+          <div className="w-[34px] h-[34px] rounded-lg bg-surface border border-elevated flex items-center justify-center overflow-hidden">
+            <Image
+              src={iconSrc}
+              alt="nhimbe"
+              width={34}
+              height={34}
+            />
+          </div>
           <div className="relative h-[34px] flex items-center">
-            {/* Logo - visible when not scrolled */}
+            {/* Logo text - visible when not scrolled */}
             <span
-              className={`text-[28px] font-bold text-primary transition-all duration-300 ${
+              className={`text-[24px] font-bold text-primary transition-all duration-300 ${
                 isScrolled && pageTitle
                   ? "opacity-0 absolute"
                   : "opacity-100"
@@ -181,28 +176,44 @@ export function Header() {
             className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
             aria-label="Create event"
           >
-            <Plus className="w-6 h-6 text-background" />
+            <Plus className="w-6 h-6 text-primary-foreground" />
           </Link>
           <Link
             href="/search"
             className="flex items-center justify-center w-11 h-11 rounded-full bg-background/10 hover:bg-background/20 transition-colors"
             aria-label="Search events"
           >
-            <Search className="w-6 h-6 text-background" />
+            <Search className="w-6 h-6 text-primary-foreground" />
           </Link>
-          <Link
-            href="/profile"
-            className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20 hover:bg-background/30 transition-colors overflow-hidden"
-            aria-label="Profile"
-          >
-            {userInitials ? (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-background">
-                {userInitials}
-              </div>
-            ) : (
-              <User className="w-5 h-5 text-background" />
-            )}
-          </Link>
+
+          {/* Profile / Sign In button */}
+          {isLoading ? (
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20">
+              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            </div>
+          ) : isAuthenticated ? (
+            <Link
+              href="/profile"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20 hover:bg-background/30 transition-colors overflow-hidden"
+              aria-label="Profile"
+            >
+              {userInitials ? (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                  {userInitials}
+                </div>
+              ) : (
+                <User className="w-5 h-5 text-primary-foreground" />
+              )}
+            </Link>
+          ) : (
+            <Link
+              href={`/auth/signin?redirect=${encodeURIComponent(pathname)}`}
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-background/20 hover:bg-background/30 transition-colors"
+              aria-label="Sign in"
+            >
+              <LogIn className="w-5 h-5 text-primary-foreground" />
+            </Link>
+          )}
         </div>
       </div>
     </header>

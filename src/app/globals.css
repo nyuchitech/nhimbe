@@ -35,6 +35,9 @@
   /* High contrast text for AAA compliance on gradient backgrounds */
   --hero-text: #FFFFFF;
   --hero-text-muted: #E0E0E0;
+
+  /* Button text on primary background - dark text on bright button */
+  --primary-foreground: #0A0A0A;
 }
 
 /* Dark Theme - WCAG AAA Compliant */
@@ -61,6 +64,9 @@
   /* Hero section high contrast */
   --hero-text: #FFFFFF;
   --hero-text-muted: #E0E0E0;
+
+  /* Button text on primary background - dark text on bright button */
+  --primary-foreground: #0A0A0A;
 }
 
 /* Light Theme - WCAG AAA Compliant */
@@ -87,6 +93,9 @@
   /* Hero section high contrast */
   --hero-text: #0A0A0A;
   --hero-text-muted: #2A2A2A;
+
+  /* Button text on primary background - light text on dark button */
+  --primary-foreground: #FFFFFF;
 }
 
 @theme inline {
@@ -157,4 +166,54 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
+}
+
+/* Custom utility for theme-aware primary button text */
+.text-primary-foreground {
+  color: var(--primary-foreground);
+}
+
+.bg-primary-foreground {
+  background-color: var(--primary-foreground);
+}
+
+/* Event Page Theme System */
+.event-themed-page {
+  --event-primary: #64FFDA;
+  --event-secondary: #00796B;
+  --event-accent: #004D40;
+  --event-surface: rgba(0, 77, 64, 0.15);
+  --event-surface-hover: rgba(0, 77, 64, 0.25);
+  --event-gradient: linear-gradient(135deg, #004D40, #00796B);
+}
+
+/* Event theme utilities */
+.event-themed-page .event-primary {
+  color: var(--event-primary);
+}
+
+.event-themed-page .event-surface {
+  background-color: var(--event-surface);
+}
+
+.event-themed-page .event-surface-hover:hover {
+  background-color: var(--event-surface-hover);
+}
+
+.event-themed-page .event-accent-text {
+  color: var(--event-primary);
+}
+
+.event-themed-page .event-badge {
+  background-color: var(--event-primary);
+  color: var(--charcoal);
+}
+
+.event-themed-page .event-icon-bg {
+  background-color: var(--event-surface);
+  color: var(--event-primary);
+}
+
+.event-themed-page .event-border {
+  border-color: var(--event-surface);
 }

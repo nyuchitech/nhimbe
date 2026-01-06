@@ -267,6 +267,12 @@ export interface Env {
   ENVIRONMENT: string;
   API_KEY: string;
   ALLOWED_ORIGIN?: string;
+  // Stytch OAuth Connected App
+  STYTCH_PROJECT_ID: string;
+  STYTCH_SECRET: string;
+  STYTCH_CLIENT_ID: string;
+  STYTCH_CLIENT_SECRET: string;
+  // Cloudflare bindings
   AI: Ai;
   VECTORIZE: VectorizeIndex;
   DB: D1Database;
@@ -320,6 +326,8 @@ export interface Event {
   friendsCount?: number;
   capacity?: number;
   isOnline?: boolean;
+  meetingUrl?: string;
+  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
   price?: EventPrice;
   createdAt?: string;

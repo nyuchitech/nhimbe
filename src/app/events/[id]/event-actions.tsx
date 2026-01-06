@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Share2, Calendar, Download, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  downloadICS,
+  getGoogleCalendarUrl,
+  getOutlookCalendarUrl,
+  getOutlookLiveUrl,
+  type CalendarEvent,
+} from "@/lib/calendar";
 
 interface EventActionsProps {
   event: {
@@ -22,6 +29,21 @@ interface EventActionsProps {
       country: string;
     };
     description: string;
+  };
+}
+
+// Helper to create CalendarEvent from event data
+function createCalendarEvent(event: EventActionsProps["event"]): CalendarEvent {
+  const startDate = new Date(event.date.iso);
+  const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
+
+  return {
+    title: event.title,
+    description: event.description,
+    location: `${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}`,
+    startDate,
+    endDate,
+    url: typeof window !== "undefined" ? `${window.location.origin}/e/${event.shortCode}` : undefined,
   };
 }
 
@@ -127,44 +149,104 @@ END:VCALENDAR`;
 
 // Separate components for individual use in the page
 export function AddToCalendarButton({ event }: EventActionsProps) {
-  const handleAddToCalendar = () => {
-    const startDate = new Date(event.date.iso);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const formatDateForICS = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    };
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//nhimbe//Event//EN
-BEGIN:VEVENT
-DTSTART:${formatDateForICS(startDate)}
-DTEND:${formatDateForICS(endDate)}
-SUMMARY:${event.title}
-DESCRIPTION:${event.description.slice(0, 200).replace(/\n/g, "\\n")}
-LOCATION:${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}
-END:VEVENT
-END:VCALENDAR`;
+  const calendarEvent = createCalendarEvent(event);
 
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${event.title.toLowerCase().replace(/\s+/g, "-")}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleDownloadICS = () => {
+    downloadICS(calendarEvent);
+    setShowDropdown(false);
+  };
+
+  const handleGoogleCalendar = () => {
+    window.open(getGoogleCalendarUrl(calendarEvent), "_blank");
+    setShowDropdown(false);
+  };
+
+  const handleOutlook = () => {
+    window.open(getOutlookCalendarUrl(calendarEvent), "_blank");
+    setShowDropdown(false);
+  };
+
+  const handleOutlookLive = () => {
+    window.open(getOutlookLiveUrl(calendarEvent), "_blank");
+    setShowDropdown(false);
   };
 
   return (
-    <button
-      onClick={handleAddToCalendar}
-      className="text-primary text-sm font-semibold hover:underline"
-    >
-      Add to Calendar
-    </button>
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="flex items-center gap-1 text-primary text-sm font-semibold hover:underline"
+      >
+        <Calendar className="w-4 h-4" />
+        Add to Calendar
+        <ChevronDown className={`w-3 h-3 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
+      </button>
+
+      {showDropdown && (
+        <div className="absolute right-0 top-full mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-[200px] z-50">
+          <button
+            onClick={handleDownloadICS}
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+          >
+            <Download className="w-4 h-4 text-text-tertiary" />
+            <div>
+              <div className="font-medium">Download .ics</div>
+              <div className="text-xs text-text-tertiary">Apple Calendar, etc.</div>
+            </div>
+          </button>
+          <button
+            onClick={handleGoogleCalendar}
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.5 4H18V3a1 1 0 0 0-2 0v1H8V3a1 1 0 0 0-2 0v1H4.5C3.12 4 2 5.12 2 6.5v13C2 20.88 3.12 22 4.5 22h15c1.38 0 2.5-1.12 2.5-2.5v-13C22 5.12 20.88 4 19.5 4zm0 15.5h-15a.5.5 0 0 1-.5-.5V9h16v10a.5.5 0 0 1-.5.5z" />
+            </svg>
+            <div>
+              <div className="font-medium">Google Calendar</div>
+              <div className="text-xs text-text-tertiary">Opens in new tab</div>
+            </div>
+          </button>
+          <button
+            onClick={handleOutlook}
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21.5 4H2.5C1.67 4 1 4.67 1 5.5v13c0 .83.67 1.5 1.5 1.5h19c.83 0 1.5-.67 1.5-1.5v-13c0-.83-.67-1.5-1.5-1.5zm-10 12l-8-5V7l8 5 8-5v4l-8 5z" />
+            </svg>
+            <div>
+              <div className="font-medium">Outlook (Office 365)</div>
+              <div className="text-xs text-text-tertiary">Work or school</div>
+            </div>
+          </button>
+          <button
+            onClick={handleOutlookLive}
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21.5 4H2.5C1.67 4 1 4.67 1 5.5v13c0 .83.67 1.5 1.5 1.5h19c.83 0 1.5-.67 1.5-1.5v-13c0-.83-.67-1.5-1.5-1.5zm-10 12l-8-5V7l8 5 8-5v4l-8 5z" />
+            </svg>
+            <div>
+              <div className="font-medium">Outlook.com</div>
+              <div className="text-xs text-text-tertiary">Personal account</div>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
