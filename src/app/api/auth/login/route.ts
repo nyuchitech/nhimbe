@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Stytch Connected Apps Configuration
-// Authorization goes to Mukoko ID, token exchange goes to Stytch API
-const MUKOKO_ID_URL = (process.env.NEXT_PUBLIC_MUKOKO_ID_URL || 'https://id.mukoko.com').trim();
+// Authorization and token exchange both go to Stytch
+const STYTCH_PROJECT_ID = 'project-live-86090362-2491-4ca7-9037-f7688c7699ce';
+const STYTCH_AUTHORIZE_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/authorize`;
 const CLIENT_ID = (process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID || '').trim();
 const REDIRECT_URI = (process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback').trim();
 
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = generateRandomString(32);
 
-  // Build Mukoko ID authorization URL
-  const authUrl = new URL(`${MUKOKO_ID_URL}/oauth/authorize`);
+  // Build Stytch authorization URL
+  const authUrl = new URL(STYTCH_AUTHORIZE_URL);
   authUrl.searchParams.set('client_id', CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.set('response_type', 'code');

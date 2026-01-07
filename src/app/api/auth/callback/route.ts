@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Stytch OIDC endpoints (from discovery document)
+// Stytch OIDC endpoints
 const STYTCH_PROJECT_ID = 'project-live-86090362-2491-4ca7-9037-f7688c7699ce';
+// Use the authenticated token endpoint for confidential (first_party) clients
 const STYTCH_TOKEN_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/token`;
 const STYTCH_USERINFO_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/userinfo`;
 const CLIENT_ID = (process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID || '').trim();
@@ -49,6 +50,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Log token exchange parameters (excluding secrets)
+    console.log('Token exchange params:', {
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      has_secret: !!CLIENT_SECRET,
+      secret_length: CLIENT_SECRET?.length,
+      code_length: code?.length,
+      verifier_length: codeVerifier?.length,
+    });
+
     // Exchange code for tokens
     const tokenResponse = await fetch(STYTCH_TOKEN_URL, {
       method: 'POST',
@@ -67,9 +78,14 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => ({}));
-      console.error('Token exchange failed:', errorData);
+      console.error('Token exchange failed:', {
+        status: tokenResponse.status,
+        error: errorData,
+        client_id: CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+      });
       const errorUrl = new URL('/auth/error', SITE_URL);
-      errorUrl.searchParams.set('error', errorData.error_description || 'Failed to exchange code');
+      errorUrl.searchParams.set('error', errorData.error_description || errorData.error || 'Failed to exchange code');
       return NextResponse.redirect(errorUrl);
     }
 
