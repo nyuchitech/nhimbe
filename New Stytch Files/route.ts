@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Stytch Connected Apps Configuration
-// Authorization goes to Mukoko ID, token exchange goes to Stytch API
-const MUKOKO_ID_URL = process.env.NEXT_PUBLIC_MUKOKO_ID_URL || 'https://id.mukoko.com';
-const CLIENT_ID = process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID!;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback';
+const config = {
+  clientId: process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID!,
+  redirectUri: process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI!,
+  
+  // Stytch authorization endpoint for Mukoko Identity project
+  projectId: 'project-live-86090362-2491-4ca7-9037-f7688c7699ce',
+  get authorizationEndpoint() {
+    return `https://api.stytch.com/v1/public/${this.projectId}/oauth2/authorize`;
+  },
+  
+  scope: 'openid profile email',
+};
 
 function generateRandomString(length: number): string {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -33,12 +41,12 @@ export async function GET(request: NextRequest) {
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = generateRandomString(32);
 
-  // Build Mukoko ID authorization URL
-  const authUrl = new URL(`${MUKOKO_ID_URL}/oauth/authorize`);
-  authUrl.searchParams.set('client_id', CLIENT_ID);
-  authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+  // Build Stytch authorization URL
+  const authUrl = new URL(config.authorizationEndpoint);
+  authUrl.searchParams.set('client_id', config.clientId);
+  authUrl.searchParams.set('redirect_uri', config.redirectUri);
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', 'openid profile email');
+  authUrl.searchParams.set('scope', config.scope);
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('code_challenge', codeChallenge);
   authUrl.searchParams.set('code_challenge_method', 'S256');

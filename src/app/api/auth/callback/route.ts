@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const STYTCH_TOKEN_URL = 'https://api.stytch.com/v1/oauth2/token';
-const STYTCH_USERINFO_URL = 'https://api.stytch.com/v1/oauth2/userinfo';
+// Stytch OIDC endpoints (from discovery document)
+const STYTCH_PROJECT_ID = 'project-live-86090362-2491-4ca7-9037-f7688c7699ce';
+const STYTCH_TOKEN_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/token`;
+const STYTCH_USERINFO_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/userinfo`;
 const CLIENT_ID = process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID!;
 const CLIENT_SECRET = process.env.MUKOKO_CLIENT_SECRET!;
 const REDIRECT_URI = process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback';
