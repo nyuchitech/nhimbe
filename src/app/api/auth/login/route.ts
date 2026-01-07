@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Stytch Connected Apps Configuration
-// Authorization and token exchange both go to Stytch
-const STYTCH_PROJECT_ID = 'project-live-86090362-2491-4ca7-9037-f7688c7699ce';
-const STYTCH_AUTHORIZE_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/authorize`;
+// Authorization goes to Mukoko ID, token exchange goes to Stytch
+const MUKOKO_ID_URL = (process.env.NEXT_PUBLIC_MUKOKO_ID_URL || 'https://id.mukoko.com').trim();
 const CLIENT_ID = (process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID || '').trim();
 const REDIRECT_URI = (process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback').trim();
 
@@ -14,12 +13,13 @@ function generateRandomString(length: number): string {
   return Array.from(randomValues, (v) => charset[v % charset.length]).join('');
 }
 
+// Generate PKCE code challenge from verifier using S256
 async function generateCodeChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
   const digest = await crypto.subtle.digest('SHA-256', data);
-  return Buffer.from(digest)
-    .toString('base64')
+  // Base64url encode (no padding, URL-safe characters)
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
@@ -29,13 +29,15 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const returnUrl = searchParams.get('returnUrl') || '/';
 
-  // Generate PKCE values
-  const codeVerifier = generateRandomString(64);
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  // Generate state for CSRF protection
   const state = generateRandomString(32);
 
-  // Build Stytch authorization URL
-  const authUrl = new URL(STYTCH_AUTHORIZE_URL);
+  // Generate PKCE code verifier and challenge (S256)
+  const codeVerifier = generateRandomString(64);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+  // Build Mukoko ID authorization URL
+  const authUrl = new URL(`${MUKOKO_ID_URL}/oauth/authorize`);
   authUrl.searchParams.set('client_id', CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
   authUrl.searchParams.set('response_type', 'code');
@@ -59,8 +61,8 @@ export async function GET(request: NextRequest) {
     ...(isProduction && { domain: '.nhimbe.com' }),
   };
 
-  response.cookies.set('mukoko_code_verifier', codeVerifier, cookieOptions);
   response.cookies.set('mukoko_state', state, cookieOptions);
+  response.cookies.set('mukoko_code_verifier', codeVerifier, cookieOptions);
   response.cookies.set('mukoko_return_url', returnUrl, {
     ...cookieOptions,
     httpOnly: false,

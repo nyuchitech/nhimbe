@@ -43,9 +43,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl);
   }
 
+  // Verify code_verifier exists (required for PKCE)
   if (!codeVerifier) {
     const errorUrl = new URL('/auth/error', SITE_URL);
-    errorUrl.searchParams.set('error', 'Missing code verifier');
+    errorUrl.searchParams.set('error', 'Missing PKCE code verifier');
     return NextResponse.redirect(errorUrl);
   }
 
@@ -57,10 +58,10 @@ export async function GET(request: NextRequest) {
       has_secret: !!CLIENT_SECRET,
       secret_length: CLIENT_SECRET?.length,
       code_length: code?.length,
-      verifier_length: codeVerifier?.length,
+      has_code_verifier: !!codeVerifier,
     });
 
-    // Exchange code for tokens
+    // Exchange code for tokens (PKCE + client_secret for auth)
     const tokenResponse = await fetch(STYTCH_TOKEN_URL, {
       method: 'POST',
       headers: {
