@@ -3,11 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Search, MapPin, Clock, ArrowRight, Loader2, X } from "lucide-react";
-import { getEvents, getCategories, type Event } from "@/lib/api";
+import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 
 export default function SearchPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -190,11 +190,11 @@ export default function SearchPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {popularCategories.map((category) => (
                 <Link
-                  key={category}
-                  href={`/events?category=${encodeURIComponent(category)}`}
+                  key={category.id}
+                  href={`/events?category=${encodeURIComponent(category.id)}`}
                   className="p-4 bg-surface rounded-xl hover:bg-elevated transition-colors text-center"
                 >
-                  <span className="font-medium">{category}</span>
+                  <span className="font-medium">{category.name}</span>
                 </Link>
               ))}
             </div>

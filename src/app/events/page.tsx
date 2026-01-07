@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Search, MapPin, ChevronDown, Loader2, SlidersHorizontal, X } from "lucide-react";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
-import { getEvents, getCategories, getCities, type Event } from "@/lib/api";
+import { getEvents, getCategories, getCities, type Event, type Category } from "@/lib/api";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +43,7 @@ export default function EventsPage() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
+      // Match category by ID (new format) or name (legacy)
       const categoryMatch = activeCategory === "All" || e.category === activeCategory;
       const cityMatch =
         activeCity === "All Cities" ||
@@ -183,10 +184,10 @@ export default function EventsPage() {
         />
         {categories.map((cat) => (
           <CategoryChip
-            key={cat}
-            label={cat}
-            active={activeCategory === cat}
-            onClick={() => setActiveCategory(cat)}
+            key={cat.id}
+            label={cat.name}
+            active={activeCategory === cat.id}
+            onClick={() => setActiveCategory(cat.id)}
           />
         ))}
       </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/ui/button";
-import { getCities, getCategories } from "@/lib/api";
+import { getCities, getCategories, type Category } from "@/lib/api";
 import {
   ArrowRight,
   ArrowLeft,
@@ -33,7 +33,7 @@ export default function OnboardingForm() {
     interests: [],
   });
   const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -263,15 +263,15 @@ export default function OnboardingForm() {
               <div className="flex flex-wrap gap-2">
                 {categories.map((category) => (
                   <button
-                    key={category}
-                    onClick={() => toggleInterest(category)}
+                    key={category.id}
+                    onClick={() => toggleInterest(category.id)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      data.interests.includes(category)
+                      data.interests.includes(category.id)
                         ? "bg-primary text-background"
                         : "bg-surface border border-elevated hover:border-primary/50"
                     }`}
                   >
-                    {category}
+                    {category.name}
                   </button>
                 ))}
               </div>

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { MapPin, ChevronDown, Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun } from "lucide-react";
 import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
-import { getEvents, getCategories, type Event } from "@/lib/api";
+import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 import { getUserTimezone, getCurrentTimeWithTimezone, getWeather, type WeatherData } from "@/lib/timezone";
 
 // Weather icon component
@@ -23,7 +23,7 @@ function WeatherIcon({ icon }: { icon: string }) {
 
 export default function DiscoverPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeCity, setActiveCity] = useState<string | null>(null);
@@ -217,15 +217,15 @@ export default function DiscoverPage() {
             </button>
             {categories.map((category) => (
               <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeCategory === category
+                  activeCategory === category.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-surface text-foreground hover:bg-elevated"
                 }`}
               >
-                {category}
+                {category.name}
               </button>
             ))}
           </div>

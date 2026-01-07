@@ -20,23 +20,25 @@ import {
   ImagePlus,
   Trash2,
 } from "lucide-react";
-import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type CreateEventInput } from "@/lib/api";
+import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type CreateEventInput, type Category } from "@/lib/api";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
 import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
 
-// Default categories if API returns none
-const DEFAULT_CATEGORIES = [
-  "Community",
-  "Music",
-  "Art",
-  "Tech",
-  "Business",
-  "Food & Drink",
-  "Sports",
-  "Wellness",
-  "Education",
-  "Networking",
+// Default categories if API returns none (matching Mukoko's 32 interest categories)
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: "tech", name: "Technology", group: "Technology & Innovation" },
+  { id: "ai-ml", name: "AI & Machine Learning", group: "Technology & Innovation" },
+  { id: "business", name: "Business", group: "Business & Economy" },
+  { id: "music", name: "Music", group: "Entertainment & Media" },
+  { id: "film-tv", name: "Film & TV", group: "Entertainment & Media" },
+  { id: "football", name: "Football", group: "Sports" },
+  { id: "fitness", name: "Fitness & Wellness", group: "Sports" },
+  { id: "culture", name: "Culture & Society", group: "Culture & Society" },
+  { id: "food", name: "Food & Drink", group: "Culture & Society" },
+  { id: "education", name: "Education", group: "Education & Knowledge" },
+  { id: "art", name: "Art", group: "Creative Arts" },
+  { id: "comedy", name: "Comedy", group: "Creative Arts" },
 ];
 
 // Default cities if API returns none
@@ -125,21 +127,25 @@ export default function CreateEventPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
-  // Capacity & Price
+  // Capacity & Ticketing
   const [capacity, setCapacity] = useState<number | null>(null);
-  const [priceAmount, setPriceAmount] = useState<number>(0);
-  const [priceCurrency, setPriceCurrency] = useState("USD");
+  const [isFree, setIsFree] = useState(true);
+  const [ticketUrl, setTicketUrl] = useState("");
 
   // Load categories and cities
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
         const [cats, citiesData] = await Promise.all([getCategories(), getCities()]);
-        // Use defaults if API returns empty
-        setCategories(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
+        // Use defaults if API returns empty or returns old string format
+        if (cats.length > 0 && typeof cats[0] !== "string") {
+          setCategories(cats);
+        } else {
+          setCategories(DEFAULT_CATEGORIES);
+        }
         setCities(citiesData.length > 0 ? citiesData : DEFAULT_CITIES);
       } catch (err) {
         console.error("Failed to load form data:", err);
@@ -290,7 +296,8 @@ export default function CreateEventPage() {
           initials: "EH",
           eventCount: 1,
         },
-        price: priceAmount > 0 ? { amount: priceAmount, currency: priceCurrency, label: "Ticket" } : undefined,
+        isFree,
+        ticketUrl: !isFree && ticketUrl.trim() ? ticketUrl.trim() : undefined,
       };
 
       const result = await createEvent(eventData);
@@ -470,7 +477,7 @@ export default function CreateEventPage() {
         <span className="text-lg">🏷️</span>
         <div className="text-left flex-1">
           <div className={`font-medium ${!category ? "text-text-secondary" : ""}`}>
-            {category || "Select Category"}
+            {category ? categories.find(c => c.id === category)?.name || category : "Select Category"}
           </div>
           {tags.length > 0 && (
             <div className="text-sm text-text-tertiary">
@@ -498,15 +505,15 @@ export default function CreateEventPage() {
         </h3>
 
         <div className="bg-surface rounded-xl divide-y divide-elevated">
-          {/* Ticket Price */}
+          {/* Ticketing */}
           <button
             onClick={() => setShowPriceModal(true)}
             className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-elevated transition-colors"
           >
             <Ticket className="w-5 h-5 text-text-secondary" />
-            <span className="flex-1 text-left">Ticket Price</span>
+            <span className="flex-1 text-left">Ticketing</span>
             <span className="text-text-secondary">
-              {priceAmount > 0 ? `${priceCurrency} ${priceAmount}` : "Free"}
+              {isFree ? "Free Event" : "Paid (External)"}
             </span>
             <Pencil className="w-4 h-4 text-text-tertiary" />
           </button>
@@ -777,21 +784,34 @@ export default function CreateEventPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-text-secondary mb-2">Category</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setCategory(cat)}
-                      className={`px-4 py-3 rounded-xl text-left ${
-                        category === cat
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-surface hover:bg-elevated"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+                {/* Group categories by their group field */}
+                {Object.entries(
+                  categories.reduce((groups, cat) => {
+                    const group = cat.group;
+                    if (!groups[group]) groups[group] = [];
+                    groups[group].push(cat);
+                    return groups;
+                  }, {} as Record<string, Category[]>)
+                ).map(([groupName, groupCategories]) => (
+                  <div key={groupName} className="mb-4">
+                    <div className="text-xs text-text-tertiary uppercase tracking-wider mb-2">{groupName}</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {groupCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setCategory(cat.id)}
+                          className={`px-4 py-3 rounded-xl text-left ${
+                            category === cat.id
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-surface hover:bg-elevated"
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
               <div>
                 <label className="block text-sm text-text-secondary mb-2">Tags</label>
@@ -872,43 +892,52 @@ export default function CreateEventPage() {
         </div>
       )}
 
-      {/* Price Modal */}
+      {/* Ticketing Modal */}
       {showPriceModal && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
           <div className="bg-background rounded-t-2xl w-full max-w-150 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Ticket Price</h3>
+              <h3 className="text-lg font-semibold">Ticketing</h3>
               <button onClick={() => setShowPriceModal(false)}>
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm text-text-secondary mb-2">Price</label>
+              {/* Free/Paid Toggle */}
+              <div className="flex items-center gap-3 p-3 bg-surface rounded-xl">
+                <Ticket className="w-5 h-5 text-text-secondary" />
+                <span className="flex-1">Free Event</span>
+                <Switch
+                  checked={isFree}
+                  onCheckedChange={setIsFree}
+                />
+              </div>
+
+              {/* External Ticket URL (shown for paid events) */}
+              {!isFree && (
+                <div>
+                  <label className="block text-sm text-text-secondary mb-2">External Ticket URL</label>
                   <input
-                    type="number"
-                    value={priceAmount}
-                    onChange={(e) => setPriceAmount(Number(e.target.value))}
-                    min={0}
+                    type="url"
+                    value={ticketUrl}
+                    onChange={(e) => setTicketUrl(e.target.value)}
+                    placeholder="https://tickets.example.com/your-event"
                     className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
                   />
+                  <p className="text-xs text-text-tertiary mt-2">
+                    Link to your external ticketing page (e.g., Eventbrite, Quicket, etc.)
+                  </p>
                 </div>
-                <div className="w-24">
-                  <label className="block text-sm text-text-secondary mb-2">Currency</label>
-                  <select
-                    value={priceCurrency}
-                    onChange={(e) => setPriceCurrency(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="ZWL">ZWL</option>
-                    <option value="ZAR">ZAR</option>
-                    <option value="KES">KES</option>
-                  </select>
+              )}
+
+              {isFree && (
+                <div className="p-4 bg-primary/10 rounded-xl">
+                  <p className="text-sm text-primary">
+                    Free events allow guests to RSVP directly on nhimbe. For paid events, toggle off &quot;Free Event&quot; and add a link to your external ticketing provider.
+                  </p>
                 </div>
-              </div>
-              <p className="text-sm text-text-tertiary">Set to 0 for a free event</p>
+              )}
+
               <button
                 onClick={() => setShowPriceModal(false)}
                 className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"

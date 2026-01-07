@@ -329,6 +329,10 @@ export interface Event {
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
+  // Ticketing - free events on nhimbe, paid events link to external
+  isFree?: boolean;
+  ticketUrl?: string; // External ticketing URL for paid events
+  // Legacy price field (deprecated)
   price?: EventPrice;
   createdAt?: string;
   updatedAt?: string;

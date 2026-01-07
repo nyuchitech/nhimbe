@@ -72,7 +72,11 @@ CREATE TABLE IF NOT EXISTS events (
   host_initials TEXT NOT NULL,
   host_event_count INTEGER DEFAULT 0,
 
-  -- Pricing (optional)
+  -- Ticketing (free events on nhimbe, paid events link to external)
+  is_free BOOLEAN DEFAULT TRUE,
+  ticket_url TEXT, -- External ticketing URL for paid events
+
+  -- Legacy pricing fields (deprecated, kept for migration)
   price_amount REAL,
   price_currency TEXT,
   price_label TEXT,

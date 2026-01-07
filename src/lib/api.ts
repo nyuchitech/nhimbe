@@ -53,6 +53,10 @@ export interface Event {
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
+  // Ticketing - free events on nhimbe, paid events link to external
+  isFree?: boolean;
+  ticketUrl?: string; // External ticketing URL for paid events
+  // Legacy price field (deprecated)
   price?: EventPrice;
   friends?: { name: string; gradient: string }[];
   createdAt?: string;
@@ -68,8 +72,15 @@ export interface EventsResponse {
   };
 }
 
+// Category with id, name, and group (matching Mukoko's 32 interest categories)
+export interface Category {
+  id: string;
+  name: string;
+  group: string;
+}
+
 export interface CategoriesResponse {
-  categories: string[];
+  categories: Category[];
 }
 
 export interface CitiesResponse {
@@ -132,7 +143,7 @@ export async function getEventByShortCode(shortCode: string): Promise<{ event: E
 }
 
 // Categories API
-export async function getCategories(): Promise<string[]> {
+export async function getCategories(): Promise<Category[]> {
   const response = await apiFetch<CategoriesResponse>("/api/categories");
   return response.categories;
 }
@@ -164,6 +175,10 @@ export interface CreateEventInput {
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
   host: EventHost;
+  // Ticketing - free events on nhimbe, paid events link to external
+  isFree?: boolean;
+  ticketUrl?: string; // External ticketing URL for paid events
+  // Legacy price field (deprecated)
   price?: EventPrice;
 }
 
