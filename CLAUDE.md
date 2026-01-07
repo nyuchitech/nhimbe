@@ -274,7 +274,6 @@ Stytch Project ID: `project-live-86090362-2491-4ca7-9037-f7688c7699ce`
 **Production:**
 
 - `https://nhimbe.com/api/auth/callback`
-- `https://www.nhimbe.com/auth/callback`
 
 ### OAuth Clients
 

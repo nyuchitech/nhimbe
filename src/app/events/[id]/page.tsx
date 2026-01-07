@@ -30,8 +30,8 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     };
   }
 
-  const eventUrl = `https://www.nhimbe.com/events/${event.id}`;
-  const shortUrl = `https://www.nhimbe.com/e/${event.shortCode}`;
+  const eventUrl = `https://nhimbe.com/events/${event.id}`;
+  const shortUrl = `https://nhimbe.com/e/${event.shortCode}`;
   const description = `${event.title} on ${event.date.full} at ${event.location.venue}, ${event.location.city}. ${event.description.slice(0, 150)}...`;
 
   // Generate dynamic OG image URL with mineral gradient
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     gradient: "mixed",
     type: "event",
   });
-  const ogImageUrl = `https://www.nhimbe.com/api/og?${ogImageParams.toString()}`;
+  const ogImageUrl = `https://nhimbe.com/api/og?${ogImageParams.toString()}`;
 
   // Use cover image if available, otherwise use dynamic OG image
   const imageUrl = event.coverImage || ogImageUrl;
@@ -99,7 +99,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
-  const eventUrl = `https://www.nhimbe.com/e/${event.shortCode}`;
+  const eventUrl = `https://nhimbe.com/e/${event.shortCode}`;
 
   // JSON-LD structured data for SEO
   const jsonLd = {

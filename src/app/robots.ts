@@ -37,7 +37,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: "https://www.nhimbe.com/sitemap.xml",
-    host: "https://www.nhimbe.com",
+    sitemap: "https://nhimbe.com/sitemap.xml",
+    host: "https://nhimbe.com",
   };
 }

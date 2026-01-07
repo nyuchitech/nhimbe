@@ -56,12 +56,12 @@ nhimbe provides a public API for event discovery:
 
 ## Contact
 
-- Website: https://www.nhimbe.com
+- Website: https://nhimbe.com
 - Parent Company: https://mukoko.com
 
 ## Useful Links
 
-- Events: https://www.nhimbe.com/events
-- Create Event: https://www.nhimbe.com/events/create
-- Search: https://www.nhimbe.com/search
-- About: https://www.nhimbe.com/about
+- Events: https://nhimbe.com/events
+- Create Event: https://nhimbe.com/events/create
+- Search: https://nhimbe.com/search
+- About: https://nhimbe.com/about

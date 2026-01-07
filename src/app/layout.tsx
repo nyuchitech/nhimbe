@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth/auth-context";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.nhimbe.com"),
+  metadataBase: new URL("https://nhimbe.com"),
   title: {
     default: "nhimbe - Together we gather, together we grow",
     template: "%s | nhimbe",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
       "Discover events and gatherings across Africa. Connect with your community and celebrate together.",
     type: "website",
     locale: "en_US",
-    url: "https://www.nhimbe.com",
+    url: "https://nhimbe.com",
     siteName: "nhimbe",
     images: [
       {
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://www.nhimbe.com",
+    canonical: "https://nhimbe.com",
   },
   category: "events",
 };

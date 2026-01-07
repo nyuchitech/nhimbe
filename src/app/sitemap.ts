@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { getEvents } from "@/lib/api";
 
-const BASE_URL = "https://www.nhimbe.com";
+const BASE_URL = "https://nhimbe.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
