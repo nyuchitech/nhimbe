@@ -118,12 +118,14 @@ export async function GET(request: NextRequest) {
     const successUrl = new URL(nhimbeUser?.onboardingCompleted === false ? '/onboarding' : returnUrl, SITE_URL);
     const response = NextResponse.redirect(successUrl);
 
-    // Set auth cookies
+    // Set auth cookies with shared domain for www/non-www compatibility
+    const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax' as const,
       path: '/',
+      ...(isProduction && { domain: '.nhimbe.com' }),
     };
 
     // Store tokens in httpOnly cookies
@@ -154,10 +156,14 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 30,
     });
 
-    // Clear auth flow cookies
-    response.cookies.delete('mukoko_code_verifier');
-    response.cookies.delete('mukoko_state');
-    response.cookies.delete('mukoko_return_url');
+    // Clear auth flow cookies (with domain to match how they were set)
+    const deleteCookieOptions = {
+      path: '/',
+      ...(isProduction && { domain: '.nhimbe.com' }),
+    };
+    response.cookies.delete({ name: 'mukoko_code_verifier', ...deleteCookieOptions });
+    response.cookies.delete({ name: 'mukoko_state', ...deleteCookieOptions });
+    response.cookies.delete({ name: 'mukoko_return_url', ...deleteCookieOptions });
 
     return response;
   } catch (err) {

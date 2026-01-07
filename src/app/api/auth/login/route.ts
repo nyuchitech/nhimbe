@@ -47,12 +47,15 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(authUrl);
 
   // Set cookies for callback verification
+  // Use .nhimbe.com domain in production so cookies work across www and non-www
+  const isProduction = process.env.NODE_ENV === 'production';
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     sameSite: 'lax' as const,
     path: '/',
     maxAge: 60 * 10, // 10 minutes
+    ...(isProduction && { domain: '.nhimbe.com' }),
   };
 
   response.cookies.set('mukoko_code_verifier', codeVerifier, cookieOptions);
