@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Stytch Connected Apps Configuration
 // Authorization goes to Mukoko ID, token exchange goes to Stytch API
-const MUKOKO_ID_URL = process.env.NEXT_PUBLIC_MUKOKO_ID_URL || 'https://id.mukoko.com';
-const CLIENT_ID = process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID!;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback';
+const MUKOKO_ID_URL = (process.env.NEXT_PUBLIC_MUKOKO_ID_URL || 'https://id.mukoko.com').trim();
+const CLIENT_ID = (process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID || '').trim();
+const REDIRECT_URI = (process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback').trim();
 
 function generateRandomString(length: number): string {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

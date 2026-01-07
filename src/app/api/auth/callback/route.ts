@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 const STYTCH_PROJECT_ID = 'project-live-86090362-2491-4ca7-9037-f7688c7699ce';
 const STYTCH_TOKEN_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/token`;
 const STYTCH_USERINFO_URL = `https://api.stytch.com/v1/public/${STYTCH_PROJECT_ID}/oauth2/userinfo`;
-const CLIENT_ID = process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID!;
-const CLIENT_SECRET = process.env.MUKOKO_CLIENT_SECRET!;
-const REDIRECT_URI = process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3005';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8785';
+const CLIENT_ID = (process.env.NEXT_PUBLIC_MUKOKO_CLIENT_ID || '').trim();
+const CLIENT_SECRET = (process.env.MUKOKO_CLIENT_SECRET || '').trim();
+const REDIRECT_URI = (process.env.NEXT_PUBLIC_MUKOKO_REDIRECT_URI || 'http://localhost:3005/api/auth/callback').trim();
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3005').trim();
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8785').trim();
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
