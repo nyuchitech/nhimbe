@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Frontend**: Next.js 16, React 19, Tailwind CSS v4 (deployed to Vercel)
 - **Backend**: Cloudflare Workers with D1 database, Vectorize, and Workers AI
-- **Authentication**: Stytch OAuth (Connected App flow)
+- **Authentication**: Stytch Connected Apps (OIDC) - "Sign in with Mukoko ID"
 - **Storage**: Cloudflare R2 for media uploads
 - **Icons**: Lucide React
 
@@ -64,7 +64,7 @@ npm run tail         # View production logs
 
 - **Single entry point**: All routes in `worker/src/index.ts`
 - **AI Features**: RAG search, assistant, description generator in `worker/src/ai/`
-- **Authentication**: Stytch integration in `worker/src/auth/stytch.ts`
+- **Authentication**: Stytch Connected Apps in `worker/src/auth/`
 - **Database**: D1 SQLite schema in `worker/src/db/schema.sql`
 
 ### API Endpoints
@@ -188,7 +188,7 @@ const { user, isAuthenticated, signIn, signOut } = useAuth();
 
 // Check auth state
 if (!isAuthenticated) {
-  signIn(); // Redirects to Stytch OAuth
+  signIn(); // Redirects to Stytch OAuth (Mukoko ID login)
 }
 
 // Access user data
@@ -197,23 +197,91 @@ console.log(user?.name, user?.email);
 
 ## Environment Variables
 
-### Frontend (`.env.local`)
+### Frontend Development (`.env.local`)
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8787
-NEXT_PUBLIC_STYTCH_CLIENT_ID=your-stytch-client-id
+# Stytch Connected Apps OAuth Client
+NEXT_PUBLIC_MUKOKO_CLIENT_ID=connected-app-test-936d1176-7374-47c9-998d-caca532d4742
+NEXT_PUBLIC_MUKOKO_REDIRECT_URI=http://localhost:3005/api/auth/callback
+
+# Mukoko ID URL (for logout redirect)
+NEXT_PUBLIC_MUKOKO_ID_URL=https://id.mukoko.com
+
+# App URLs
+NEXT_PUBLIC_SITE_URL=http://localhost:3005
+NEXT_PUBLIC_API_URL=http://localhost:8785
+
+# Environment
+NEXT_PUBLIC_ENVIRONMENT=development
+
+# Optional
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-key
+```
+
+### Frontend Production (`.env.production`)
+
+```bash
+# Stytch Connected Apps OAuth Client
+NEXT_PUBLIC_MUKOKO_CLIENT_ID=connected-app-live-181e2d4a-0564-4006-8062-4615fa91b950
+MUKOKO_CLIENT_SECRET=secret-****pNK1
+NEXT_PUBLIC_MUKOKO_REDIRECT_URI=https://nhimbe.com/api/auth/callback
+
+# Mukoko ID URL
+NEXT_PUBLIC_MUKOKO_ID_URL=https://id.mukoko.com
+
+# App URLs
+NEXT_PUBLIC_SITE_URL=https://nhimbe.com
+NEXT_PUBLIC_API_URL=https://api.nhimbe.com
+
+# Environment
+NEXT_PUBLIC_ENVIRONMENT=production
 ```
 
 ### Backend (`worker/.dev.vars`)
 
 ```bash
-STYTCH_PROJECT_ID=your-stytch-project-id
-STYTCH_SECRET=your-stytch-secret
+MUKOKO_CLIENT_SECRET=your-client-secret
 API_KEY=your-api-key
 ```
 
 Secrets for local dev. Use `wrangler secret put` for production.
+
+## Worker Deployments
+
+| Environment | Worker Name | URL |
+| ----------- | ----------- | --- |
+| Production | `mukoko-events-api` | `https://api.nhimbe.com` (custom domain) |
+| Staging | `mukoko-events-api-staging` | `https://mukoko-events-api-staging.nyuchi.workers.dev` |
+
+## Stytch OIDC Endpoints
+
+Stytch Project ID: `project-live-86090362-2491-4ca7-9037-f7688c7699ce`
+
+| Endpoint | URL |
+| -------- | --- |
+| Authorization | `https://api.stytch.com/v1/public/{project_id}/oauth2/authorize` |
+| Token | `https://api.stytch.com/v1/oauth2/token` |
+| UserInfo | `https://api.stytch.com/v1/oauth2/userinfo` |
+| JWKS | `https://api.stytch.com/v1/sessions/jwks/{project_id}` |
+
+### Registered Redirect URLs
+
+**Development:**
+
+- `http://localhost:3005/api/auth/callback`
+- `http://localhost:3004/api/auth/callback`
+
+**Production:**
+
+- `https://nhimbe.com/api/auth/callback`
+- `https://www.nhimbe.com/auth/callback`
+
+### OAuth Clients
+
+| Environment | Client ID | Client Type |
+| ----------- | --------- | ----------- |
+| Development | `connected-app-test-936d1176-7374-47c9-998d-caca532d4742` | `third_party_public` |
+| Production | `connected-app-live-181e2d4a-0564-4006-8062-4615fa91b950` | `first_party` |
 
 ## Key Patterns
 

@@ -28,7 +28,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsOnboarding: boolean;
-  signIn: () => void;
+  signIn: (returnUrl?: string) => void;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -37,9 +37,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
-// OAuth configuration for Stytch Connected App
-const STYTCH_OAUTH_URL = "https://api.stytch.com/v1/public/oauth2/authorize";
-const CLIENT_ID = process.env.NEXT_PUBLIC_STYTCH_CLIENT_ID || "";
+// Helper to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  if (match) {
+    try {
+      return decodeURIComponent(match[2]);
+    } catch {
+      return match[2];
+    }
+  }
+  return null;
+}
+
+// Helper to delete cookie
+function deleteCookie(name: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<NhimbeUser | null>(null);
@@ -53,28 +69,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkSession = async () => {
     try {
-      const accessToken = localStorage.getItem("nhimbe_access_token");
-      if (!accessToken) {
-        setIsLoading(false);
-        return;
+      // First check for user data in cookie (set by callback)
+      const userCookie = getCookie("nhimbe_user");
+      if (userCookie) {
+        try {
+          const userData = JSON.parse(userCookie);
+          setUser(userData);
+          // Also store in localStorage for easy access
+          localStorage.setItem("nhimbe_user", userCookie);
+          setIsLoading(false);
+          return;
+        } catch (e) {
+          console.error("Failed to parse user cookie:", e);
+        }
       }
 
-      // Validate token and get user
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      // Fallback to localStorage
+      const storedUser = localStorage.getItem("nhimbe_user");
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          setIsLoading(false);
+          return;
+        } catch (e) {
+          console.error("Failed to parse stored user:", e);
+        }
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        localStorage.setItem("nhimbe_user", JSON.stringify(data.user));
-      } else {
-        // Token invalid, clear storage
-        localStorage.removeItem("nhimbe_access_token");
-        localStorage.removeItem("nhimbe_refresh_token");
-        localStorage.removeItem("nhimbe_user");
+      // Try to validate session with backend
+      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
+      if (accessToken) {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+          localStorage.setItem("nhimbe_user", JSON.stringify(data.user));
+        } else {
+          // Token invalid, clear storage
+          clearAuth();
+        }
       }
     } catch (error) {
       console.error("Session check failed:", error);
@@ -83,48 +123,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = useCallback(() => {
-    // Build OAuth authorization URL
-    const redirectUri = typeof window !== "undefined"
-      ? `${window.location.origin}/auth/callback`
-      : "https://www.nhimbe.com/auth/callback";
+  const clearAuth = () => {
+    deleteCookie("nhimbe_access_token");
+    deleteCookie("nhimbe_refresh_token");
+    deleteCookie("nhimbe_user");
+    localStorage.removeItem("nhimbe_access_token");
+    localStorage.removeItem("nhimbe_refresh_token");
+    localStorage.removeItem("nhimbe_user");
+  };
 
-    const params = new URLSearchParams({
-      client_id: CLIENT_ID,
-      response_type: "code",
-      redirect_uri: redirectUri,
-      scope: "openid email profile",
-      state: generateState(),
-    });
-
-    // Store state for CSRF protection
-    if (typeof window !== "undefined") {
-      localStorage.setItem("oauth_state", params.get("state") || "");
+  const signIn = useCallback((returnUrl?: string) => {
+    // Use API route for OAuth flow with PKCE
+    const loginUrl = new URL("/api/auth/login", window.location.origin);
+    if (returnUrl) {
+      loginUrl.searchParams.set("returnUrl", returnUrl);
     }
-
-    // Redirect to Stytch OAuth
-    window.location.href = `${STYTCH_OAUTH_URL}?${params.toString()}`;
+    window.location.href = loginUrl.toString();
   }, []);
 
   const signOut = useCallback(async () => {
     try {
-      const accessToken = localStorage.getItem("nhimbe_access_token");
+      // Call logout API to clear cookies
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      }).catch(() => {});
 
-      // Revoke token on backend
+      // Also try backend logout
+      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
       if (accessToken) {
         await fetch(`${API_URL}/api/auth/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }).catch(() => {}); // Ignore errors
+          credentials: "include",
+        }).catch(() => {});
       }
     } finally {
-      // Clear local storage
-      localStorage.removeItem("nhimbe_access_token");
-      localStorage.removeItem("nhimbe_refresh_token");
-      localStorage.removeItem("nhimbe_user");
-      localStorage.removeItem("oauth_state");
+      clearAuth();
       setUser(null);
       router.push("/");
     }
@@ -161,13 +198,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
-
-// Generate random state for CSRF protection
-function generateState(): string {
-  const array = new Uint8Array(32);
-  if (typeof window !== "undefined" && window.crypto) {
-    window.crypto.getRandomValues(array);
-  }
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

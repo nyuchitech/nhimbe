@@ -1,6 +1,6 @@
 # nhimbe API - Cloudflare Workers Configuration
 # Part of the Mukoko ecosystem
-name = "mukoko-nhimbe-api"
+name = "mukoko-events-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
@@ -44,10 +44,59 @@ binding = "IMAGES"
 
 # Production environment
 [env.production]
-name = "mukoko-nhimbe-api"
+name = "mukoko-events-api"
 vars = { ENVIRONMENT = "production" }
+routes = [
+  { pattern = "api.nhimbe.com", custom_domain = true }
+]
+
+[env.production.ai]
+binding = "AI"
+
+[[env.production.vectorize]]
+binding = "VECTORIZE"
+index_name = "mukoko-nhimbe-events"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "mukoko-nhimbe-db"
+database_id = "039aa68b-2f13-4c16-9c39-f6ed85283174"
+
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "bbe12fb2c88247b4a498da713416b7d7"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mukoko-nhimbe-media"
+
+[env.production.images]
+binding = "IMAGES"
 
 # Staging environment
 [env.staging]
-name = "mukoko-nhimbe-api-staging"
+name = "mukoko-events-api-staging"
 vars = { ENVIRONMENT = "staging" }
+
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.vectorize]]
+binding = "VECTORIZE"
+index_name = "mukoko-nhimbe-events"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "mukoko-nhimbe-db"
+database_id = "039aa68b-2f13-4c16-9c39-f6ed85283174"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE"
+id = "bbe12fb2c88247b4a498da713416b7d7"
+
+[[env.staging.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mukoko-nhimbe-media"
+
+[env.staging.images]
+binding = "IMAGES"
