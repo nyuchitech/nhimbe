@@ -17,6 +17,20 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
+// Helper to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  if (match) {
+    try {
+      return decodeURIComponent(match[2]);
+    } catch {
+      return match[2];
+    }
+  }
+  return null;
+}
+
 interface OnboardingData {
   name: string;
   city: string;
@@ -130,7 +144,7 @@ export default function OnboardingForm() {
     setError(null);
 
     try {
-      const accessToken = localStorage.getItem("nhimbe_access_token");
+      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
       if (!accessToken) {
         throw new Error("No session found");
       }

@@ -145,9 +145,11 @@ export async function GET(request: NextRequest) {
       ...(isProduction && { domain: '.nhimbe.com' }),
     };
 
-    // Store tokens in httpOnly cookies
+    // Store access token in non-httpOnly cookie for client access
+    // (needed for frontend API calls to backend)
     response.cookies.set('nhimbe_access_token', tokens.access_token, {
       ...cookieOptions,
+      httpOnly: false,
       maxAge: tokens.expires_in || 3600,
     });
 
