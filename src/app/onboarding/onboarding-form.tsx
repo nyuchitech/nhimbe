@@ -52,7 +52,7 @@ export default function OnboardingForm() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, refreshUser, signOut } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -61,15 +61,18 @@ export default function OnboardingForm() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Pre-fill name from user if available
+  // Pre-fill data from user if available (from Mukoko ID profile)
   useEffect(() => {
-    if (user?.name && !data.name) {
+    if (user) {
       setData((prev) => ({
         ...prev,
-        name: user.name,
+        name: prev.name || user.name || "",
+        city: prev.city || user.city || "",
+        country: prev.country || user.country || "",
+        interests: prev.interests.length > 0 ? prev.interests : (user.interests || []),
       }));
     }
-  }, [user, data.name]);
+  }, [user]);
 
   // Load cities and categories
   useEffect(() => {
@@ -124,6 +127,11 @@ export default function OnboardingForm() {
     if (step > 0) {
       setStep(step - 1);
     }
+  };
+
+  const handleSkip = () => {
+    // Skip onboarding and go to home - user can complete later in profile
+    router.push("/");
   };
 
   const toggleInterest = (category: string) => {
@@ -324,6 +332,16 @@ export default function OnboardingForm() {
               </>
             )}
           </Button>
+        </div>
+
+        {/* Skip option */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleSkip}
+            className="text-sm text-text-tertiary hover:text-text-secondary transition-colors"
+          >
+            Skip for now
+          </button>
         </div>
       </div>
     </div>

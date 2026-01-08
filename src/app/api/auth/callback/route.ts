@@ -161,12 +161,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Store user data in non-httpOnly cookie for client access
+    // Pull any additional profile data from Mukoko ID via Stytch userinfo
     const userData = nhimbeUser || {
       id: stytchUser.sub,
       email: stytchUser.email,
-      name: stytchUser.name || stytchUser.email?.split('@')[0] || 'User',
+      name: stytchUser.name || stytchUser.given_name || stytchUser.email?.split('@')[0] || 'User',
       stytchUserId: stytchUser.sub,
-      onboardingCompleted: false,
+      // Mukoko ID may pass these through custom claims
+      city: stytchUser.city || stytchUser['custom:city'] || null,
+      country: stytchUser.country || stytchUser['custom:country'] || null,
+      interests: stytchUser.interests || stytchUser['custom:interests'] || [],
+      avatarUrl: stytchUser.picture || null,
+      // Mark onboarding as complete if we already have location data
+      onboardingCompleted: !!(stytchUser.city || stytchUser['custom:city']),
     };
 
     response.cookies.set('nhimbe_user', JSON.stringify(userData), {

@@ -17,6 +17,8 @@ import {
   Heart,
   Shield,
   HelpCircle,
+  ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -31,6 +33,7 @@ type MenuItem = {
   value?: boolean | string;
   onChange?: () => void;
   onClick?: () => void;
+  external?: boolean;
 };
 
 type MenuSection = {
@@ -90,6 +93,23 @@ function ProfileContent() {
           label: "Appearance",
           value: theme === "system" ? "System" : resolvedTheme === "dark" ? "Dark" : "Light",
           onClick: cycleTheme,
+        },
+      ],
+    },
+    {
+      section: "Account",
+      items: [
+        {
+          icon: KeyRound,
+          label: "Change Password",
+          href: "https://id.mukoko.com/settings/security",
+          external: true,
+        },
+        {
+          icon: ExternalLink,
+          label: "Manage Mukoko ID",
+          href: "https://id.mukoko.com/settings",
+          external: true,
         },
       ],
     },
@@ -187,6 +207,22 @@ function ProfileContent() {
                       <span className="text-text-secondary">{item.value}</span>
                       <ChevronRight className="w-5 h-5 text-text-tertiary" />
                     </button>
+                  );
+                }
+
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-4 py-3.5 hover:bg-elevated transition-colors"
+                    >
+                      <Icon className="w-5 h-5 text-text-secondary" />
+                      <span className="flex-1 font-medium">{item.label}</span>
+                      <ExternalLink className="w-4 h-4 text-text-tertiary" />
+                    </a>
                   );
                 }
 
