@@ -899,6 +899,180 @@ export default function ManageEventPage() {
 
         {/* More Tab (Settings) */}
         <TabsContent value="more" className="space-y-6">
+          {/* Clone Event */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Clone Event</CardTitle>
+              <CardDescription>
+                Create a new event with the same information as this one.
+                Everything except the guest list and event blasts will be copied over.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="secondary" className="gap-2">
+                <Copy className="w-4 h-4" />
+                Clone Event
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Event Page / Custom URL */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Event Page</CardTitle>
+              <CardDescription>
+                When you choose a new URL, the current one will no longer work.
+                Do not change your URL if you have already shared the event.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-text-secondary mb-2 block">Public URL</label>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-2.5 bg-surface rounded-lg text-text-secondary text-sm">
+                    nhimbe.com/e/
+                  </div>
+                  <Input
+                    defaultValue={event.shortCode}
+                    className="flex-1"
+                    placeholder="your-custom-url"
+                  />
+                  <Button variant="secondary">Update</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Embed Event */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Embed Event</CardTitle>
+              <CardDescription>
+                Have your own site? Embed the event to let visitors know about it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Embed Options */}
+              <div className="space-y-2">
+                <button className="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary text-left">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  <div className="flex-1">
+                    <div className="font-medium">Embed as Button</div>
+                  </div>
+                  <Check className="w-5 h-5 text-primary" />
+                </button>
+                <button className="w-full flex items-center gap-3 p-4 rounded-xl bg-elevated hover:bg-surface text-left transition-colors">
+                  <ExternalLink className="w-5 h-5 text-text-secondary" />
+                  <div className="flex-1">
+                    <div className="font-medium">Embed Event Page</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Code Snippet */}
+              <div>
+                <label className="text-sm font-medium text-text-secondary mb-2 block">
+                  Paste the following HTML code snippet to your page:
+                </label>
+                <div className="bg-[#1a1a2e] rounded-xl p-4 font-mono text-sm overflow-x-auto">
+                  <div className="text-blue-400">
+                    &lt;<span className="text-pink-400">a</span>
+                  </div>
+                  <div className="pl-4 text-green-400">
+                    href=&quot;{typeof window !== "undefined" ? window.location.origin : ""}/events/{event.id}&quot;
+                  </div>
+                  <div className="pl-4 text-green-400">
+                    class=&quot;nhimbe-checkout-button&quot;
+                  </div>
+                  <div className="pl-4 text-green-400">
+                    data-nhimbe-action=&quot;checkout&quot;
+                  </div>
+                  <div className="pl-4 text-green-400">
+                    data-nhimbe-event-id=&quot;{event.id}&quot;
+                  </div>
+                  <div className="text-blue-400">&gt;</div>
+                  <div className="pl-4 text-white">Register for Event</div>
+                  <div className="text-blue-400">
+                    &lt;/<span className="text-pink-400">a</span>&gt;
+                  </div>
+                  <div className="mt-2 text-blue-400">
+                    &lt;<span className="text-pink-400">script</span>{" "}
+                    <span className="text-green-400">id</span>=&quot;nhimbe-checkout&quot;{" "}
+                    <span className="text-green-400">src</span>=&quot;{typeof window !== "undefined" ? window.location.origin : ""}/embed.js&quot;&gt;
+                  </div>
+                  <div className="text-blue-400">
+                    &lt;/<span className="text-pink-400">script</span>&gt;
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div>
+                <label className="text-sm font-medium text-text-secondary mb-2 block">
+                  This gives you the following button. Click it to see it in action!
+                </label>
+                <div className="p-8 bg-elevated rounded-xl border-2 border-dashed border-surface flex items-center justify-center">
+                  <button className="px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                    Register for Event
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-sm text-text-secondary">
+                If you want to use your own styling for the button, simply remove the{" "}
+                <code className="bg-elevated px-1 py-0.5 rounded">nhimbe-checkout-button</code>{" "}
+                class from the snippet above.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Registration Referrals */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Registration Referrals</CardTitle>
+              <CardDescription>
+                Each guest has a unique referral link to invite friends.
+                <Link href="#" className="text-primary ml-1 hover:underline">Learn More</Link>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="py-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-elevated rounded-full flex items-center justify-center">
+                  <Share2 className="w-8 h-8 text-text-tertiary" />
+                </div>
+                <h4 className="font-medium text-text-secondary mb-1">No Referrals</h4>
+                <p className="text-sm text-text-tertiary">
+                  Referrals will start showing up here once guests start inviting their friends.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Event Feedback */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Event Feedback</CardTitle>
+              <CardDescription>
+                See how much your guests enjoyed the event.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="py-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-elevated rounded-full flex items-center justify-center">
+                  <Mail className="w-8 h-8 text-text-tertiary" />
+                </div>
+                <h4 className="font-medium text-text-secondary mb-1">No Post-Event Email Scheduled</h4>
+                <p className="text-sm text-text-tertiary mb-4">
+                  To collect feedback, schedule a post-event thank you email. We will take care of the rest!
+                </p>
+                <Button variant="secondary" className="gap-2">
+                  <Clock className="w-4 h-4" />
+                  Schedule Feedback Email
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Event Settings */}
           <Card>
             <CardHeader>

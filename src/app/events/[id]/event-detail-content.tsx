@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, CalendarDays, MapPin, Users, QrCode, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Users, QrCode, Video, Eye, TrendingUp, Flame, Star, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventQRCode } from "./event-qr-code";
 import { AddToCalendarButton, GetDirectionsButton, ShareButton } from "./event-actions";
@@ -10,13 +10,33 @@ import { RSVPButton } from "./rsvp-button";
 import { EventThemeWrapper } from "./event-theme-wrapper";
 import { EventMap } from "./event-map";
 import { EventWeather } from "./event-weather";
+import { HostReputation } from "@/components/ui/host-reputation";
+import { EventRatings } from "@/components/ui/event-ratings";
+import { ReferralLeaderboard } from "@/components/ui/referral-leaderboard";
+import { PopularityBadge } from "@/components/ui/popularity-badge";
 import type { Event } from "@/lib/api";
 
 interface EventDetailContentProps {
   event: Event;
 }
 
+// Simulated data - in production this would come from API
+const getEventInsights = (event: Event) => {
+  // Generate consistent "random" data based on event id
+  const seed = event.id.charCodeAt(0) + event.id.charCodeAt(1);
+  return {
+    views: 120 + (seed * 47) % 2000,
+    trend: (seed * 13) % 35,
+    isHot: seed % 4 === 0,
+    rating: 3.5 + ((seed * 7) % 15) / 10,
+    reviewCount: 5 + (seed * 3) % 95,
+    isPastEvent: new Date(event.date.iso) < new Date(),
+  };
+};
+
 export function EventDetailContent({ event }: EventDetailContentProps) {
+  const insights = getEventInsights(event);
+
   const coverStyle = event.coverImage
     ? {
         backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5)), url('${event.coverImage}')`,
@@ -24,6 +44,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
         backgroundPosition: "center",
       }
     : { background: event.coverGradient || "linear-gradient(135deg, #004D40, #00796B)" };
+
+  const formatViews = (count: number): string => {
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
 
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
@@ -71,6 +96,35 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             >
               {event.category}
             </div>
+
+            {/* Hot/Trending Badge */}
+            {insights.isHot && (
+              <div className="flex items-center gap-1 bg-accent/90 text-background px-2.5 py-1.5 rounded-full self-start">
+                <Flame className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">HOT</span>
+              </div>
+            )}
+            {!insights.isHot && insights.trend > 20 && (
+              <div className="flex items-center gap-1 bg-green-500/90 text-white px-2.5 py-1.5 rounded-full self-start">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">+{insights.trend}%</span>
+              </div>
+            )}
+          </div>
+
+          {/* Open Data: Views & Rating on Cover */}
+          <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-10">
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
+              <Eye className="w-4 h-4" />
+              <span className="text-sm font-medium">{formatViews(insights.views)} views</span>
+            </div>
+            {insights.rating > 0 && insights.reviewCount > 0 && (
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
+                <Star className="w-4 h-4 text-accent fill-accent" />
+                <span className="text-sm font-medium">{insights.rating.toFixed(1)}</span>
+                <span className="text-xs text-white/60">({insights.reviewCount})</span>
+              </div>
+            )}
           </div>
 
           {/* Tags */}
@@ -96,7 +150,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               {event.title}
             </h1>
 
-            {/* Host Row */}
+            {/* Host Row with Reputation */}
             <div className="flex items-center gap-3.5 py-4 border-b mb-6" style={{ borderColor: "var(--event-surface)" }}>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-[#0A0A0A]"
@@ -105,10 +159,28 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 {event.host.initials}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">{event.host.name}</h4>
-                <p className="text-sm text-foreground/60">
-                  {event.host.handle} · {event.host.eventCount} past events
-                </p>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold">{event.host.name}</h4>
+                  {event.host.eventCount > 5 && (
+                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full">
+                      Trusted Host
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-foreground/60">
+                  <span>{event.host.handle}</span>
+                  <span>·</span>
+                  <span>{event.host.eventCount} events hosted</span>
+                  {insights.rating > 0 && (
+                    <>
+                      <span>·</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-accent fill-accent" />
+                        <span>{insights.rating.toFixed(1)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
               <Button variant="secondary">Follow</Button>
             </div>
@@ -194,6 +266,28 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 </p>
               ))}
             </div>
+
+            {/* Event Ratings - Public Feedback */}
+            {insights.isPastEvent && (
+              <div className="mt-8">
+                <EventRatings
+                  eventId={event.id}
+                  averageRating={insights.rating}
+                  totalReviews={insights.reviewCount}
+                  isPastEvent={true}
+                  userCanReview={true}
+                />
+              </div>
+            )}
+
+            {/* Referral Leaderboard - Community Builders */}
+            <div className="mt-8">
+              <ReferralLeaderboard
+                eventId={event.id}
+                userReferralCode="user123"
+                userReferrals={0}
+              />
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -219,6 +313,76 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 )}
               </div>
               <RSVPButton eventId={event.id} price={event.price} />
+
+              {/* Capacity indicator */}
+              {event.capacity && (
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--event-border)" }}>
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-foreground/60">Spots</span>
+                    <span className="font-medium">
+                      {event.attendeeCount} / {event.capacity}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-background rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min((event.attendeeCount / event.capacity) * 100, 100)}%`,
+                        backgroundColor: "var(--event-primary)",
+                      }}
+                    />
+                  </div>
+                  {event.capacity - event.attendeeCount < event.capacity * 0.2 && (
+                    <p className="text-xs text-red-400 mt-2">
+                      Only {event.capacity - event.attendeeCount} spots left!
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Event Stats Card - Open Data */}
+            <div
+              className="rounded-(--radius-card) p-5"
+              style={{ backgroundColor: "var(--event-surface)" }}
+            >
+              <div className="flex items-center gap-2.5 mb-4">
+                <TrendingUp className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
+                <h4 className="font-semibold text-sm">Event Insights</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="text-xs">Views</span>
+                  </div>
+                  <div className="text-lg font-bold">{formatViews(insights.views)}</div>
+                </div>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                    <Users className="w-3.5 h-3.5" />
+                    <span className="text-xs">Going</span>
+                  </div>
+                  <div className="text-lg font-bold">{event.attendeeCount}</div>
+                </div>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                    <Star className="w-3.5 h-3.5 text-accent" />
+                    <span className="text-xs">Rating</span>
+                  </div>
+                  <div className="text-lg font-bold">{insights.rating.toFixed(1)}</div>
+                </div>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span className="text-xs">Referrals</span>
+                  </div>
+                  <div className="text-lg font-bold">33</div>
+                </div>
+              </div>
+              <p className="text-xs text-foreground/40 text-center mt-3">
+                Open data - Transparency builds trust
+              </p>
             </div>
 
             {/* QR Code Card */}
@@ -264,6 +428,22 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 </div>
               </div>
             )}
+
+            {/* Host Reputation Card */}
+            <HostReputation
+              host={{
+                name: event.host.name,
+                handle: event.host.handle,
+                initials: event.host.initials,
+                eventsHosted: event.host.eventCount,
+                totalAttendees: event.host.eventCount * 25,
+                avgAttendance: 78,
+                rating: insights.rating,
+                reviewCount: insights.reviewCount,
+                badges: event.host.eventCount > 10 ? ["trusted-host", "veteran"] : event.host.eventCount > 5 ? ["trusted-host"] : ["rising-star"],
+              }}
+              variant="compact"
+            />
           </aside>
         </div>
       </div>

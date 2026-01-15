@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { MapPin, ChevronDown, Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun } from "lucide-react";
+import { MapPin, ChevronDown, Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun, TrendingUp, Flame, Clock, Users } from "lucide-react";
 import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
+import { CommunityInsightsCompact } from "@/components/ui/community-insights";
 import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 import { getUserTimezone, getCurrentTimeWithTimezone, getWeather, type WeatherData } from "@/lib/timezone";
 
@@ -19,6 +20,59 @@ function WeatherIcon({ icon }: { icon: string }) {
     case "cloud-sun": return <CloudSun {...iconProps} />;
     default: return <Sun {...iconProps} />;
   }
+}
+
+// Community Stats Bar Component
+function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-surface rounded-xl mb-6">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+          <Flame className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <div className="text-xs text-text-tertiary">Active Events</div>
+          <div className="font-semibold">{eventCount}</div>
+        </div>
+      </div>
+      <div className="h-8 w-px bg-elevated hidden sm:block" />
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+          <TrendingUp className="w-4 h-4 text-accent" />
+        </div>
+        <div>
+          <div className="text-xs text-text-tertiary">Trending</div>
+          <div className="font-semibold text-green-400">Tech +23%</div>
+        </div>
+      </div>
+      <div className="h-8 w-px bg-elevated hidden sm:block" />
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-secondary/20 flex items-center justify-center">
+          <Clock className="w-4 h-4 text-secondary" />
+        </div>
+        <div>
+          <div className="text-xs text-text-tertiary">Peak Time</div>
+          <div className="font-semibold">Wed 6-8pm</div>
+        </div>
+      </div>
+      <div className="h-8 w-px bg-elevated hidden sm:block" />
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+          <Users className="w-4 h-4 text-green-400" />
+        </div>
+        <div>
+          <div className="text-xs text-text-tertiary">Community</div>
+          <div className="font-semibold">2.8K members</div>
+        </div>
+      </div>
+      <Link
+        href="/insights"
+        className="ml-auto text-xs text-primary font-medium hover:underline hidden md:block"
+      >
+        View all insights →
+      </Link>
+    </div>
+  );
 }
 
 export default function DiscoverPage() {
@@ -151,6 +205,9 @@ export default function DiscoverPage() {
       {/* Popular Events Section */}
       <section className="pb-16">
         <div className="max-w-300 mx-auto px-6">
+          {/* Community Stats Bar - Open Data */}
+          <CommunityStatsBar city={activeCity || undefined} eventCount={filteredEvents.length} />
+
           {/* Section Header with City Selector */}
           <div className="flex items-start justify-between mb-8">
             <div>
@@ -236,36 +293,61 @@ export default function DiscoverPage() {
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
           ) : filteredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
-              {/* Left Column */}
-              <div className="space-y-2">
-                {leftColumnEvents.map((event) => (
-                  <EventCardHorizontal
-                    key={event.id}
-                    id={event.id}
-                    title={event.title}
-                    date={event.date}
-                    location={event.location}
-                    coverImage={event.coverImage}
-                    coverGradient={event.coverGradient}
-                  />
-                ))}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+              {/* Main Events Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                {/* Left Column */}
+                <div className="space-y-2">
+                  {leftColumnEvents.map((event) => (
+                    <EventCardHorizontal
+                      key={event.id}
+                      id={event.id}
+                      title={event.title}
+                      date={event.date}
+                      location={event.location}
+                      coverImage={event.coverImage}
+                      coverGradient={event.coverGradient}
+                    />
+                  ))}
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-2">
+                  {rightColumnEvents.map((event) => (
+                    <EventCardHorizontal
+                      key={event.id}
+                      id={event.id}
+                      title={event.title}
+                      date={event.date}
+                      location={event.location}
+                      coverImage={event.coverImage}
+                      coverGradient={event.coverGradient}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-2">
-                {rightColumnEvents.map((event) => (
-                  <EventCardHorizontal
-                    key={event.id}
-                    id={event.id}
-                    title={event.title}
-                    date={event.date}
-                    location={event.location}
-                    coverImage={event.coverImage}
-                    coverGradient={event.coverGradient}
-                  />
-                ))}
-              </div>
+              {/* Sidebar - Community Insights */}
+              <aside className="hidden lg:block">
+                <CommunityInsightsCompact />
+
+                {/* Open Data Philosophy */}
+                <div className="mt-4 p-4 bg-surface rounded-xl border border-elevated">
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-primary" />
+                    Open Data
+                  </h4>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    We believe in transparency. View counts, ratings, and community insights are visible to everyone - not locked away for hosts only.
+                  </p>
+                  <Link
+                    href="/about"
+                    className="text-xs text-primary font-medium mt-2 inline-block hover:underline"
+                  >
+                    Learn more →
+                  </Link>
+                </div>
+              </aside>
             </div>
           ) : (
             <div className="text-center py-16 text-text-secondary">
