@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Settings } from "lucide-react";
+import { MapPin, Settings, Eye, TrendingUp, Flame, Star } from "lucide-react";
 
 interface EventCardProps {
   id: string;
@@ -12,6 +12,14 @@ interface EventCardProps {
   attendeeCount: number;
   friendsCount?: number;
   isHosting?: boolean;
+  // New open data props
+  views?: number;
+  trend?: number; // percentage change in views/interest
+  isHot?: boolean;
+  rating?: number;
+  reviewCount?: number;
+  spotsLeft?: number;
+  capacity?: number;
 }
 
 export function EventCard({
@@ -25,12 +33,28 @@ export function EventCard({
   attendeeCount,
   friendsCount,
   isHosting,
+  // New props
+  views,
+  trend,
+  isHot,
+  rating,
+  reviewCount,
+  spotsLeft,
+  capacity,
 }: EventCardProps) {
   const coverStyle = coverImage
     ? {
         background: `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url('${coverImage}') center/cover`,
       }
     : { background: coverGradient || "linear-gradient(135deg, #004D40, #00796B)" };
+
+  const formatViews = (count: number): string => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
+  const isAlmostFull = spotsLeft !== undefined && capacity !== undefined && spotsLeft < capacity * 0.2;
 
   return (
     <Link href={`/events/${id}`} className="block">
@@ -47,10 +71,53 @@ export function EventCard({
             </div>
           </div>
 
-          {/* Category Badge */}
-          <div className="absolute top-4 right-4 bg-secondary text-background px-3 py-1.5 rounded-full text-[11px] font-bold uppercase">
-            {category}
+          {/* Top Right Badges */}
+          <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+            {/* Category Badge */}
+            <div className="bg-secondary text-background px-3 py-1.5 rounded-full text-[11px] font-bold uppercase">
+              {category}
+            </div>
+
+            {/* Hot Badge */}
+            {isHot && (
+              <div className="flex items-center gap-1 bg-accent/90 text-background px-2.5 py-1 rounded-full">
+                <Flame className="w-3 h-3" />
+                <span className="text-[10px] font-bold">HOT</span>
+              </div>
+            )}
+
+            {/* Trending Badge */}
+            {trend && trend > 15 && !isHot && (
+              <div className="flex items-center gap-1 bg-green-500/90 text-white px-2.5 py-1 rounded-full">
+                <TrendingUp className="w-3 h-3" />
+                <span className="text-[10px] font-bold">+{trend}%</span>
+              </div>
+            )}
           </div>
+
+          {/* Bottom Left - Views & Rating (Open Data) */}
+          <div className="absolute bottom-4 left-4 flex items-center gap-2">
+            {views !== undefined && views > 0 && (
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white/90 px-2.5 py-1 rounded-full">
+                <Eye className="w-3 h-3" />
+                <span className="text-[11px] font-medium">{formatViews(views)}</span>
+              </div>
+            )}
+            {rating !== undefined && rating > 0 && reviewCount !== undefined && reviewCount > 0 && (
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white/90 px-2.5 py-1 rounded-full">
+                <Star className="w-3 h-3 text-accent fill-accent" />
+                <span className="text-[11px] font-medium">{rating.toFixed(1)}</span>
+                <span className="text-[10px] text-white/60">({reviewCount})</span>
+              </div>
+            )}
+          </div>
+
+          {/* Almost Full Warning */}
+          {isAlmostFull && (
+            <div className="absolute bottom-4 right-4 bg-red-500/90 text-white px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-bold">Only {spotsLeft} left!</span>
+            </div>
+          )}
         </div>
 
         {/* Info */}

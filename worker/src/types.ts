@@ -262,6 +262,62 @@ export interface ImageOutputOptions {
   quality?: number;
 }
 
+// Analytics Engine Types
+export interface AnalyticsEngineDataset {
+  writeDataPoint(event: AnalyticsEngineDataPoint): void;
+}
+
+export interface AnalyticsEngineDataPoint {
+  blobs?: string[];
+  doubles?: number[];
+  indexes?: string[];
+}
+
+// Queue Types
+export interface Queue<T = unknown> {
+  send(message: T, options?: QueueSendOptions): Promise<void>;
+  sendBatch(messages: QueueSendBatchMessage<T>[]): Promise<void>;
+}
+
+export interface QueueSendOptions {
+  contentType?: "json" | "text" | "bytes" | "v8";
+  delaySeconds?: number;
+}
+
+export interface QueueSendBatchMessage<T> {
+  body: T;
+  contentType?: "json" | "text" | "bytes" | "v8";
+  delaySeconds?: number;
+}
+
+export interface MessageBatch<T = unknown> {
+  queue: string;
+  messages: Message<T>[];
+  ackAll(): void;
+  retryAll(): void;
+}
+
+export interface Message<T = unknown> {
+  id: string;
+  timestamp: Date;
+  body: T;
+  ack(): void;
+  retry(): void;
+}
+
+// Rate Limiter Types
+export interface RateLimiter {
+  limit(options: RateLimitOptions): Promise<RateLimitOutcome>;
+}
+
+export interface RateLimitOptions {
+  key: string;
+}
+
+export interface RateLimitOutcome {
+  success: boolean;
+}
+
 // Environment Bindings
 export interface Env {
   ENVIRONMENT: string;
@@ -279,6 +335,29 @@ export interface Env {
   CACHE: KVNamespace;
   MEDIA: R2Bucket;
   IMAGES: ImagesBinding;
+  // Analytics Engine
+  ANALYTICS: AnalyticsEngineDataset;
+  // Queues
+  ANALYTICS_QUEUE: Queue<AnalyticsQueueMessage>;
+  EMAIL_QUEUE: Queue<EmailQueueMessage>;
+  // Rate Limiter
+  RATE_LIMITER: RateLimiter;
+}
+
+// Queue Message Types
+export interface AnalyticsQueueMessage {
+  type: "view" | "rsvp" | "referral" | "review";
+  eventId: string;
+  userId?: string;
+  data?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface EmailQueueMessage {
+  type: "event_reminder" | "feedback_request" | "welcome" | "rsvp_confirmation";
+  to: string;
+  subject: string;
+  templateData: Record<string, unknown>;
 }
 
 // Event Types (matching frontend)
@@ -378,5 +457,98 @@ export interface AssistantResponse {
   actions?: Array<{
     type: "search" | "navigate" | "create";
     payload: unknown;
+  }>;
+}
+
+// Open Data Types - Reviews, Referrals, Reputation
+
+export interface EventReview {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  userInitials: string;
+  rating: number;
+  comment?: string;
+  helpfulCount: number;
+  isVerifiedAttendee: boolean;
+  createdAt: string;
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+}
+
+export interface Referral {
+  id: string;
+  eventId: string;
+  referrerUserId: string;
+  referredUserId?: string;
+  referralCode: string;
+  status: "pending" | "converted" | "expired";
+  createdAt: string;
+  convertedAt?: string;
+}
+
+export interface ReferralLeaderboardEntry {
+  rank: number;
+  userId: string;
+  userName: string;
+  userInitials: string;
+  referralCount: number;
+  conversionCount: number;
+}
+
+export interface HostStats {
+  userId: string;
+  name: string;
+  handle?: string;
+  initials: string;
+  eventsHosted: number;
+  totalAttendees: number;
+  avgAttendance: number;
+  rating: number;
+  reviewCount: number;
+  badges: string[];
+  responseRate?: number;
+  responseTime?: string;
+}
+
+export interface EventStats {
+  eventId: string;
+  views: number;
+  uniqueViews: number;
+  rsvps: number;
+  checkins: number;
+  referrals: number;
+  trend?: number;
+  isHot?: boolean;
+  peakViewTime?: string;
+  topSources?: Array<{ source: string; count: number }>;
+  topCities?: Array<{ city: string; count: number }>;
+}
+
+export interface CommunityStats {
+  city?: string;
+  totalEvents: number;
+  totalAttendees: number;
+  activeHosts: number;
+  trendingCategories: Array<{
+    category: string;
+    change: number;
+    events: number;
+  }>;
+  peakTime: string;
+  popularVenues: Array<{
+    venue: string;
+    events: number;
   }>;
 }
