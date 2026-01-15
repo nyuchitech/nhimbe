@@ -202,7 +202,7 @@ export function EventRatings({
 
         {/* Rating Distribution */}
         <div className="flex-1 space-y-1">
-          {[5, 4, 3, 2, 1].map((stars) => {
+          {([5, 4, 3, 2, 1] as const).map((stars) => {
             const count = ratingDistribution[stars] || 0;
             const percentage = totalRatings > 0 ? (count / totalRatings) * 100 : 0;
 
