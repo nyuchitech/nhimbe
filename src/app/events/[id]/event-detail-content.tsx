@@ -272,8 +272,6 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               <div className="mt-8">
                 <EventRatings
                   eventId={event.id}
-                  averageRating={insights.rating}
-                  totalReviews={insights.reviewCount}
                   isPastEvent={true}
                   userCanReview={true}
                 />
