@@ -9,6 +9,12 @@ import type {
   Event,
   SearchQuery,
   AssistantRequest,
+  EventReview,
+  ReviewStats,
+  ReferralLeaderboardEntry,
+  HostStats,
+  EventStats,
+  CommunityStats,
 } from "./types";
 import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search";
 import { chat, generateSuggestions } from "./ai/assistant";
@@ -192,6 +198,61 @@ const worker: ExportedHandler<Env> = {
           return jsonResponse({ error: "Unauthorized - API key required" }, 401);
         }
         return handleSeedData(request, env);
+      }
+
+      // ============================================
+      // OPEN DATA ENDPOINTS - Reviews, Referrals, Stats
+      // ============================================
+
+      // Event Reviews - GET /api/events/:id/reviews, POST /api/events/:id/reviews
+      const reviewsMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/reviews$/);
+      if (reviewsMatch) {
+        return handleEventReviews(reviewsMatch[1], request, env);
+      }
+
+      // Review helpful vote - POST /api/reviews/:id/helpful
+      const helpfulMatch = url.pathname.match(/^\/api\/reviews\/([^/]+)\/helpful$/);
+      if (helpfulMatch && request.method === "POST") {
+        return handleReviewHelpful(helpfulMatch[1], request, env);
+      }
+
+      // Event Stats - GET /api/events/:id/stats
+      const statsMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/stats$/);
+      if (statsMatch && request.method === "GET") {
+        return handleEventStats(statsMatch[1], env);
+      }
+
+      // Event Referrals Leaderboard - GET /api/events/:id/referrals
+      const referralsMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/referrals$/);
+      if (referralsMatch && request.method === "GET") {
+        return handleEventReferrals(referralsMatch[1], env);
+      }
+
+      // Track referral - POST /api/referrals/track
+      if (url.pathname === "/api/referrals/track" && request.method === "POST") {
+        return handleTrackReferral(request, env);
+      }
+
+      // User referral code - GET/POST /api/users/:id/referral-code
+      const userRefCodeMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/referral-code$/);
+      if (userRefCodeMatch) {
+        return handleUserReferralCode(userRefCodeMatch[1], request, env);
+      }
+
+      // Host Reputation - GET /api/users/:id/reputation
+      const reputationMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/reputation$/);
+      if (reputationMatch && request.method === "GET") {
+        return handleHostReputation(reputationMatch[1], env);
+      }
+
+      // Community Stats - GET /api/community/stats
+      if (url.pathname === "/api/community/stats" && request.method === "GET") {
+        return handleCommunityStats(url, env);
+      }
+
+      // Trending Events - GET /api/events/trending
+      if (url.pathname === "/api/events/trending" && request.method === "GET") {
+        return handleTrendingEvents(url, env);
       }
 
       // 404 for unknown routes
@@ -1769,8 +1830,674 @@ async function handleSeedData(request: Request, env: Env): Promise<Response> {
 }
 
 // ============================================
+// Event Reviews Handler
+// ============================================
+
+async function handleEventReviews(
+  eventId: string,
+  request: Request,
+  env: Env
+): Promise<Response> {
+  // GET - List reviews for an event (PUBLIC)
+  if (request.method === "GET") {
+    interface ReviewRow {
+      id: string;
+      event_id: string;
+      user_id: string;
+      rating: number;
+      comment: string | null;
+      helpful_count: number;
+      is_verified_attendee: number;
+      created_at: string;
+      user_name: string | null;
+    }
+
+    const reviewsResult = await env.DB.prepare(`
+      SELECT r.*, u.name as user_name
+      FROM event_reviews r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.event_id = ?
+      ORDER BY r.helpful_count DESC, r.created_at DESC
+      LIMIT 50
+    `).bind(eventId).all();
+
+    const reviews: EventReview[] = (reviewsResult.results as ReviewRow[]).map((row) => ({
+      id: row.id,
+      eventId: row.event_id,
+      userId: row.user_id,
+      userName: row.user_name || "Anonymous",
+      userInitials: getInitials(row.user_name || "Anonymous"),
+      rating: row.rating,
+      comment: row.comment || undefined,
+      helpfulCount: row.helpful_count,
+      isVerifiedAttendee: !!row.is_verified_attendee,
+      createdAt: row.created_at,
+    }));
+
+    // Get rating stats
+    interface StatsRow {
+      avg_rating: number;
+      total_reviews: number;
+      rating_1: number;
+      rating_2: number;
+      rating_3: number;
+      rating_4: number;
+      rating_5: number;
+    }
+
+    const statsResult = await env.DB.prepare(`
+      SELECT
+        AVG(rating) as avg_rating,
+        COUNT(*) as total_reviews,
+        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as rating_1,
+        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as rating_2,
+        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as rating_3,
+        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as rating_4,
+        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as rating_5
+      FROM event_reviews
+      WHERE event_id = ?
+    `).bind(eventId).first() as StatsRow | null;
+
+    const stats: ReviewStats = {
+      averageRating: statsResult?.avg_rating || 0,
+      totalReviews: statsResult?.total_reviews || 0,
+      distribution: {
+        1: statsResult?.rating_1 || 0,
+        2: statsResult?.rating_2 || 0,
+        3: statsResult?.rating_3 || 0,
+        4: statsResult?.rating_4 || 0,
+        5: statsResult?.rating_5 || 0,
+      },
+    };
+
+    return jsonResponse({ reviews, stats });
+  }
+
+  // POST - Create a review (requires auth)
+  if (request.method === "POST") {
+    const body = await request.json() as {
+      userId: string;
+      rating: number;
+      comment?: string;
+    };
+
+    if (!body.userId || !body.rating || body.rating < 1 || body.rating > 5) {
+      return jsonResponse({ error: "userId and rating (1-5) required" }, 400);
+    }
+
+    // Check if user was a verified attendee
+    const registration = await env.DB.prepare(
+      "SELECT id FROM registrations WHERE event_id = ? AND user_id = ? AND status IN ('registered', 'approved', 'checked_in')"
+    ).bind(eventId, body.userId).first();
+
+    const id = generateId();
+
+    try {
+      await env.DB.prepare(`
+        INSERT INTO event_reviews (id, event_id, user_id, rating, comment, is_verified_attendee)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        eventId,
+        body.userId,
+        body.rating,
+        body.comment || null,
+        registration ? 1 : 0
+      ).run();
+
+      // Track in analytics queue if available
+      if (env.ANALYTICS_QUEUE) {
+        await env.ANALYTICS_QUEUE.send({
+          type: "review",
+          eventId,
+          userId: body.userId,
+          data: { rating: body.rating },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      return jsonResponse({ id, message: "Review submitted successfully" }, 201);
+    } catch (e) {
+      // Likely duplicate review
+      return jsonResponse({ error: "You have already reviewed this event" }, 409);
+    }
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405);
+}
+
+// ============================================
+// Review Helpful Vote Handler
+// ============================================
+
+async function handleReviewHelpful(
+  reviewId: string,
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const body = await request.json() as { userId: string };
+
+  if (!body.userId) {
+    return jsonResponse({ error: "userId required" }, 400);
+  }
+
+  try {
+    // Check if already voted
+    const existing = await env.DB.prepare(
+      "SELECT id FROM review_helpful_votes WHERE review_id = ? AND user_id = ?"
+    ).bind(reviewId, body.userId).first();
+
+    if (existing) {
+      return jsonResponse({ error: "Already voted" }, 409);
+    }
+
+    // Add vote
+    await env.DB.prepare(
+      "INSERT INTO review_helpful_votes (id, review_id, user_id) VALUES (?, ?, ?)"
+    ).bind(generateId(), reviewId, body.userId).run();
+
+    // Update helpful count
+    await env.DB.prepare(
+      "UPDATE event_reviews SET helpful_count = helpful_count + 1 WHERE id = ?"
+    ).bind(reviewId).run();
+
+    return jsonResponse({ message: "Vote recorded" });
+  } catch (e) {
+    return jsonResponse({ error: "Failed to record vote" }, 500);
+  }
+}
+
+// ============================================
+// Event Stats Handler (Open Data)
+// ============================================
+
+async function handleEventStats(eventId: string, env: Env): Promise<Response> {
+  interface StatsRow {
+    views: number;
+    unique_views: number;
+    rsvps: number;
+    checkins: number;
+    referrals: number;
+    views_7_days_ago: number;
+  }
+
+  // Get aggregated stats
+  const stats = await env.DB.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM event_views WHERE event_id = ?) as views,
+      (SELECT COUNT(DISTINCT COALESCE(user_id, source || ip_hash)) FROM event_views WHERE event_id = ?) as unique_views,
+      (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND status != 'cancelled') as rsvps,
+      (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND checked_in_at IS NOT NULL) as checkins,
+      (SELECT COUNT(*) FROM referrals WHERE event_id = ? AND status = 'converted') as referrals,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = ? AND created_at < datetime('now', '-7 days')) as views_7_days_ago
+  `).bind(eventId, eventId, eventId, eventId, eventId, eventId).first() as StatsRow | null;
+
+  // Calculate trend (week-over-week change)
+  const currentViews = stats?.views || 0;
+  const lastWeekViews = stats?.views_7_days_ago || 0;
+  const recentViews = currentViews - lastWeekViews;
+  const trend = lastWeekViews > 0 ? Math.round(((recentViews - lastWeekViews) / lastWeekViews) * 100) : 0;
+
+  // Determine if "hot" (high engagement)
+  const isHot = trend > 50 || (currentViews > 100 && trend > 20);
+
+  // Get top sources
+  interface SourceRow {
+    source: string;
+    count: number;
+  }
+  const sourcesResult = await env.DB.prepare(`
+    SELECT source, COUNT(*) as count
+    FROM event_views
+    WHERE event_id = ?
+    GROUP BY source
+    ORDER BY count DESC
+    LIMIT 5
+  `).bind(eventId).all();
+
+  // Get top cities from registrations
+  interface CityRow {
+    city: string;
+    count: number;
+  }
+  const citiesResult = await env.DB.prepare(`
+    SELECT u.city, COUNT(*) as count
+    FROM registrations r
+    JOIN users u ON r.user_id = u.id
+    WHERE r.event_id = ? AND u.city IS NOT NULL
+    GROUP BY u.city
+    ORDER BY count DESC
+    LIMIT 5
+  `).bind(eventId).all();
+
+  const eventStats: EventStats = {
+    eventId,
+    views: stats?.views || 0,
+    uniqueViews: stats?.unique_views || 0,
+    rsvps: stats?.rsvps || 0,
+    checkins: stats?.checkins || 0,
+    referrals: stats?.referrals || 0,
+    trend,
+    isHot,
+    topSources: (sourcesResult.results as SourceRow[]).map((r) => ({
+      source: r.source,
+      count: r.count,
+    })),
+    topCities: (citiesResult.results as CityRow[]).map((r) => ({
+      city: r.city,
+      count: r.count,
+    })),
+  };
+
+  // Track this view in Analytics Engine if available
+  if (env.ANALYTICS) {
+    env.ANALYTICS.writeDataPoint({
+      blobs: [eventId, "stats_view"],
+      doubles: [1],
+      indexes: [eventId],
+    });
+  }
+
+  return jsonResponse({ stats: eventStats });
+}
+
+// ============================================
+// Event Referrals Leaderboard Handler
+// ============================================
+
+async function handleEventReferrals(eventId: string, env: Env): Promise<Response> {
+  interface LeaderboardRow {
+    user_id: string;
+    user_name: string | null;
+    referral_count: number;
+    conversion_count: number;
+  }
+
+  const result = await env.DB.prepare(`
+    SELECT
+      r.referrer_user_id as user_id,
+      u.name as user_name,
+      COUNT(*) as referral_count,
+      SUM(CASE WHEN r.status = 'converted' THEN 1 ELSE 0 END) as conversion_count
+    FROM referrals r
+    LEFT JOIN users u ON r.referrer_user_id = u.id
+    WHERE r.event_id = ?
+    GROUP BY r.referrer_user_id
+    ORDER BY conversion_count DESC, referral_count DESC
+    LIMIT 10
+  `).bind(eventId).all();
+
+  const leaderboard: ReferralLeaderboardEntry[] = (result.results as LeaderboardRow[]).map((row, index) => ({
+    rank: index + 1,
+    userId: row.user_id,
+    userName: row.user_name || "Anonymous",
+    userInitials: getInitials(row.user_name || "Anonymous"),
+    referralCount: row.referral_count,
+    conversionCount: row.conversion_count,
+  }));
+
+  return jsonResponse({ leaderboard });
+}
+
+// ============================================
+// Track Referral Handler
+// ============================================
+
+async function handleTrackReferral(request: Request, env: Env): Promise<Response> {
+  const body = await request.json() as {
+    eventId: string;
+    referralCode: string;
+    referredUserId?: string;
+  };
+
+  if (!body.eventId || !body.referralCode) {
+    return jsonResponse({ error: "eventId and referralCode required" }, 400);
+  }
+
+  // Look up the referral code
+  interface CodeRow {
+    user_id: string;
+  }
+  const codeResult = await env.DB.prepare(
+    "SELECT user_id FROM user_referral_codes WHERE code = ?"
+  ).bind(body.referralCode).first() as CodeRow | null;
+
+  if (!codeResult) {
+    return jsonResponse({ error: "Invalid referral code" }, 404);
+  }
+
+  const id = generateId();
+
+  await env.DB.prepare(`
+    INSERT INTO referrals (id, event_id, referrer_user_id, referred_user_id, referral_code, status)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    id,
+    body.eventId,
+    codeResult.user_id,
+    body.referredUserId || null,
+    body.referralCode,
+    body.referredUserId ? "converted" : "pending"
+  ).run();
+
+  // Track in analytics
+  if (env.ANALYTICS_QUEUE) {
+    await env.ANALYTICS_QUEUE.send({
+      type: "referral",
+      eventId: body.eventId,
+      userId: codeResult.user_id,
+      data: { referralCode: body.referralCode, converted: !!body.referredUserId },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  return jsonResponse({ id, message: "Referral tracked" }, 201);
+}
+
+// ============================================
+// User Referral Code Handler
+// ============================================
+
+async function handleUserReferralCode(
+  userId: string,
+  request: Request,
+  env: Env
+): Promise<Response> {
+  // GET - Get user's referral code
+  if (request.method === "GET") {
+    interface CodeRow {
+      code: string;
+      total_referrals: number;
+      total_conversions: number;
+    }
+
+    const result = await env.DB.prepare(
+      "SELECT code, total_referrals, total_conversions FROM user_referral_codes WHERE user_id = ?"
+    ).bind(userId).first() as CodeRow | null;
+
+    if (!result) {
+      return jsonResponse({ error: "No referral code found" }, 404);
+    }
+
+    return jsonResponse({
+      code: result.code,
+      totalReferrals: result.total_referrals,
+      totalConversions: result.total_conversions,
+    });
+  }
+
+  // POST - Generate a new referral code
+  if (request.method === "POST") {
+    // Check if user already has a code
+    const existing = await env.DB.prepare(
+      "SELECT code FROM user_referral_codes WHERE user_id = ?"
+    ).bind(userId).first();
+
+    if (existing) {
+      return jsonResponse({ error: "User already has a referral code", code: (existing as { code: string }).code }, 409);
+    }
+
+    const code = generateReferralCode();
+
+    await env.DB.prepare(`
+      INSERT INTO user_referral_codes (id, user_id, code)
+      VALUES (?, ?, ?)
+    `).bind(generateId(), userId, code).run();
+
+    return jsonResponse({ code }, 201);
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405);
+}
+
+// ============================================
+// Host Reputation Handler
+// ============================================
+
+async function handleHostReputation(userId: string, env: Env): Promise<Response> {
+  interface UserRow {
+    id: string;
+    name: string;
+    handle: string | null;
+  }
+
+  // Get user basic info
+  const user = await env.DB.prepare(
+    "SELECT id, name, handle FROM users WHERE id = ?"
+  ).bind(userId).first() as UserRow | null;
+
+  if (!user) {
+    return jsonResponse({ error: "User not found" }, 404);
+  }
+
+  interface StatsRow {
+    events_hosted: number;
+    total_attendees: number;
+    avg_attendance: number;
+  }
+
+  // Get host stats from hosted events
+  const stats = await env.DB.prepare(`
+    SELECT
+      COUNT(*) as events_hosted,
+      SUM(attendee_count) as total_attendees,
+      AVG(attendee_count) as avg_attendance
+    FROM events
+    WHERE host_handle = ? OR id IN (
+      SELECT event_id FROM event_hosts WHERE user_id = ?
+    )
+  `).bind(user.handle || "", userId).first() as StatsRow | null;
+
+  interface RatingRow {
+    avg_rating: number;
+    review_count: number;
+  }
+
+  // Get average rating from all their events
+  const ratings = await env.DB.prepare(`
+    SELECT
+      AVG(r.rating) as avg_rating,
+      COUNT(*) as review_count
+    FROM event_reviews r
+    JOIN events e ON r.event_id = e.id
+    WHERE e.host_handle = ? OR e.id IN (
+      SELECT event_id FROM event_hosts WHERE user_id = ?
+    )
+  `).bind(user.handle || "", userId).first() as RatingRow | null;
+
+  // Determine badges
+  const badges: string[] = [];
+  const eventsHosted = stats?.events_hosted || 0;
+  const avgRating = ratings?.avg_rating || 0;
+  const reviewCount = ratings?.review_count || 0;
+
+  if (eventsHosted >= 10 && avgRating >= 4.5) badges.push("Trusted Host");
+  if (eventsHosted >= 25) badges.push("Veteran");
+  if (eventsHosted >= 5 && eventsHosted < 10 && avgRating >= 4.0) badges.push("Rising Star");
+  if (reviewCount >= 50 && avgRating >= 4.8) badges.push("Community Favorite");
+  if ((stats?.avg_attendance || 0) >= 50) badges.push("Crowd Puller");
+
+  const hostStats: HostStats = {
+    userId: user.id,
+    name: user.name,
+    handle: user.handle || undefined,
+    initials: getInitials(user.name),
+    eventsHosted,
+    totalAttendees: stats?.total_attendees || 0,
+    avgAttendance: Math.round(stats?.avg_attendance || 0),
+    rating: Math.round((avgRating || 0) * 10) / 10,
+    reviewCount,
+    badges,
+  };
+
+  return jsonResponse({ host: hostStats });
+}
+
+// ============================================
+// Community Stats Handler
+// ============================================
+
+async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
+  const city = url.searchParams.get("city");
+
+  interface StatsRow {
+    total_events: number;
+    total_attendees: number;
+    active_hosts: number;
+  }
+
+  // Build query based on whether city filter is applied
+  let statsQuery = `
+    SELECT
+      COUNT(*) as total_events,
+      SUM(attendee_count) as total_attendees,
+      COUNT(DISTINCT host_handle) as active_hosts
+    FROM events
+    WHERE is_published = TRUE AND is_cancelled = FALSE
+  `;
+  const params: string[] = [];
+
+  if (city) {
+    statsQuery += " AND location_city = ?";
+    params.push(city);
+  }
+
+  const stats = await env.DB.prepare(statsQuery).bind(...params).first() as StatsRow | null;
+
+  interface CategoryRow {
+    category: string;
+    count: number;
+    last_week: number;
+  }
+
+  // Get trending categories (comparing this week vs last week)
+  let trendingQuery = `
+    SELECT
+      category,
+      COUNT(*) as count,
+      (SELECT COUNT(*) FROM events e2
+       WHERE e2.category = events.category
+       AND e2.created_at < datetime('now', '-7 days')
+       ${city ? "AND e2.location_city = ?" : ""}
+      ) as last_week
+    FROM events
+    WHERE created_at >= datetime('now', '-7 days')
+    ${city ? "AND location_city = ?" : ""}
+    GROUP BY category
+    ORDER BY count DESC
+    LIMIT 5
+  `;
+
+  const trendingParams = city ? [city, city] : [];
+  const trendingResult = await env.DB.prepare(trendingQuery).bind(...trendingParams).all();
+
+  interface VenueRow {
+    venue: string;
+    count: number;
+  }
+
+  // Get popular venues
+  let venueQuery = `
+    SELECT location_venue as venue, COUNT(*) as count
+    FROM events
+    WHERE is_published = TRUE
+    ${city ? "AND location_city = ?" : ""}
+    GROUP BY location_venue
+    ORDER BY count DESC
+    LIMIT 5
+  `;
+
+  const venueParams = city ? [city] : [];
+  const venuesResult = await env.DB.prepare(venueQuery).bind(...venueParams).all();
+
+  const communityStats: CommunityStats = {
+    city: city || undefined,
+    totalEvents: stats?.total_events || 0,
+    totalAttendees: stats?.total_attendees || 0,
+    activeHosts: stats?.active_hosts || 0,
+    trendingCategories: (trendingResult.results as CategoryRow[]).map((row) => ({
+      category: row.category,
+      change: row.last_week > 0 ? Math.round(((row.count - row.last_week) / row.last_week) * 100) : 100,
+      events: row.count,
+    })),
+    peakTime: "Wed 6-8pm", // Would need more sophisticated query for real data
+    popularVenues: (venuesResult.results as VenueRow[]).map((row) => ({
+      venue: row.venue,
+      events: row.count,
+    })),
+  };
+
+  return jsonResponse({ stats: communityStats });
+}
+
+// ============================================
+// Trending Events Handler
+// ============================================
+
+async function handleTrendingEvents(url: URL, env: Env): Promise<Response> {
+  const city = url.searchParams.get("city");
+  const limit = parseInt(url.searchParams.get("limit") || "10");
+
+  // Get events with view counts and calculate trend
+  let query = `
+    SELECT e.*,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id) as views,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id AND created_at >= datetime('now', '-7 days')) as recent_views
+    FROM events e
+    WHERE e.is_published = TRUE AND e.is_cancelled = FALSE
+    AND e.date_iso >= datetime('now')
+  `;
+  const params: (string | number)[] = [];
+
+  if (city) {
+    query += " AND e.location_city = ?";
+    params.push(city);
+  }
+
+  query += " ORDER BY recent_views DESC, views DESC LIMIT ?";
+  params.push(limit);
+
+  const result = await env.DB.prepare(query).bind(...params).all();
+
+  interface EventRow extends Record<string, unknown> {
+    views: number;
+    recent_views: number;
+  }
+
+  const events = (result.results as EventRow[]).map((row) => {
+    const event = dbRowToEvent(row);
+    return {
+      ...event,
+      views: row.views,
+      trend: row.views > 10 ? Math.round((row.recent_views / row.views) * 100) : 0,
+      isHot: row.recent_views > 20,
+    };
+  });
+
+  return jsonResponse({ events });
+}
+
+// ============================================
 // Utility Functions
 // ============================================
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+}
+
+function generateReferralCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let result = "";
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data, null, 2), {

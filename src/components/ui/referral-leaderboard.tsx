@@ -1,6 +1,8 @@
 "use client";
 
-import { Trophy, Users, Share2, Crown, Medal, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trophy, Users, Share2, Crown, Medal, Award, Loader2 } from "lucide-react";
+import { getEventReferralLeaderboard, type ReferralLeaderboardEntry } from "@/lib/api";
 
 interface Referrer {
   id: string;
@@ -11,16 +13,14 @@ interface Referrer {
 }
 
 interface ReferralLeaderboardProps {
-  eventId?: string;
-  referrers?: Referrer[];
-  totalReferrals?: number;
+  eventId: string;
   userReferralCode?: string;
   userReferrals?: number;
   className?: string;
 }
 
-// Default mock data
-const defaultReferrers: Referrer[] = [
+// Fallback data when API fails
+const fallbackReferrers: Referrer[] = [
   { id: "1", name: "Sarah M.", initials: "SM", referrals: 12, rank: 1 },
   { id: "2", name: "John K.", initials: "JK", referrals: 8, rank: 2 },
   { id: "3", name: "Lisa T.", initials: "LT", referrals: 6, rank: 3 },
@@ -36,12 +36,43 @@ const rankIcons = {
 
 export function ReferralLeaderboard({
   eventId,
-  referrers = defaultReferrers,
-  totalReferrals = 33,
   userReferralCode,
   userReferrals = 0,
   className = "",
 }: ReferralLeaderboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<ReferralLeaderboardEntry[]>([]);
+
+  useEffect(() => {
+    async function fetchLeaderboard() {
+      try {
+        const data = await getEventReferralLeaderboard(eventId);
+        setLeaderboard(data);
+      } catch (error) {
+        console.error("Failed to fetch referral leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (eventId) {
+      fetchLeaderboard();
+    } else {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  // Transform API data to component format
+  const referrers: Referrer[] = leaderboard.length > 0
+    ? leaderboard.map((entry) => ({
+        id: entry.userId,
+        name: entry.userName,
+        initials: entry.userInitials,
+        referrals: entry.conversionCount,
+        rank: entry.rank,
+      }))
+    : fallbackReferrers;
+
+  const totalReferrals = referrers.reduce((sum, r) => sum + r.referrals, 0);
   const handleCopyReferralLink = () => {
     const link = `${window.location.origin}/events/${eventId}?ref=${userReferralCode}`;
     navigator.clipboard.writeText(link);

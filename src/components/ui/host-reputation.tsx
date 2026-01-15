@@ -1,6 +1,8 @@
 "use client";
 
-import { Star, Award, Users, Calendar, TrendingUp, CheckCircle, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Award, Users, Calendar, TrendingUp, CheckCircle, Shield, Loader2 } from "lucide-react";
+import { getHostReputation, type HostStats as ApiHostStats } from "@/lib/api";
 
 interface HostStats {
   name: string;
@@ -203,5 +205,68 @@ export function TrustedHostBadge({ className = "" }: { className?: string }) {
       <Shield className="w-3 h-3" />
       <span className="text-xs font-medium">Trusted</span>
     </div>
+  );
+}
+
+// Wrapper component that fetches host data from API
+export function HostReputationFetch({
+  userId,
+  variant = "full",
+  showRating = true,
+  className = "",
+}: {
+  userId: string;
+  variant?: "full" | "compact" | "inline";
+  showRating?: boolean;
+  className?: string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [hostStats, setHostStats] = useState<ApiHostStats | null>(null);
+
+  useEffect(() => {
+    async function fetchHost() {
+      try {
+        const data = await getHostReputation(userId);
+        setHostStats(data);
+      } catch (error) {
+        console.error("Failed to fetch host reputation:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchHost();
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className={`bg-surface rounded-xl p-6 flex items-center justify-center ${className}`}>
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!hostStats) {
+    return null;
+  }
+
+  const host: HostStats = {
+    name: hostStats.name,
+    handle: hostStats.handle,
+    initials: hostStats.initials,
+    eventsHosted: hostStats.eventsHosted,
+    totalAttendees: hostStats.totalAttendees,
+    avgAttendance: hostStats.avgAttendance,
+    rating: hostStats.rating,
+    reviewCount: hostStats.reviewCount,
+    badges: hostStats.badges,
+  };
+
+  return (
+    <HostReputation
+      host={host}
+      variant={variant}
+      showRating={showRating}
+      className={className}
+    />
   );
 }

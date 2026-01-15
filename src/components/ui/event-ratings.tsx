@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Star, MessageSquare, ThumbsUp, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
+import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
 
 interface Review {
   id: string;
@@ -15,17 +16,14 @@ interface Review {
 
 interface EventRatingsProps {
   eventId: string;
-  averageRating?: number;
-  totalReviews?: number;
-  ratingDistribution?: { [key: number]: number }; // 1-5 star counts
-  reviews?: Review[];
   isPastEvent?: boolean;
   userCanReview?: boolean;
+  currentUserId?: string;
   className?: string;
 }
 
-// Default mock data
-const defaultReviews: Review[] = [
+// Fallback data when API fails
+const fallbackReviews: Review[] = [
   {
     id: "1",
     userName: "Sarah M.",
@@ -55,18 +53,62 @@ const defaultReviews: Review[] = [
   },
 ];
 
-const defaultDistribution = { 5: 45, 4: 28, 3: 12, 2: 8, 1: 3 };
+const fallbackDistribution = { 5: 45, 4: 28, 3: 12, 2: 8, 1: 3 };
+
+// Helper to format date
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
+  return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? "s" : ""} ago`;
+}
 
 export function EventRatings({
   eventId,
-  averageRating = 4.3,
-  totalReviews = 96,
-  ratingDistribution = defaultDistribution,
-  reviews = defaultReviews,
   isPastEvent = true,
   userCanReview = false,
+  currentUserId,
   className = "",
 }: EventRatingsProps) {
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState<ReviewStats | null>(null);
+
+  useEffect(() => {
+    async function fetchReviews() {
+      try {
+        const data = await getEventReviews(eventId);
+        // Transform API data to component format
+        const transformedReviews: Review[] = data.reviews.map((r) => ({
+          id: r.id,
+          userName: r.userName,
+          userInitials: r.userInitials,
+          rating: r.rating,
+          comment: r.comment || "",
+          date: formatRelativeDate(r.createdAt),
+          helpful: r.helpfulCount,
+        }));
+        setReviews(transformedReviews);
+        setStats(data.stats);
+      } catch (error) {
+        console.error("Failed to fetch event reviews:", error);
+        setReviews(fallbackReviews);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchReviews();
+  }, [eventId]);
+
+  const averageRating = stats?.averageRating || 4.3;
+  const totalReviews = stats?.totalReviews || 96;
+  const ratingDistribution = stats?.distribution || fallbackDistribution;
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [helpfulClicked, setHelpfulClicked] = useState<Set<string>>(new Set());
 
@@ -97,19 +139,42 @@ export function EventRatings({
     );
   };
 
-  const handleHelpful = (reviewId: string) => {
-    setHelpfulClicked((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(reviewId)) {
-        newSet.delete(reviewId);
-      } else {
-        newSet.add(reviewId);
+  const handleHelpful = async (reviewId: string) => {
+    if (helpfulClicked.has(reviewId)) return;
+
+    // Optimistic update
+    setHelpfulClicked((prev) => new Set([...prev, reviewId]));
+
+    // Call API if user is logged in
+    if (currentUserId) {
+      try {
+        await markReviewHelpful(reviewId, currentUserId);
+      } catch (error) {
+        // Revert on failure
+        setHelpfulClicked((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(reviewId);
+          return newSet;
+        });
       }
-      return newSet;
-    });
+    }
   };
 
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+
+  if (loading) {
+    return (
+      <div className={`bg-surface rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center gap-2 mb-6">
+          <MessageSquare className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-lg">Community Feedback</h3>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-surface rounded-2xl p-6 ${className}`}>

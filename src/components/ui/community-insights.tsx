@@ -1,6 +1,8 @@
 "use client";
 
-import { TrendingUp, Users, MapPin, Clock, Flame, Star, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, Users, MapPin, Clock, Flame, Loader2 } from "lucide-react";
+import { getCommunityStats, type CommunityStats } from "@/lib/api";
 
 interface TrendingCategory {
   name: string;
@@ -22,28 +24,23 @@ interface PeakTime {
 
 interface CommunityInsightsProps {
   city?: string;
-  trendingCategories?: TrendingCategory[];
-  popularVenues?: PopularVenue[];
-  peakTimes?: PeakTime[];
-  totalEvents?: number;
-  totalAttendees?: number;
   className?: string;
 }
 
-// Default mock data - in production this would come from API
-const defaultTrendingCategories: TrendingCategory[] = [
+// Fallback data when API fails
+const fallbackTrendingCategories: TrendingCategory[] = [
   { name: "Tech", change: 23, events: 45 },
   { name: "Networking", change: 15, events: 32 },
   { name: "Workshop", change: 8, events: 28 },
 ];
 
-const defaultPopularVenues: PopularVenue[] = [
+const fallbackPopularVenues: PopularVenue[] = [
   { name: "The Hub", city: "Johannesburg", eventCount: 12 },
   { name: "Innovation Center", city: "Cape Town", eventCount: 9 },
   { name: "Community Hall", city: "Nairobi", eventCount: 7 },
 ];
 
-const defaultPeakTimes: PeakTime[] = [
+const fallbackPeakTimes: PeakTime[] = [
   { day: "Wednesday", time: "6-8pm", percentage: 34 },
   { day: "Saturday", time: "2-4pm", percentage: 28 },
   { day: "Thursday", time: "7-9pm", percentage: 22 },
@@ -51,13 +48,45 @@ const defaultPeakTimes: PeakTime[] = [
 
 export function CommunityInsights({
   city,
-  trendingCategories = defaultTrendingCategories,
-  popularVenues = defaultPopularVenues,
-  peakTimes = defaultPeakTimes,
-  totalEvents = 156,
-  totalAttendees = 2847,
   className = "",
 }: CommunityInsightsProps) {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<CommunityStats | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await getCommunityStats(city);
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch community stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, [city]);
+
+  // Transform API data to component format
+  const trendingCategories: TrendingCategory[] = stats?.trendingCategories?.map((c) => ({
+    name: c.category,
+    change: c.change,
+    events: c.events,
+  })) || fallbackTrendingCategories;
+
+  const popularVenues: PopularVenue[] = stats?.popularVenues?.map((v) => ({
+    name: v.venue,
+    city: city || "Various",
+    eventCount: v.events,
+  })) || fallbackPopularVenues;
+
+  // Parse peak time from string
+  const peakTimes: PeakTime[] = stats?.peakTime
+    ? [{ day: stats.peakTime.split(" ")[0], time: stats.peakTime.split(" ").slice(1).join(" "), percentage: 34 }]
+    : fallbackPeakTimes;
+
+  const totalEvents = stats?.totalEvents || 156;
+  const totalAttendees = stats?.totalAttendees || 2847;
   return (
     <div className={`bg-surface rounded-2xl p-6 ${className}`}>
       <div className="flex items-center gap-2 mb-6">
@@ -172,27 +201,57 @@ export function CommunityInsights({
 }
 
 // Compact version for sidebars
-export function CommunityInsightsCompact({ className = "" }: { className?: string }) {
+export function CommunityInsightsCompact({ city, className = "" }: { city?: string; className?: string }) {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<CommunityStats | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await getCommunityStats(city);
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch community stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, [city]);
+
+  const topCategory = stats?.trendingCategories?.[0];
+  const topVenue = stats?.popularVenues?.[0];
+
   return (
     <div className={`bg-surface rounded-xl p-4 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-primary" />
         <span className="font-semibold text-sm">What&apos;s Trending</span>
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm">Tech events</span>
-          <span className="text-xs text-green-400 font-medium">↑ 23%</span>
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm">Peak time</span>
-          <span className="text-xs text-text-secondary">Wed 6-8pm</span>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">{topCategory?.category || "Tech"} events</span>
+            <span className={`text-xs font-medium ${
+              (topCategory?.change || 23) > 0 ? "text-green-400" : "text-red-400"
+            }`}>
+              {(topCategory?.change || 23) > 0 ? "↑" : "↓"} {Math.abs(topCategory?.change || 23)}%
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Peak time</span>
+            <span className="text-xs text-text-secondary">{stats?.peakTime || "Wed 6-8pm"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Hot venue</span>
+            <span className="text-xs text-text-secondary">{topVenue?.venue || "The Hub"}</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm">Hot venue</span>
-          <span className="text-xs text-text-secondary">The Hub</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

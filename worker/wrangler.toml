@@ -1,12 +1,13 @@
 # nhimbe API - Cloudflare Workers Configuration
 # Part of the Mukoko ecosystem
-name = "mukoko-events-api"
+name = "mukoko-nhimbe-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # Environment variables (use wrangler secret for sensitive values)
 [vars]
 ENVIRONMENT = "development"
+ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"
 
 # Development settings
 [dev]
@@ -42,10 +43,60 @@ bucket_name = "mukoko-nhimbe-media"
 [images]
 binding = "IMAGES"
 
-# Production environment
+# ============================================
+# ANALYTICS ENGINE - Real-time analytics
+# For tracking views, clicks, conversions
+# ============================================
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "nhimbe_events"
+
+# ============================================
+# QUEUES - Background job processing
+# For async tasks like email, aggregations
+# ============================================
+[[queues.producers]]
+binding = "ANALYTICS_QUEUE"
+queue = "nhimbe-analytics-queue"
+
+[[queues.producers]]
+binding = "EMAIL_QUEUE"
+queue = "nhimbe-email-queue"
+
+[[queues.consumers]]
+queue = "nhimbe-analytics-queue"
+max_batch_size = 100
+max_batch_timeout = 30
+
+[[queues.consumers]]
+queue = "nhimbe-email-queue"
+max_batch_size = 10
+max_batch_timeout = 60
+
+# ============================================
+# HYPERDRIVE - Database connection pooling
+# For faster D1 connections (optional)
+# ============================================
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "your-hyperdrive-id"
+
+# ============================================
+# RATE LIMITING
+# Protect API from abuse
+# ============================================
+[[unsafe.bindings]]
+type = "ratelimit"
+name = "RATE_LIMITER"
+namespace_id = "1"
+simple = { limit = 100, period = 60 }  # 100 requests per minute
+
+# ============================================
+# PRODUCTION ENVIRONMENT
+# ============================================
 [env.production]
-name = "mukoko-events-api"
-vars = { ENVIRONMENT = "production" }
+name = "mukoko-nhimbe-api"
+vars = { ENVIRONMENT = "production", ALLOWED_ORIGINS = "https://nhimbe.com,https://www.nhimbe.com" }
 routes = [
   { pattern = "api.nhimbe.com", custom_domain = true }
 ]
@@ -73,10 +124,34 @@ bucket_name = "mukoko-nhimbe-media"
 [env.production.images]
 binding = "IMAGES"
 
-# Staging environment
+[[env.production.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "nhimbe_events"
+
+[[env.production.queues.producers]]
+binding = "ANALYTICS_QUEUE"
+queue = "nhimbe-analytics-queue"
+
+[[env.production.queues.producers]]
+binding = "EMAIL_QUEUE"
+queue = "nhimbe-email-queue"
+
+[[env.production.queues.consumers]]
+queue = "nhimbe-analytics-queue"
+max_batch_size = 100
+max_batch_timeout = 30
+
+[[env.production.queues.consumers]]
+queue = "nhimbe-email-queue"
+max_batch_size = 10
+max_batch_timeout = 60
+
+# ============================================
+# STAGING ENVIRONMENT
+# ============================================
 [env.staging]
-name = "mukoko-events-api-staging"
-vars = { ENVIRONMENT = "staging" }
+name = "mukoko-nhimbe-api-staging"
+vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://staging.nhimbe.com" }
 
 [env.staging.ai]
 binding = "AI"
@@ -100,3 +175,7 @@ bucket_name = "mukoko-nhimbe-media"
 
 [env.staging.images]
 binding = "IMAGES"
+
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "nhimbe_events_staging"

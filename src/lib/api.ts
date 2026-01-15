@@ -453,3 +453,209 @@ export async function regenerateEventDescription(
     body: JSON.stringify({ ...context, feedback }),
   });
 }
+
+// ============================================
+// Open Data APIs - Reviews, Referrals, Stats
+// ============================================
+
+// Event Review Types
+export interface EventReview {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  userInitials: string;
+  rating: number;
+  comment?: string;
+  helpfulCount: number;
+  isVerifiedAttendee: boolean;
+  createdAt: string;
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+}
+
+export interface EventReviewsResponse {
+  reviews: EventReview[];
+  stats: ReviewStats;
+}
+
+// Get reviews for an event (PUBLIC)
+export async function getEventReviews(eventId: string): Promise<EventReviewsResponse> {
+  return apiFetch<EventReviewsResponse>(`/api/events/${eventId}/reviews`);
+}
+
+// Submit a review for an event
+export async function submitEventReview(
+  eventId: string,
+  data: { userId: string; rating: number; comment?: string }
+): Promise<{ id: string; message: string }> {
+  return apiFetch<{ id: string; message: string }>(`/api/events/${eventId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// Mark a review as helpful
+export async function markReviewHelpful(
+  reviewId: string,
+  userId: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/reviews/${reviewId}/helpful`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+// Event Stats Types
+export interface EventStats {
+  eventId: string;
+  views: number;
+  uniqueViews: number;
+  rsvps: number;
+  checkins: number;
+  referrals: number;
+  trend?: number;
+  isHot?: boolean;
+  peakViewTime?: string;
+  topSources?: Array<{ source: string; count: number }>;
+  topCities?: Array<{ city: string; count: number }>;
+}
+
+// Get stats for an event (PUBLIC - Open Data)
+export async function getEventStats(eventId: string): Promise<EventStats> {
+  const response = await apiFetch<{ stats: EventStats }>(`/api/events/${eventId}/stats`);
+  return response.stats;
+}
+
+// Referral Types
+export interface ReferralLeaderboardEntry {
+  rank: number;
+  userId: string;
+  userName: string;
+  userInitials: string;
+  referralCount: number;
+  conversionCount: number;
+}
+
+// Get referral leaderboard for an event (PUBLIC)
+export async function getEventReferralLeaderboard(eventId: string): Promise<ReferralLeaderboardEntry[]> {
+  const response = await apiFetch<{ leaderboard: ReferralLeaderboardEntry[] }>(`/api/events/${eventId}/referrals`);
+  return response.leaderboard;
+}
+
+// Track a referral
+export async function trackReferral(data: {
+  eventId: string;
+  referralCode: string;
+  referredUserId?: string;
+}): Promise<{ id: string; message: string }> {
+  return apiFetch<{ id: string; message: string }>("/api/referrals/track", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// User Referral Code
+export interface UserReferralCode {
+  code: string;
+  totalReferrals: number;
+  totalConversions: number;
+}
+
+// Get user's referral code
+export async function getUserReferralCode(userId: string): Promise<UserReferralCode | null> {
+  try {
+    return await apiFetch<UserReferralCode>(`/api/users/${userId}/referral-code`);
+  } catch {
+    return null;
+  }
+}
+
+// Generate a referral code for user
+export async function generateUserReferralCode(userId: string): Promise<{ code: string }> {
+  return apiFetch<{ code: string }>(`/api/users/${userId}/referral-code`, {
+    method: "POST",
+  });
+}
+
+// Host Reputation Types
+export interface HostStats {
+  userId: string;
+  name: string;
+  handle?: string;
+  initials: string;
+  eventsHosted: number;
+  totalAttendees: number;
+  avgAttendance: number;
+  rating: number;
+  reviewCount: number;
+  badges: string[];
+  responseRate?: number;
+  responseTime?: string;
+}
+
+// Get host reputation (PUBLIC)
+export async function getHostReputation(userId: string): Promise<HostStats | null> {
+  try {
+    const response = await apiFetch<{ host: HostStats }>(`/api/users/${userId}/reputation`);
+    return response.host;
+  } catch {
+    return null;
+  }
+}
+
+// Community Stats Types
+export interface CommunityStats {
+  city?: string;
+  totalEvents: number;
+  totalAttendees: number;
+  activeHosts: number;
+  trendingCategories: Array<{
+    category: string;
+    change: number;
+    events: number;
+  }>;
+  peakTime: string;
+  popularVenues: Array<{
+    venue: string;
+    events: number;
+  }>;
+}
+
+// Get community stats (PUBLIC)
+export async function getCommunityStats(city?: string): Promise<CommunityStats> {
+  const params = city ? `?city=${encodeURIComponent(city)}` : "";
+  const response = await apiFetch<{ stats: CommunityStats }>(`/api/community/stats${params}`);
+  return response.stats;
+}
+
+// Trending Events (includes views and trend data)
+export interface TrendingEvent extends Event {
+  views: number;
+  trend: number;
+  isHot: boolean;
+}
+
+// Get trending events
+export async function getTrendingEvents(params?: {
+  city?: string;
+  limit?: number;
+}): Promise<TrendingEvent[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.city) searchParams.set("city", params.city);
+  if (params?.limit) searchParams.set("limit", params.limit.toString());
+
+  const query = searchParams.toString();
+  const response = await apiFetch<{ events: TrendingEvent[] }>(`/api/events/trending${query ? `?${query}` : ""}`);
+  return response.events;
+}
