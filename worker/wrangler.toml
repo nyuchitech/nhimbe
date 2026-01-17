@@ -14,6 +14,12 @@ ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"
 port = 8787
 local_protocol = "http"
 
+# Observability
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true
+
 # Workers AI Binding
 [ai]
 binding = "AI"
