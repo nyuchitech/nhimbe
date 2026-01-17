@@ -2485,7 +2485,7 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
   }
 
   // Get trending categories (comparing this week vs last week)
-  let trendingQuery = `
+  const trendingQuery = `
     SELECT
       category,
       COUNT(*) as count,
@@ -2511,7 +2511,7 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
   }
 
   // Get popular venues
-  let venueQuery = `
+  const venueQuery = `
     SELECT location_venue as venue, COUNT(*) as count
     FROM events
     WHERE is_published = TRUE

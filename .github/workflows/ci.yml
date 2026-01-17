@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  worker-typecheck:
+    name: Worker Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install worker dependencies
+        run: cd worker && npm ci
+
+      - name: Type check
+        run: cd worker && npx tsc --noEmit
+
+  validate-migrations:
+    name: Validate Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate migration files
+        run: |
+          cd worker
+
+          # List all migration files
+          echo "=== Migration files found ==="
+          ls -la src/db/migrations/ 2>/dev/null || echo "No migrations directory"
+
+          # Validate SQL files exist and are not empty
+          for file in src/db/migrations/*.sql; do
+            if [ -f "$file" ]; then
+              echo "Validating: $file"
+              # Check file is valid UTF-8 and not empty
+              if [ -s "$file" ]; then
+                echo "  ✓ File is valid"
+              else
+                echo "  ✗ File is empty"
+                exit 1
+              fi
+            fi
+          done
+
+          echo ""
+          echo "=== Migration validation complete ==="

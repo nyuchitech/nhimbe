@@ -148,12 +148,22 @@ See [CLAUDE.md](./CLAUDE.md) for complete API endpoint documentation.
 - **Icons**: Lucide React
 - **Wordmark**: Always lowercase `nhimbe`
 
+## CI/CD
+
+GitHub Actions automatically runs on pull requests and pushes to main:
+
+- **Lint & Build**: Validates frontend code
+- **Worker Type Check**: Validates backend TypeScript
+- **Validate Migrations**: Checks migration files are valid
+
+Deployment is handled automatically by Cloudflare's GitHub integration.
+
 ## Contributing
 
 1. Create a feature branch
 2. Make your changes
 3. Run `npm run lint` and `npm run build`
-4. Submit a pull request
+4. Submit a pull request (CI will validate migrations)
 
 ## License
 
