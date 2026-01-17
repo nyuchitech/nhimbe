@@ -148,12 +148,28 @@ See [CLAUDE.md](./CLAUDE.md) for complete API endpoint documentation.
 - **Icons**: Lucide React
 - **Wordmark**: Always lowercase `nhimbe`
 
+## CI/CD
+
+GitHub Actions automatically runs on pull requests and pushes to main:
+
+- **Lint & Build**: Validates frontend code
+- **Worker Type Check**: Validates backend TypeScript
+- **Migrations**: Validates and applies database migrations
+- **Deploy Worker**: Deploys to Cloudflare on merge to main
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `CLOUDFLARE_API_TOKEN` | API token with Workers and D1 permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+
 ## Contributing
 
 1. Create a feature branch
 2. Make your changes
 3. Run `npm run lint` and `npm run build`
-4. Submit a pull request
+4. Submit a pull request (CI will validate migrations)
 
 ## License
 
