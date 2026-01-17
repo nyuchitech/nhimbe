@@ -154,15 +154,9 @@ GitHub Actions automatically runs on pull requests and pushes to main:
 
 - **Lint & Build**: Validates frontend code
 - **Worker Type Check**: Validates backend TypeScript
-- **Migrations**: Validates and applies database migrations
-- **Deploy Worker**: Deploys to Cloudflare on merge to main
+- **Validate Migrations**: Checks migration files are valid
 
-### Required GitHub Secrets
-
-| Secret | Description |
-|--------|-------------|
-| `CLOUDFLARE_API_TOKEN` | API token with Workers and D1 permissions |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+Deployment is handled automatically by Cloudflare's GitHub integration.
 
 ## Contributing
 
