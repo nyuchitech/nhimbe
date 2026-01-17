@@ -1,6 +1,6 @@
 # nhimbe API - Cloudflare Workers Configuration
 # Part of the Mukoko ecosystem
-name = "mukoko-events-api"
+name = "mukoko-nhimbe-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
@@ -95,7 +95,7 @@ simple = { limit = 100, period = 60 }  # 100 requests per minute
 # PRODUCTION ENVIRONMENT
 # ============================================
 [env.production]
-name = "mukoko-events-api"
+name = "mukoko-nhimbe-api"
 vars = { ENVIRONMENT = "production", ALLOWED_ORIGINS = "https://nhimbe.com,https://www.nhimbe.com" }
 routes = [
   { pattern = "api.nhimbe.com", custom_domain = true }
@@ -150,7 +150,7 @@ max_batch_timeout = 60
 # STAGING ENVIRONMENT
 # ============================================
 [env.staging]
-name = "mukoko-events-api-staging"
+name = "mukoko-nhimbe-api-staging"
 vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://staging.nhimbe.com" }
 
 [env.staging.ai]
