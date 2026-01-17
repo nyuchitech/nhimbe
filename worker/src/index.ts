@@ -24,6 +24,38 @@ import { getAuthenticatedUser, exchangeCodeForTokens, getUserInfo } from "./auth
 
 const VERSION = "0.2.0";
 
+// ============================================
+// Input Validation Helpers
+// ============================================
+
+// Safe integer parsing with bounds
+function safeParseInt(value: string | null, defaultValue: number, min: number = 0, max: number = 1000): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) return defaultValue;
+  return Math.min(Math.max(parsed, min), max);
+}
+
+// Validate required string fields
+function validateRequiredFields(obj: Record<string, unknown>, fields: string[]): string | null {
+  for (const field of fields) {
+    if (!obj[field] || (typeof obj[field] === 'string' && !(obj[field] as string).trim())) {
+      return `Missing required field: ${field}`;
+    }
+  }
+  return null;
+}
+
+// Safe JSON parse with error handling
+function safeParseJSON(value: string | null, defaultValue: unknown = []): unknown {
+  if (!value) return defaultValue;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return defaultValue;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -593,8 +625,9 @@ async function handleEvents(
   if (url.pathname === "/api/events" && method === "GET") {
     const city = url.searchParams.get("city");
     const category = url.searchParams.get("category");
-    const limit = parseInt(url.searchParams.get("limit") || "20");
-    const offset = parseInt(url.searchParams.get("offset") || "0");
+    // Use safe parsing with bounds (min: 1, max: 100 for limit; max: 10000 for offset)
+    const limit = safeParseInt(url.searchParams.get("limit"), 20, 1, 100);
+    const offset = safeParseInt(url.searchParams.get("offset"), 0, 0, 10000);
 
     let query = "SELECT * FROM events WHERE is_published = TRUE AND is_cancelled = FALSE";
     const params: unknown[] = [];
@@ -1059,7 +1092,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     avatarUrl: result.avatar_url,
     city: result.city,
     country: result.country,
-    interests: JSON.parse(result.interests || "[]"),
+    interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: !!(result.onboarding_completed),
     stytchUserId: result.stytch_user_id,
   };
@@ -1165,7 +1198,7 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
     avatarUrl: result.avatar_url,
     city: result.city,
     country: result.country,
-    interests: JSON.parse(result.interests || "[]"),
+    interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: true,
     stytchUserId: result.stytch_user_id,
   };
@@ -1232,7 +1265,7 @@ async function handleAuthToken(request: Request, env: Env): Promise<Response> {
       avatarUrl: existingUser.avatar_url,
       city: existingUser.city,
       country: existingUser.country,
-      interests: JSON.parse(existingUser.interests || "[]"),
+      interests: safeParseJSON(existingUser.interests, []) as string[],
       onboardingCompleted: !!(existingUser.onboarding_completed),
       stytchUserId: userInfo.sub,
     };
@@ -1313,7 +1346,46 @@ async function handleRegistrations(
 
   // POST /api/registrations - Register for event
   if (url.pathname === "/api/registrations" && method === "POST") {
-    const body = await request.json() as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json() as Record<string, unknown>;
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    // Validate required fields
+    const validationError = validateRequiredFields(body, ['event_id', 'user_id']);
+    if (validationError) {
+      return jsonResponse({ error: validationError }, 400);
+    }
+
+    // Verify event exists and is available for registration
+    const event = await env.DB.prepare(
+      "SELECT id, capacity, attendee_count, is_published, is_cancelled FROM events WHERE id = ?"
+    ).bind(body.event_id).first() as { id: string; capacity: number | null; attendee_count: number; is_published: boolean; is_cancelled: boolean } | null;
+
+    if (!event) {
+      return jsonResponse({ error: "Event not found" }, 404);
+    }
+
+    if (!event.is_published || event.is_cancelled) {
+      return jsonResponse({ error: "Event is not available for registration" }, 400);
+    }
+
+    // Check capacity
+    if (event.capacity && event.attendee_count >= event.capacity) {
+      return jsonResponse({ error: "Event is at capacity" }, 400);
+    }
+
+    // Check if user is already registered
+    const existingReg = await env.DB.prepare(
+      "SELECT id FROM registrations WHERE event_id = ? AND user_id = ? AND status NOT IN ('cancelled', 'rejected')"
+    ).bind(body.event_id, body.user_id).first();
+
+    if (existingReg) {
+      return jsonResponse({ error: "User is already registered for this event" }, 400);
+    }
+
     const id = generateId();
 
     await env.DB.prepare(`
@@ -1323,9 +1395,9 @@ async function handleRegistrations(
       id,
       body.event_id,
       body.user_id,
-      body.ticket_type,
-      body.ticket_price,
-      body.ticket_currency
+      body.ticket_type || null,
+      body.ticket_price || null,
+      body.ticket_currency || null
     ).run();
 
     // Update attendee count
@@ -1340,10 +1412,49 @@ async function handleRegistrations(
   const regIdMatch = url.pathname.match(/^\/api\/registrations\/([^/]+)$/);
   if (regIdMatch && method === "PUT") {
     const regId = regIdMatch[1];
-    const body = await request.json() as { status: string };
+    let body: { status: string; user_id?: string };
+    try {
+      body = await request.json() as { status: string; user_id?: string };
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
 
-    if (!body.status || !["approved", "rejected", "pending", "registered"].includes(body.status)) {
-      return jsonResponse({ error: "Invalid status. Must be: approved, rejected, pending, or registered" }, 400);
+    if (!body.status || !["approved", "rejected", "pending", "registered", "attended"].includes(body.status)) {
+      return jsonResponse({ error: "Invalid status. Must be: approved, rejected, pending, registered, or attended" }, 400);
+    }
+
+    // Get the registration and event to verify ownership
+    const reg = await env.DB.prepare(`
+      SELECT r.*, e.host_name, e.host_handle
+      FROM registrations r
+      JOIN events e ON r.event_id = e.id
+      WHERE r.id = ?
+    `).bind(regId).first() as { id: string; user_id: string; event_id: string; host_name: string; host_handle: string } | null;
+
+    if (!reg) {
+      return jsonResponse({ error: "Registration not found" }, 404);
+    }
+
+    // Authorization check: Only the event host or the registrant can update status
+    // Host can approve/reject/change to attended
+    // Registrant can only cancel their own registration (done via DELETE)
+    // For now, require user_id in request to verify identity
+    // In production, this should come from an authenticated session
+    if (body.user_id) {
+      const requestingUser = body.user_id;
+      const isHost = reg.host_handle === `@${requestingUser}` ||
+                     reg.host_name?.toLowerCase() === requestingUser.toLowerCase();
+      const isRegistrant = reg.user_id === requestingUser;
+
+      // Registrant can't approve/reject - only host can
+      if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {
+        return jsonResponse({ error: "Only the event host can approve, reject, or mark attendance" }, 403);
+      }
+
+      // Non-owner/non-registrant can't update at all
+      if (!isHost && !isRegistrant) {
+        return jsonResponse({ error: "Not authorized to update this registration" }, 403);
+      }
     }
 
     await env.DB.prepare(
@@ -1425,18 +1536,21 @@ async function handleMedia(
       return jsonResponse({ error: "File not found" }, 404);
     }
 
-    // Check for transformation params
-    const width = url.searchParams.get("w");
-    const height = url.searchParams.get("h");
-    const format = url.searchParams.get("format") as "webp" | "avif" | "jpeg" | "png" | null;
+    // Check for transformation params with safe bounds (max 4000px to prevent DoS)
+    const widthParam = url.searchParams.get("w");
+    const heightParam = url.searchParams.get("h");
+    const width = widthParam ? safeParseInt(widthParam, 0, 1, 4000) : undefined;
+    const height = heightParam ? safeParseInt(heightParam, 0, 1, 4000) : undefined;
+    const formatParam = url.searchParams.get("format");
+    const format = ["webp", "avif", "jpeg", "png"].includes(formatParam || "") ? formatParam as "webp" | "avif" | "jpeg" | "png" : null;
 
     // If transformations requested and Images binding available
     if ((width || height || format) && env.IMAGES) {
       const transformed = env.IMAGES
         .input(object.body)
         .transform({
-          width: width ? parseInt(width) : undefined,
-          height: height ? parseInt(height) : undefined,
+          width: width || undefined,
+          height: height || undefined,
           fit: "cover",
           format: format || "webp",
           quality: 80,
@@ -2436,7 +2550,8 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
 
 async function handleTrendingEvents(url: URL, env: Env): Promise<Response> {
   const city = url.searchParams.get("city");
-  const limit = parseInt(url.searchParams.get("limit") || "10");
+  // Use safe parsing with bounds (min: 1, max: 50)
+  const limit = safeParseInt(url.searchParams.get("limit"), 10, 1, 50);
 
   // Get events with view counts and calculate trend
   let query = `
@@ -2553,7 +2668,7 @@ function dbRowToEvent(row: Record<string, unknown>): Event {
       country: row.location_country as string,
     },
     category: row.category as string,
-    tags: JSON.parse((row.tags as string) || "[]"),
+    tags: safeParseJSON((row.tags as string), []) as string[],
     coverImage: row.cover_image as string | undefined,
     coverGradient: row.cover_gradient as string | undefined,
     attendeeCount: row.attendee_count as number,

@@ -12,18 +12,33 @@ const GRADIENTS = {
   sunset: "linear-gradient(135deg, #FF6B6B 0%, #FFD740 50%, #64FFDA 100%)",
 };
 
+// Sanitize text input to prevent XSS and injection attacks
+function sanitizeText(input: string | null, maxLength: number = 200): string {
+  if (!input) return "";
+
+  // Remove any HTML tags and dangerous characters
+  const sanitized = input
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/[<>'"&]/g, "") // Remove potentially dangerous chars
+    .trim()
+    .slice(0, maxLength); // Limit length
+
+  return sanitized;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Get parameters
-    const title = searchParams.get("title") || "nhimbe";
-    const subtitle = searchParams.get("subtitle") || "Together we gather, together we grow";
-    const date = searchParams.get("date");
-    const location = searchParams.get("location");
-    const category = searchParams.get("category");
-    const gradient = (searchParams.get("gradient") as keyof typeof GRADIENTS) || "mixed";
-    const type = searchParams.get("type") || "event"; // event, default
+    // Get and sanitize parameters
+    const title = sanitizeText(searchParams.get("title"), 100) || "nhimbe";
+    const subtitle = sanitizeText(searchParams.get("subtitle"), 200) || "Together we gather, together we grow";
+    const date = sanitizeText(searchParams.get("date"), 50);
+    const location = sanitizeText(searchParams.get("location"), 100);
+    const category = sanitizeText(searchParams.get("category"), 50);
+    const gradientParam = sanitizeText(searchParams.get("gradient"), 20);
+    const gradient = (Object.keys(GRADIENTS).includes(gradientParam) ? gradientParam : "mixed") as keyof typeof GRADIENTS;
+    const type = sanitizeText(searchParams.get("type"), 20) || "event"; // event, default
 
     const gradientStyle = GRADIENTS[gradient] || GRADIENTS.mixed;
 
