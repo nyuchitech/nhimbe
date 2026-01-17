@@ -15,6 +15,8 @@ import type {
   HostStats,
   EventStats,
   CommunityStats,
+  AnalyticsQueueMessage,
+  EmailQueueMessage,
 } from "./types";
 import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search";
 import { chat, generateSuggestions } from "./ai/assistant";
@@ -300,9 +302,77 @@ const worker: ExportedHandler<Env> = {
       );
     }
   },
+
+  async queue(batch, env): Promise<void> {
+    // Process messages based on queue
+    for (const message of batch.messages) {
+      try {
+        if (batch.queue === "nhimbe-analytics-queue") {
+          await processAnalyticsMessage(message.body as AnalyticsQueueMessage, env);
+        } else if (batch.queue === "nhimbe-email-queue") {
+          await processEmailMessage(message.body as EmailQueueMessage, env);
+        }
+        message.ack();
+      } catch (error) {
+        console.error(`Failed to process message ${message.id}:`, error);
+        message.retry();
+      }
+    }
+  },
 };
 
 export default worker;
+
+// ============================================
+// Queue Message Processors
+// ============================================
+
+async function processAnalyticsMessage(message: AnalyticsQueueMessage, env: Env): Promise<void> {
+  console.log(`Processing analytics message: ${message.type} for event ${message.eventId}`);
+
+  // Write to Analytics Engine for real-time analytics
+  if (env.ANALYTICS) {
+    env.ANALYTICS.writeDataPoint({
+      blobs: [message.type, message.eventId, message.userId || "anonymous"],
+      doubles: [Date.now()],
+      indexes: [message.type],
+    });
+  }
+
+  // Update aggregated stats in D1 based on message type
+  switch (message.type) {
+    case "view":
+      await env.DB.prepare(
+        `UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?`
+      ).bind(message.eventId).run();
+      break;
+    case "rsvp":
+      // RSVP counts are updated when registration is created
+      break;
+    case "referral":
+      // Referral tracking handled by referral endpoints
+      break;
+    case "review":
+      // Review stats updated when review is created
+      break;
+  }
+}
+
+async function processEmailMessage(message: EmailQueueMessage, env: Env): Promise<void> {
+  console.log(`Processing email message: ${message.type} to ${message.to}`);
+
+  // TODO: Integrate with email service (e.g., Resend, SendGrid, Mailgun)
+  // For now, just log the email details
+  // In production, this would call the email provider's API
+
+  // Example structure for future implementation:
+  // await sendEmail({
+  //   to: message.to,
+  //   subject: message.subject,
+  //   template: message.type,
+  //   data: message.templateData,
+  // });
+}
 
 // ============================================
 // Status Page
