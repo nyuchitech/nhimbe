@@ -36,6 +36,7 @@ import {
   Globe,
   TrendingUp,
   Ticket,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -53,6 +54,8 @@ import {
   type Event,
   type Registration as APIRegistration,
 } from "@/lib/api";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import { useAuth } from "@/components/auth/auth-context";
 
 interface Registration {
   id: string;
@@ -91,11 +94,13 @@ const generateViewsData = () => {
   return data;
 };
 
-export default function ManageEventPage() {
+function ManageEventContent() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [registrationFilter, setRegistrationFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [guestSearch, setGuestSearch] = useState("");
@@ -114,27 +119,40 @@ export default function ManageEventPage() {
         const eventData = await findEvent(params.id as string);
         setEvent(eventData);
 
-        if (eventData) {
-          const regs = await getEventRegistrations(eventData.id);
-          const formattedRegs: Registration[] = regs.map((r: APIRegistration) => ({
-            id: r.id,
-            name: r.user_name || "Unknown User",
-            email: r.user_email || r.user_id,
-            status: r.status,
-            date: new Date(r.registered_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-            avatar: (r.user_name || "U")
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2),
-            checkedIn: r.status === "attended",
-          }));
-          setRegistrations(formattedRegs);
+        if (eventData && user) {
+          // Verify ownership - check if current user is the event host
+          const userNameLower = user.name?.toLowerCase() || "";
+          const hostNameLower = eventData.host.name.toLowerCase();
+          const ownerCheck =
+            hostNameLower === userNameLower ||
+            eventData.host.handle === user.handle ||
+            eventData.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
+
+          setIsOwner(ownerCheck);
+
+          // Only fetch registrations if user is owner
+          if (ownerCheck) {
+            const regs = await getEventRegistrations(eventData.id);
+            const formattedRegs: Registration[] = regs.map((r: APIRegistration) => ({
+              id: r.id,
+              name: r.user_name || "Unknown User",
+              email: r.user_email || r.user_id,
+              status: r.status,
+              date: new Date(r.registered_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+              avatar: (r.user_name || "U")
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2),
+              checkedIn: r.status === "attended",
+            }));
+            setRegistrations(formattedRegs);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -143,7 +161,7 @@ export default function ManageEventPage() {
       }
     }
     fetchData();
-  }, [params.id]);
+  }, [params.id, user]);
 
   if (loading) {
     return (
@@ -160,6 +178,30 @@ export default function ManageEventPage() {
         <Link href="/my-events">
           <Button variant="primary">Back to My Events</Button>
         </Link>
+      </div>
+    );
+  }
+
+  // Access denied - user is not the event host
+  if (!isOwner) {
+    return (
+      <div className="max-w-200 mx-auto px-6 py-12 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
+          <ShieldAlert className="w-8 h-8 text-red-400" />
+        </div>
+        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+        <p className="text-text-secondary mb-6">
+          You do not have permission to manage this event.
+          Only the event host can access this page.
+        </p>
+        <div className="flex justify-center gap-4">
+          <Link href={`/events/${event.id}`}>
+            <Button variant="secondary">View Event</Button>
+          </Link>
+          <Link href="/my-events">
+            <Button variant="primary">My Events</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -1220,5 +1262,14 @@ export default function ManageEventPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap with AuthGuard to require authentication
+export default function ManageEventPage() {
+  return (
+    <AuthGuard>
+      <ManageEventContent />
+    </AuthGuard>
   );
 }

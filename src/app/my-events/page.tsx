@@ -5,36 +5,81 @@ import Link from "next/link";
 import { CalendarPlus, Ticket, Users, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/ui/event-card";
-import { getEvents, type Event } from "@/lib/api";
+import { getEvents, getUserRegistrations, type Event, type Registration } from "@/lib/api";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import { useAuth } from "@/components/auth/auth-context";
 
 type TabType = "attending" | "hosting" | "past";
 
-export default function MyEventsPage() {
-  const [events, setEvents] = useState<Event[]>([]);
+function MyEventsContent() {
+  const { user } = useAuth();
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [userRegistrations, setUserRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("attending");
 
-  // Fetch events on mount
+  // Fetch events and user registrations on mount
   useEffect(() => {
-    async function fetchEvents() {
+    async function fetchData() {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await getEvents({ limit: 50 });
-        setEvents(response.events);
+        // Fetch all events and user's registrations in parallel
+        const [eventsResponse, registrations] = await Promise.all([
+          getEvents({ limit: 100 }),
+          getUserRegistrations(user.id).catch(() => []),
+        ]);
+
+        setAllEvents(eventsResponse.events);
+        setUserRegistrations(registrations);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchEvents();
-  }, []);
+    fetchData();
+  }, [user?.id]);
 
-  // TODO: Replace with real user data from authentication
-  // For now, split events for demonstration
   const now = new Date();
-  const attendingEvents = events.filter((e) => new Date(e.date.iso) >= now).slice(0, 3);
-  const hostingEvents = events.filter((e) => new Date(e.date.iso) >= now).slice(0, 2);
-  const pastEvents = events.filter((e) => new Date(e.date.iso) < now);
+
+  // Filter events the user is attending (has registration for)
+  const registeredEventIds = new Set(
+    userRegistrations
+      .filter((r) => r.status === "registered" || r.status === "approved" || r.status === "pending")
+      .map((r) => r.event_id)
+  );
+
+  // Filter events the user is hosting (their name matches host name)
+  // In production, this should be based on a host_id field in the event
+  const hostingEventIds = new Set(
+    allEvents
+      .filter((e) => {
+        // Check if user's name or handle matches the host
+        const userNameLower = user?.name?.toLowerCase() || "";
+        const hostNameLower = e.host.name.toLowerCase();
+        return hostNameLower === userNameLower ||
+               e.host.handle === user?.handle ||
+               e.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
+      })
+      .map((e) => e.id)
+  );
+
+  // Categorize events
+  const attendingEvents = allEvents.filter(
+    (e) => registeredEventIds.has(e.id) && new Date(e.date.iso) >= now && !hostingEventIds.has(e.id)
+  );
+
+  const hostingEvents = allEvents.filter(
+    (e) => hostingEventIds.has(e.id) && new Date(e.date.iso) >= now
+  );
+
+  const pastEvents = allEvents.filter(
+    (e) => (registeredEventIds.has(e.id) || hostingEventIds.has(e.id)) && new Date(e.date.iso) < now
+  );
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode; count: number }[] = [
     { id: "attending", label: "Attending", icon: <Ticket className="w-4 h-4" />, count: attendingEvents.length },
@@ -55,7 +100,7 @@ export default function MyEventsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Events</h1>
           <p className="text-text-secondary mt-1">
-            Manage your upcoming gatherings and see past events
+            {user?.name ? `Welcome back, ${user.name.split(" ")[0]}!` : "Manage your upcoming gatherings and see past events"}
           </p>
         </div>
         <Link href="/events/create">
@@ -110,7 +155,7 @@ export default function MyEventsPage() {
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}
-              isHosting={activeTab === "hosting"}
+              isHosting={activeTab === "hosting" || hostingEventIds.has(event.id)}
             />
           ))}
         </div>
@@ -124,11 +169,13 @@ export default function MyEventsPage() {
             )}
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">
-            {activeTab === "hosting" ? "No events hosted yet" : "No events found"}
+            {activeTab === "hosting" ? "No events hosted yet" : activeTab === "past" ? "No past events" : "No events found"}
           </h3>
           <p className="text-text-secondary mb-6">
             {activeTab === "hosting"
               ? "Create your first event and bring your community together"
+              : activeTab === "past"
+              ? "Events you've attended or hosted will appear here"
               : "Explore events and find gatherings that interest you"}
           </p>
           <Link href={activeTab === "hosting" ? "/events/create" : "/"}>
@@ -139,5 +186,14 @@ export default function MyEventsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap with AuthGuard to require authentication
+export default function MyEventsPage() {
+  return (
+    <AuthGuard>
+      <MyEventsContent />
+    </AuthGuard>
   );
 }

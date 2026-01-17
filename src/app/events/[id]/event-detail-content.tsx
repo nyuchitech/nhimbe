@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, CalendarDays, MapPin, Users, QrCode, Video, Eye, TrendingUp, Flame, Star, Share2 } from "lucide-react";
@@ -14,6 +15,8 @@ import { HostReputation } from "@/components/ui/host-reputation";
 import { EventRatings } from "@/components/ui/event-ratings";
 import { ReferralLeaderboard } from "@/components/ui/referral-leaderboard";
 import { PopularityBadge } from "@/components/ui/popularity-badge";
+import { useAuth } from "@/components/auth/auth-context";
+import { getUserReferralCode, generateUserReferralCode, type UserReferralCode } from "@/lib/api";
 import type { Event } from "@/lib/api";
 
 interface EventDetailContentProps {
@@ -35,7 +38,29 @@ const getEventInsights = (event: Event) => {
 };
 
 export function EventDetailContent({ event }: EventDetailContentProps) {
+  const { user } = useAuth();
+  const [userReferral, setUserReferral] = useState<UserReferralCode | null>(null);
   const insights = getEventInsights(event);
+
+  // Fetch or generate user's referral code
+  useEffect(() => {
+    async function fetchReferralCode() {
+      if (!user?.id) return;
+
+      try {
+        let referral = await getUserReferralCode(user.id);
+        if (!referral) {
+          // Generate a new referral code if user doesn't have one
+          const result = await generateUserReferralCode(user.id);
+          referral = { code: result.code, totalReferrals: 0, totalConversions: 0 };
+        }
+        setUserReferral(referral);
+      } catch (error) {
+        console.error("Failed to fetch referral code:", error);
+      }
+    }
+    fetchReferralCode();
+  }, [user?.id]);
 
   const coverStyle = event.coverImage
     ? {
@@ -282,8 +307,8 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             <div className="mt-8">
               <ReferralLeaderboard
                 eventId={event.id}
-                userReferralCode="user123"
-                userReferrals={0}
+                userReferralCode={userReferral?.code || (user ? undefined : undefined)}
+                userReferrals={userReferral?.totalReferrals || 0}
               />
             </div>
           </div>

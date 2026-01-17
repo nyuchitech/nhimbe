@@ -24,6 +24,8 @@ import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type C
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
 import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
+import { AuthGuard } from "@/components/auth/auth-guard";
+import { useAuth } from "@/components/auth/auth-context";
 
 // Default categories if API returns none (matching Mukoko's 32 interest categories)
 const DEFAULT_CATEGORIES: Category[] = [
@@ -85,8 +87,9 @@ const mineralThemes = [
   },
 ];
 
-export default function CreateEventPage() {
+function CreateEventForm() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedTheme, setSelectedTheme] = useState(0);
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [eventName, setEventName] = useState("");
@@ -290,10 +293,11 @@ export default function CreateEventPage() {
         meetingUrl: isOnline ? meetingUrl.trim() : undefined,
         meetingPlatform: isOnline ? meetingPlatform : undefined,
         host: {
-          // TODO: Get from authenticated user
-          name: "Event Host",
-          handle: "@eventhost",
-          initials: "EH",
+          name: user?.name || "Event Host",
+          handle: user?.handle || `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
+          initials: user?.name
+            ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+            : "EH",
           eventCount: 1,
         },
         isFree,
@@ -983,5 +987,14 @@ export default function CreateEventPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap with AuthGuard to require authentication
+export default function CreateEventPage() {
+  return (
+    <AuthGuard>
+      <CreateEventForm />
+    </AuthGuard>
   );
 }
