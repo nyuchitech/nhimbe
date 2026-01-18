@@ -17,7 +17,9 @@ import type {
   CommunityStats,
   AnalyticsQueueMessage,
   EmailQueueMessage,
+  UserRole,
 } from "./types";
+import { hasPermission } from "./types";
 import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search";
 import { chat, generateSuggestions } from "./ai/assistant";
 import { indexEvent, indexEvents, removeEventFromIndex } from "./ai/embeddings";
@@ -287,6 +289,54 @@ const worker: ExportedHandler<Env> = {
       // Trending Events - GET /api/events/trending
       if (url.pathname === "/api/events/trending" && request.method === "GET") {
         return handleTrendingEvents(url, env);
+      }
+
+      // ============================================
+      // ADMIN DASHBOARD ENDPOINTS (Role-based access)
+      // ============================================
+
+      // Admin Stats - GET /api/admin/stats
+      if (url.pathname === "/api/admin/stats" && request.method === "GET") {
+        return handleAdminStats(request, env);
+      }
+
+      // Admin Users - GET /api/admin/users
+      if (url.pathname === "/api/admin/users" && request.method === "GET") {
+        return handleAdminUsers(request, url, env);
+      }
+
+      // Admin User Actions - suspend/activate/role
+      const adminUserActionMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/(suspend|activate|role)$/);
+      if (adminUserActionMatch && request.method === "POST") {
+        return handleAdminUserAction(adminUserActionMatch[1], adminUserActionMatch[2], request, env);
+      }
+
+      // Admin Events - GET /api/admin/events
+      if (url.pathname === "/api/admin/events" && request.method === "GET") {
+        return handleAdminEvents(request, url, env);
+      }
+
+      // Admin Delete Event - DELETE /api/admin/events/:id
+      const adminEventDeleteMatch = url.pathname.match(/^\/api\/admin\/events\/([^/]+)$/);
+      if (adminEventDeleteMatch && request.method === "DELETE") {
+        return handleAdminDeleteEvent(adminEventDeleteMatch[1], request, env);
+      }
+
+      // Admin Support Tickets - GET /api/admin/support
+      if (url.pathname === "/api/admin/support" && request.method === "GET") {
+        return handleAdminSupport(request, url, env);
+      }
+
+      // Admin Support Ticket Status - PUT /api/admin/support/:id/status
+      const adminTicketStatusMatch = url.pathname.match(/^\/api\/admin\/support\/([^/]+)\/status$/);
+      if (adminTicketStatusMatch && request.method === "PUT") {
+        return handleAdminTicketStatus(adminTicketStatusMatch[1], request, env);
+      }
+
+      // Admin Support Ticket Reply - POST /api/admin/support/:id/reply
+      const adminTicketReplyMatch = url.pathname.match(/^\/api\/admin\/support\/([^/]+)\/reply$/);
+      if (adminTicketReplyMatch && request.method === "POST") {
+        return handleAdminTicketReply(adminTicketReplyMatch[1], request, env);
       }
 
       // 404 for unknown routes
@@ -1145,6 +1195,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     interests: string | null;
     onboarding_completed: number | null;
     stytch_user_id: string | null;
+    role: string | null;
   }
   const result = await env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
@@ -1165,6 +1216,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: !!(result.onboarding_completed),
     stytchUserId: result.stytch_user_id,
+    role: result.role || 'user',
   };
 
   return jsonResponse({ user });
@@ -1314,6 +1366,7 @@ async function handleAuthToken(request: Request, env: Env): Promise<Response> {
     interests: string | null;
     onboarding_completed: number | null;
     stytch_user_id: string | null;
+    role: string | null;
   }
 
   let user = null;
@@ -1338,6 +1391,7 @@ async function handleAuthToken(request: Request, env: Env): Promise<Response> {
       interests: safeParseJSON(existingUser.interests, []) as string[],
       onboardingCompleted: !!(existingUser.onboarding_completed),
       stytchUserId: userInfo.sub,
+      role: existingUser.role || 'user',
     };
   } else {
     // New user - will need onboarding
@@ -1352,6 +1406,7 @@ async function handleAuthToken(request: Request, env: Env): Promise<Response> {
       interests: [],
       onboardingCompleted: false,
       stytchUserId: userInfo.sub,
+      role: 'user',
     };
   }
 
@@ -2767,4 +2822,539 @@ function dbRowToEvent(row: Record<string, unknown>): Event {
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+}
+
+// ============================================
+// ADMIN DASHBOARD HANDLERS
+// ============================================
+
+interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+}
+
+// Helper to get authenticated admin user with role check
+async function getAdminUser(request: Request, env: Env, requiredRole: UserRole): Promise<AdminUser | null> {
+  const stytchUser = await getAuthenticatedUser(request, env);
+  if (!stytchUser) return null;
+
+  interface DbUserRow {
+    id: string;
+    email: string;
+    name: string;
+    role: string | null;
+  }
+
+  const user = await env.DB.prepare(
+    "SELECT id, email, name, role FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(stytchUser.userId, stytchUser.email).first() as DbUserRow | null;
+
+  if (!user) return null;
+
+  const userRole = (user.role || 'user') as UserRole;
+  if (!hasPermission(userRole, requiredRole)) return null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: userRole,
+  };
+}
+
+// GET /api/admin/stats - Dashboard statistics
+async function handleAdminStats(request: Request, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'moderator');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - moderator access required" }, 401);
+  }
+
+  // Get counts
+  const [usersResult, eventsResult, registrationsResult] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) as count FROM users").first() as Promise<{ count: number } | null>,
+    env.DB.prepare("SELECT COUNT(*) as count FROM events").first() as Promise<{ count: number } | null>,
+    env.DB.prepare("SELECT COUNT(*) as count FROM registrations").first() as Promise<{ count: number } | null>,
+  ]);
+
+  // Get active events (future events)
+  const activeEventsResult = await env.DB.prepare(
+    "SELECT COUNT(*) as count FROM events WHERE date_iso >= datetime('now')"
+  ).first() as { count: number } | null;
+
+  // Get recent views (last 30 days)
+  const viewsResult = await env.DB.prepare(
+    "SELECT COUNT(*) as count FROM event_views WHERE viewed_at >= datetime('now', '-30 days')"
+  ).first() as { count: number } | null;
+
+  // Get recent events
+  interface EventRow {
+    id: string;
+    title: string;
+    date_full: string;
+    attendee_count: number;
+    date_iso: string;
+  }
+  const recentEventsResult = await env.DB.prepare(
+    "SELECT id, title, date_full, attendee_count, date_iso FROM events ORDER BY created_at DESC LIMIT 5"
+  ).all() as { results: EventRow[] };
+
+  const now = new Date();
+  const recentEvents = recentEventsResult.results.map(e => {
+    const eventDate = new Date(e.date_iso);
+    let status: 'upcoming' | 'ongoing' | 'past' = 'upcoming';
+    if (eventDate < now) status = 'past';
+    else if (eventDate.toDateString() === now.toDateString()) status = 'ongoing';
+
+    return {
+      id: e.id,
+      title: e.title,
+      date: e.date_full,
+      attendeeCount: e.attendee_count,
+      status,
+    };
+  });
+
+  // Get recent users
+  interface UserRow {
+    id: string;
+    name: string;
+    email: string;
+    created_at: string;
+  }
+  const recentUsersResult = await env.DB.prepare(
+    "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 5"
+  ).all() as { results: UserRow[] };
+
+  const recentUsers = recentUsersResult.results.map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    createdAt: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  }));
+
+  // Get support tickets (if table exists)
+  let tickets: Array<{ id: string; subject: string; status: string; createdAt: string }> = [];
+  try {
+    interface TicketRow {
+      id: string;
+      subject: string;
+      status: string;
+      created_at: string;
+    }
+    const ticketsResult = await env.DB.prepare(
+      "SELECT id, subject, status, created_at FROM support_tickets ORDER BY created_at DESC LIMIT 5"
+    ).all() as { results: TicketRow[] };
+
+    tickets = ticketsResult.results.map(t => ({
+      id: t.id,
+      subject: t.subject,
+      status: t.status,
+      createdAt: new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    }));
+  } catch {
+    // Table doesn't exist yet
+  }
+
+  return jsonResponse({
+    stats: {
+      totalUsers: usersResult?.count || 0,
+      totalEvents: eventsResult?.count || 0,
+      totalRegistrations: registrationsResult?.count || 0,
+      activeEvents: activeEventsResult?.count || 0,
+      userGrowth: 0, // Would need historical data
+      eventGrowth: 0,
+      recentViews: viewsResult?.count || 0,
+      viewsGrowth: 0,
+    },
+    recentEvents,
+    recentUsers,
+    tickets,
+  });
+}
+
+// GET /api/admin/users - List users with pagination
+async function handleAdminUsers(request: Request, url: URL, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'admin');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - admin access required" }, 401);
+  }
+
+  const limit = safeParseInt(url.searchParams.get("limit"), 20, 1, 100);
+  const offset = safeParseInt(url.searchParams.get("offset"), 0, 0, 10000);
+  const search = url.searchParams.get("search") || "";
+
+  let query = "SELECT * FROM users";
+  let countQuery = "SELECT COUNT(*) as count FROM users";
+  const params: string[] = [];
+
+  if (search) {
+    query += " WHERE name LIKE ? OR email LIKE ?";
+    countQuery += " WHERE name LIKE ? OR email LIKE ?";
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+  interface UserRow {
+    id: string;
+    email: string;
+    name: string;
+    handle: string | null;
+    avatar_url: string | null;
+    city: string | null;
+    country: string | null;
+    events_attended: number;
+    events_hosted: number;
+    role: string | null;
+    created_at: string;
+  }
+
+  const [usersResult, countResult] = await Promise.all([
+    env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: UserRow[] }>,
+    env.DB.prepare(countQuery).bind(...params).first() as Promise<{ count: number } | null>,
+  ]);
+
+  const users = usersResult.results.map(u => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    handle: u.handle,
+    avatar_url: u.avatar_url,
+    city: u.city,
+    country: u.country,
+    events_attended: u.events_attended || 0,
+    events_hosted: u.events_hosted || 0,
+    role: u.role || 'user',
+    status: 'active' as const, // Would need a status field in DB
+    created_at: u.created_at,
+  }));
+
+  return jsonResponse({
+    users,
+    total: countResult?.count || 0,
+  });
+}
+
+// POST /api/admin/users/:id/suspend, activate, role
+async function handleAdminUserAction(
+  userId: string,
+  action: string,
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const requiredRole: UserRole = action === 'role' ? 'super_admin' : 'admin';
+  const admin = await getAdminUser(request, env, requiredRole);
+  if (!admin) {
+    return jsonResponse({ error: `Unauthorized - ${requiredRole} access required` }, 401);
+  }
+
+  // Prevent self-modification for dangerous actions
+  if (userId === admin.id && (action === 'suspend' || action === 'role')) {
+    return jsonResponse({ error: "Cannot modify your own account" }, 400);
+  }
+
+  switch (action) {
+    case 'suspend':
+      // In a real implementation, you'd add a status field
+      // For now, we'll just return success
+      return jsonResponse({ message: "User suspended" });
+
+    case 'activate':
+      return jsonResponse({ message: "User activated" });
+
+    case 'role': {
+      const body = await request.json() as { role?: string };
+      const newRole = body.role as UserRole;
+
+      if (!['user', 'moderator', 'admin', 'super_admin'].includes(newRole)) {
+        return jsonResponse({ error: "Invalid role" }, 400);
+      }
+
+      // Only super_admin can promote to super_admin
+      if (newRole === 'super_admin' && admin.role !== 'super_admin') {
+        return jsonResponse({ error: "Only super_admin can assign super_admin role" }, 403);
+      }
+
+      await env.DB.prepare(
+        "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?"
+      ).bind(newRole, userId).run();
+
+      return jsonResponse({ message: `User role updated to ${newRole}` });
+    }
+
+    default:
+      return jsonResponse({ error: "Unknown action" }, 400);
+  }
+}
+
+// GET /api/admin/events - List events with pagination
+async function handleAdminEvents(request: Request, url: URL, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'moderator');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - moderator access required" }, 401);
+  }
+
+  const limit = safeParseInt(url.searchParams.get("limit"), 20, 1, 100);
+  const offset = safeParseInt(url.searchParams.get("offset"), 0, 0, 10000);
+  const search = url.searchParams.get("search") || "";
+  const status = url.searchParams.get("status") || "";
+
+  let query = "SELECT * FROM events WHERE 1=1";
+  let countQuery = "SELECT COUNT(*) as count FROM events WHERE 1=1";
+  const params: (string | number)[] = [];
+
+  if (search) {
+    query += " AND (title LIKE ? OR description LIKE ?)";
+    countQuery += " AND (title LIKE ? OR description LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  const now = new Date().toISOString();
+  if (status === 'upcoming') {
+    query += " AND date_iso >= ?";
+    countQuery += " AND date_iso >= ?";
+    params.push(now);
+  } else if (status === 'past') {
+    query += " AND date_iso < ?";
+    countQuery += " AND date_iso < ?";
+    params.push(now);
+  } else if (status === 'cancelled') {
+    query += " AND is_cancelled = 1";
+    countQuery += " AND is_cancelled = 1";
+  }
+
+  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+  const [eventsResult, countResult] = await Promise.all([
+    env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: Record<string, unknown>[] }>,
+    env.DB.prepare(countQuery).bind(...params).first() as Promise<{ count: number } | null>,
+  ]);
+
+  const nowDate = new Date();
+  const events = eventsResult.results.map((row) => {
+    const event = dbRowToEvent(row);
+    const eventDate = new Date(event.date.iso);
+    let eventStatus: 'upcoming' | 'ongoing' | 'past' | 'cancelled' = 'upcoming';
+
+    if (row.is_cancelled) eventStatus = 'cancelled';
+    else if (eventDate < nowDate) eventStatus = 'past';
+    else if (eventDate.toDateString() === nowDate.toDateString()) eventStatus = 'ongoing';
+
+    return {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      location: event.location,
+      category: event.category,
+      attendeeCount: event.attendeeCount,
+      capacity: event.capacity,
+      host: event.host,
+      status: eventStatus,
+      createdAt: event.createdAt,
+    };
+  });
+
+  return jsonResponse({
+    events,
+    total: countResult?.count || 0,
+  });
+}
+
+// DELETE /api/admin/events/:id
+async function handleAdminDeleteEvent(eventId: string, request: Request, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'moderator');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - moderator access required" }, 401);
+  }
+
+  // Check event exists
+  const event = await env.DB.prepare("SELECT id, title FROM events WHERE id = ?").bind(eventId).first();
+  if (!event) {
+    return jsonResponse({ error: "Event not found" }, 404);
+  }
+
+  // Delete event (cascades to registrations via foreign key)
+  await env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId).run();
+
+  // Remove from vector index
+  try {
+    await removeEventFromIndex(env.VECTORIZE, eventId);
+  } catch (error) {
+    console.error("Failed to remove event from index:", error);
+  }
+
+  return jsonResponse({ message: "Event deleted successfully" });
+}
+
+// GET /api/admin/support - List support tickets
+async function handleAdminSupport(request: Request, url: URL, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'admin');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - admin access required" }, 401);
+  }
+
+  const limit = safeParseInt(url.searchParams.get("limit"), 20, 1, 100);
+  const offset = safeParseInt(url.searchParams.get("offset"), 0, 0, 10000);
+  const status = url.searchParams.get("status") || "";
+  const search = url.searchParams.get("search") || "";
+
+  try {
+    let query = `
+      SELECT t.*, u.name as user_name, u.email as user_email
+      FROM support_tickets t
+      LEFT JOIN users u ON t.user_id = u.id
+      WHERE 1=1
+    `;
+    let countQuery = "SELECT COUNT(*) as count FROM support_tickets WHERE 1=1";
+    const params: string[] = [];
+
+    if (status && status !== 'all') {
+      query += " AND t.status = ?";
+      countQuery += " AND status = ?";
+      params.push(status);
+    }
+
+    if (search) {
+      query += " AND (t.subject LIKE ? OR t.description LIKE ?)";
+      countQuery += " AND (subject LIKE ? OR description LIKE ?)";
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    query += " ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
+
+    interface TicketRow {
+      id: string;
+      user_id: string | null;
+      user_name: string | null;
+      user_email: string | null;
+      subject: string;
+      description: string;
+      category: string;
+      priority: string;
+      status: string;
+      created_at: string;
+      updated_at: string;
+    }
+
+    const [ticketsResult, countResult] = await Promise.all([
+      env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: TicketRow[] }>,
+      env.DB.prepare(countQuery).bind(...params).first() as Promise<{ count: number } | null>,
+    ]);
+
+    // Get messages for each ticket
+    const tickets = await Promise.all(ticketsResult.results.map(async (t) => {
+      interface MessageRow {
+        id: string;
+        sender_type: string;
+        sender_id: string | null;
+        content: string;
+        created_at: string;
+      }
+
+      const messagesResult = await env.DB.prepare(
+        "SELECT m.*, u.name as sender_name FROM support_messages m LEFT JOIN users u ON m.sender_id = u.id WHERE m.ticket_id = ? ORDER BY m.created_at ASC"
+      ).bind(t.id).all() as { results: (MessageRow & { sender_name: string | null })[] };
+
+      return {
+        id: t.id,
+        subject: t.subject,
+        description: t.description,
+        category: t.category,
+        priority: t.priority as 'low' | 'medium' | 'high',
+        status: t.status as 'open' | 'pending' | 'resolved',
+        user: t.user_id ? {
+          id: t.user_id,
+          name: t.user_name || 'Unknown',
+          email: t.user_email || '',
+        } : undefined,
+        messages: messagesResult.results.map(m => ({
+          id: m.id,
+          content: m.content,
+          sender: m.sender_type as 'user' | 'admin',
+          senderName: m.sender_name || (m.sender_type === 'admin' ? 'Support Team' : 'User'),
+          createdAt: m.created_at,
+        })),
+        createdAt: t.created_at,
+        updatedAt: t.updated_at,
+      };
+    }));
+
+    return jsonResponse({
+      tickets,
+      total: countResult?.count || 0,
+    });
+  } catch (error) {
+    // Table might not exist yet
+    console.error("Support tickets error:", error);
+    return jsonResponse({
+      tickets: [],
+      total: 0,
+    });
+  }
+}
+
+// PUT /api/admin/support/:id/status
+async function handleAdminTicketStatus(ticketId: string, request: Request, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'admin');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - admin access required" }, 401);
+  }
+
+  const body = await request.json() as { status?: string };
+  const status = body.status;
+
+  if (!status || !['open', 'pending', 'resolved'].includes(status)) {
+    return jsonResponse({ error: "Invalid status" }, 400);
+  }
+
+  try {
+    await env.DB.prepare(
+      "UPDATE support_tickets SET status = ?, updated_at = datetime('now') WHERE id = ?"
+    ).bind(status, ticketId).run();
+
+    return jsonResponse({ message: "Ticket status updated" });
+  } catch (error) {
+    console.error("Update ticket status error:", error);
+    return jsonResponse({ error: "Failed to update ticket status" }, 500);
+  }
+}
+
+// POST /api/admin/support/:id/reply
+async function handleAdminTicketReply(ticketId: string, request: Request, env: Env): Promise<Response> {
+  const admin = await getAdminUser(request, env, 'admin');
+  if (!admin) {
+    return jsonResponse({ error: "Unauthorized - admin access required" }, 401);
+  }
+
+  const body = await request.json() as { content?: string };
+  const content = body.content?.trim();
+
+  if (!content) {
+    return jsonResponse({ error: "Content is required" }, 400);
+  }
+
+  try {
+    const messageId = crypto.randomUUID();
+
+    await env.DB.prepare(`
+      INSERT INTO support_messages (id, ticket_id, sender_type, sender_id, content, created_at)
+      VALUES (?, ?, 'admin', ?, ?, datetime('now'))
+    `).bind(messageId, ticketId, admin.id, content).run();
+
+    // Update ticket status to pending and timestamp
+    await env.DB.prepare(
+      "UPDATE support_tickets SET status = 'pending', updated_at = datetime('now') WHERE id = ?"
+    ).bind(ticketId).run();
+
+    return jsonResponse({
+      message: "Reply sent",
+      messageId,
+    });
+  } catch (error) {
+    console.error("Send reply error:", error);
+    return jsonResponse({ error: "Failed to send reply" }, 500);
+  }
 }

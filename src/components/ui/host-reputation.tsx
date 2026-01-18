@@ -9,10 +9,10 @@ interface HostStats {
   handle?: string;
   initials: string;
   eventsHosted: number;
-  totalAttendees: number;
-  avgAttendance: number; // percentage
-  rating: number; // out of 5
-  reviewCount: number;
+  totalAttendees?: number;
+  avgAttendance?: number; // percentage
+  rating?: number; // out of 5
+  reviewCount?: number;
   memberSince?: string;
   badges?: string[];
 }
@@ -66,7 +66,7 @@ export function HostReputation({
         </div>
         <div className="flex items-center gap-2">
           <span className="font-medium">{host.name}</span>
-          {showRating && host.rating > 0 && (
+          {showRating && host.rating !== undefined && host.rating > 0 && (
             <div className="flex items-center gap-1">
               <Star className="w-3.5 h-3.5 text-accent fill-accent" />
               <span className="text-sm text-text-secondary">{host.rating.toFixed(1)}</span>
@@ -102,17 +102,19 @@ export function HostReputation({
             <div className="text-lg font-bold">{host.eventsHosted}</div>
             <div className="text-xs text-text-tertiary">Events</div>
           </div>
-          <div className="text-center p-2 bg-elevated rounded-lg">
-            <div className="text-lg font-bold">{host.totalAttendees}</div>
-            <div className="text-xs text-text-tertiary">Attendees</div>
-          </div>
+          {host.totalAttendees !== undefined && (
+            <div className="text-center p-2 bg-elevated rounded-lg">
+              <div className="text-lg font-bold">{host.totalAttendees}</div>
+              <div className="text-xs text-text-tertiary">Attendees</div>
+            </div>
+          )}
         </div>
 
-        {showRating && host.rating > 0 && (
+        {showRating && host.rating !== undefined && host.rating > 0 && (
           <div className="flex items-center justify-between">
             {renderStars(host.rating)}
             <span className="text-sm text-text-secondary">
-              {host.reviewCount} reviews
+              {host.reviewCount || 0} reviews
             </span>
           </div>
         )}
@@ -140,34 +142,38 @@ export function HostReputation({
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - only show stats that have data */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="text-center p-3 bg-elevated rounded-xl">
           <Calendar className="w-5 h-5 mx-auto mb-1 text-primary" />
           <div className="text-xl font-bold">{host.eventsHosted}</div>
           <div className="text-xs text-text-tertiary">Events Hosted</div>
         </div>
-        <div className="text-center p-3 bg-elevated rounded-xl">
-          <Users className="w-5 h-5 mx-auto mb-1 text-secondary" />
-          <div className="text-xl font-bold">{host.totalAttendees}</div>
-          <div className="text-xs text-text-tertiary">Total Attendees</div>
-        </div>
-        <div className="text-center p-3 bg-elevated rounded-xl">
-          <TrendingUp className="w-5 h-5 mx-auto mb-1 text-accent" />
-          <div className="text-xl font-bold">{host.avgAttendance}%</div>
-          <div className="text-xs text-text-tertiary">Avg Attendance</div>
-        </div>
+        {host.totalAttendees !== undefined && (
+          <div className="text-center p-3 bg-elevated rounded-xl">
+            <Users className="w-5 h-5 mx-auto mb-1 text-secondary" />
+            <div className="text-xl font-bold">{host.totalAttendees}</div>
+            <div className="text-xs text-text-tertiary">Total Attendees</div>
+          </div>
+        )}
+        {host.avgAttendance !== undefined && (
+          <div className="text-center p-3 bg-elevated rounded-xl">
+            <TrendingUp className="w-5 h-5 mx-auto mb-1 text-accent" />
+            <div className="text-xl font-bold">{host.avgAttendance}%</div>
+            <div className="text-xs text-text-tertiary">Avg Attendance</div>
+          </div>
+        )}
       </div>
 
       {/* Rating Section */}
-      {showRating && host.rating > 0 && (
+      {showRating && host.rating !== undefined && host.rating > 0 && (
         <div className="flex items-center justify-between py-4 border-t border-elevated mb-4">
           <div className="flex items-center gap-3">
             {renderStars(host.rating)}
             <span className="text-lg font-bold">{host.rating.toFixed(1)}</span>
           </div>
           <span className="text-sm text-text-secondary">
-            {host.reviewCount} reviews
+            {host.reviewCount || 0} reviews
           </span>
         </div>
       )}

@@ -10,6 +10,8 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+export type UserRole = 'user' | 'moderator' | 'admin' | 'super_admin';
+
 export interface NhimbeUser {
   id: string;
   email: string;
@@ -21,6 +23,19 @@ export interface NhimbeUser {
   interests?: string[];
   onboardingCompleted: boolean;
   stytchUserId: string;
+  role: UserRole;
+}
+
+// Role permission helpers
+const ROLE_HIERARCHY: Record<UserRole, number> = {
+  user: 0,
+  moderator: 1,
+  admin: 2,
+  super_admin: 3,
+};
+
+export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
 }
 
 interface AuthContextType {

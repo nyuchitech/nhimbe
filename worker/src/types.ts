@@ -460,6 +460,69 @@ export interface AssistantResponse {
   }>;
 }
 
+// User Role Types
+export type UserRole = 'user' | 'moderator' | 'admin' | 'super_admin';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  handle?: string;
+  avatarUrl?: string;
+  bio?: string;
+  city?: string;
+  country?: string;
+  interests?: string[];
+  eventsAttended: number;
+  eventsHosted: number;
+  role: UserRole;
+  onboardingCompleted: boolean;
+  stytchUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Role permission helpers
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  user: 0,
+  moderator: 1,
+  admin: 2,
+  super_admin: 3,
+};
+
+export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+}
+
+// Support Ticket Types
+export interface SupportTicket {
+  id: string;
+  userId?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  subject: string;
+  description: string;
+  category: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'pending' | 'resolved';
+  messages: SupportMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  senderType: 'user' | 'admin';
+  senderId?: string;
+  senderName: string;
+  content: string;
+  createdAt: string;
+}
+
 // Open Data Types - Reviews, Referrals, Reputation
 
 export interface EventReview {

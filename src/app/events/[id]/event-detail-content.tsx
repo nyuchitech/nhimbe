@@ -14,33 +14,46 @@ import { EventWeather } from "./event-weather";
 import { HostReputation } from "@/components/ui/host-reputation";
 import { EventRatings } from "@/components/ui/event-ratings";
 import { ReferralLeaderboard } from "@/components/ui/referral-leaderboard";
-import { PopularityBadge } from "@/components/ui/popularity-badge";
 import { useAuth } from "@/components/auth/auth-context";
-import { getUserReferralCode, generateUserReferralCode, type UserReferralCode } from "@/lib/api";
+import { getUserReferralCode, generateUserReferralCode, getEventStats, getEventReviews, type UserReferralCode, type EventStats, type ReviewStats } from "@/lib/api";
 import type { Event } from "@/lib/api";
 
 interface EventDetailContentProps {
   event: Event;
 }
 
-// Simulated data - in production this would come from API
-const getEventInsights = (event: Event) => {
-  // Generate consistent "random" data based on event id
-  const seed = event.id.charCodeAt(0) + event.id.charCodeAt(1);
-  return {
-    views: 120 + (seed * 47) % 2000,
-    trend: (seed * 13) % 35,
-    isHot: seed % 4 === 0,
-    rating: 3.5 + ((seed * 7) % 15) / 10,
-    reviewCount: 5 + (seed * 3) % 95,
-    isPastEvent: new Date(event.date.iso) < new Date(),
-  };
-};
-
 export function EventDetailContent({ event }: EventDetailContentProps) {
   const { user } = useAuth();
   const [userReferral, setUserReferral] = useState<UserReferralCode | null>(null);
-  const insights = getEventInsights(event);
+  const [stats, setStats] = useState<EventStats | null>(null);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const isPastEvent = new Date(event.date.iso) < new Date();
+
+  // Fetch event stats from API
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const eventStats = await getEventStats(event.id);
+        setStats(eventStats);
+      } catch (error) {
+        console.error("Failed to fetch event stats:", error);
+      }
+    }
+    fetchStats();
+  }, [event.id]);
+
+  // Fetch review stats from API
+  useEffect(() => {
+    async function fetchReviewStats() {
+      try {
+        const response = await getEventReviews(event.id);
+        setReviewStats(response.stats);
+      } catch (error) {
+        console.error("Failed to fetch review stats:", error);
+      }
+    }
+    fetchReviewStats();
+  }, [event.id]);
 
   // Fetch or generate user's referral code
   useEffect(() => {
@@ -122,32 +135,34 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               {event.category}
             </div>
 
-            {/* Hot/Trending Badge */}
-            {insights.isHot && (
+            {/* Hot/Trending Badge - only shown when API returns data */}
+            {stats?.isHot && (
               <div className="flex items-center gap-1 bg-accent/90 text-background px-2.5 py-1.5 rounded-full self-start">
                 <Flame className="w-3.5 h-3.5" />
                 <span className="text-[11px] font-bold">HOT</span>
               </div>
             )}
-            {!insights.isHot && insights.trend > 20 && (
+            {!stats?.isHot && stats?.trend && stats.trend > 20 && (
               <div className="flex items-center gap-1 bg-green-500/90 text-white px-2.5 py-1.5 rounded-full self-start">
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold">+{insights.trend}%</span>
+                <span className="text-[11px] font-bold">+{stats.trend}%</span>
               </div>
             )}
           </div>
 
-          {/* Open Data: Views & Rating on Cover */}
+          {/* Open Data: Views & Rating on Cover - only shown when API returns data */}
           <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-10">
-            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
-              <Eye className="w-4 h-4" />
-              <span className="text-sm font-medium">{formatViews(insights.views)} views</span>
-            </div>
-            {insights.rating > 0 && insights.reviewCount > 0 && (
+            {stats?.views !== undefined && stats.views > 0 && (
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
+                <Eye className="w-4 h-4" />
+                <span className="text-sm font-medium">{formatViews(stats.views)} views</span>
+              </div>
+            )}
+            {reviewStats && reviewStats.averageRating > 0 && reviewStats.totalReviews > 0 && (
               <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
                 <Star className="w-4 h-4 text-accent fill-accent" />
-                <span className="text-sm font-medium">{insights.rating.toFixed(1)}</span>
-                <span className="text-xs text-white/60">({insights.reviewCount})</span>
+                <span className="text-sm font-medium">{reviewStats.averageRating.toFixed(1)}</span>
+                <span className="text-xs text-white/60">({reviewStats.totalReviews})</span>
               </div>
             )}
           </div>
@@ -196,12 +211,12 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   <span>{event.host.handle}</span>
                   <span>·</span>
                   <span>{event.host.eventCount} events hosted</span>
-                  {insights.rating > 0 && (
+                  {reviewStats && reviewStats.averageRating > 0 && (
                     <>
                       <span>·</span>
                       <div className="flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 text-accent fill-accent" />
-                        <span>{insights.rating.toFixed(1)}</span>
+                        <span>{reviewStats.averageRating.toFixed(1)}</span>
                       </div>
                     </>
                   )}
@@ -293,7 +308,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             </div>
 
             {/* Event Ratings - Public Feedback */}
-            {insights.isPastEvent && (
+            {isPastEvent && (
               <div className="mt-8">
                 <EventRatings
                   eventId={event.id}
@@ -364,49 +379,57 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               )}
             </div>
 
-            {/* Event Stats Card - Open Data */}
-            <div
-              className="rounded-(--radius-card) p-5"
-              style={{ backgroundColor: "var(--event-surface)" }}
-            >
-              <div className="flex items-center gap-2.5 mb-4">
-                <TrendingUp className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
-                <h4 className="font-semibold text-sm">Event Insights</h4>
+            {/* Event Stats Card - Open Data - only shown when API returns data */}
+            {(stats || reviewStats) && (
+              <div
+                className="rounded-(--radius-card) p-5"
+                style={{ backgroundColor: "var(--event-surface)" }}
+              >
+                <div className="flex items-center gap-2.5 mb-4">
+                  <TrendingUp className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
+                  <h4 className="font-semibold text-sm">Event Insights</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {stats?.views !== undefined && (
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs">Views</span>
+                      </div>
+                      <div className="text-lg font-bold">{formatViews(stats.views)}</div>
+                    </div>
+                  )}
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                    <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                      <Users className="w-3.5 h-3.5" />
+                      <span className="text-xs">Going</span>
+                    </div>
+                    <div className="text-lg font-bold">{event.attendeeCount}</div>
+                  </div>
+                  {reviewStats && reviewStats.totalReviews > 0 && (
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                        <Star className="w-3.5 h-3.5 text-accent" />
+                        <span className="text-xs">Rating</span>
+                      </div>
+                      <div className="text-lg font-bold">{reviewStats.averageRating.toFixed(1)}</div>
+                    </div>
+                  )}
+                  {stats?.referrals !== undefined && stats.referrals > 0 && (
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
+                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="text-xs">Referrals</span>
+                      </div>
+                      <div className="text-lg font-bold">{stats.referrals}</div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-foreground/40 text-center mt-3">
+                  Open data - Transparency builds trust
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span className="text-xs">Views</span>
-                  </div>
-                  <div className="text-lg font-bold">{formatViews(insights.views)}</div>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                    <Users className="w-3.5 h-3.5" />
-                    <span className="text-xs">Going</span>
-                  </div>
-                  <div className="text-lg font-bold">{event.attendeeCount}</div>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                    <Star className="w-3.5 h-3.5 text-accent" />
-                    <span className="text-xs">Rating</span>
-                  </div>
-                  <div className="text-lg font-bold">{insights.rating.toFixed(1)}</div>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                  <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span className="text-xs">Referrals</span>
-                  </div>
-                  <div className="text-lg font-bold">33</div>
-                </div>
-              </div>
-              <p className="text-xs text-foreground/40 text-center mt-3">
-                Open data - Transparency builds trust
-              </p>
-            </div>
+            )}
 
             {/* QR Code Card */}
             <div
@@ -452,17 +475,15 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               </div>
             )}
 
-            {/* Host Reputation Card */}
+            {/* Host Reputation Card - only show rating/reviews when API has data */}
             <HostReputation
               host={{
                 name: event.host.name,
                 handle: event.host.handle,
                 initials: event.host.initials,
                 eventsHosted: event.host.eventCount,
-                totalAttendees: event.host.eventCount * 25,
-                avgAttendance: 78,
-                rating: insights.rating,
-                reviewCount: insights.reviewCount,
+                rating: reviewStats?.averageRating,
+                reviewCount: reviewStats?.totalReviews,
                 badges: event.host.eventCount > 10 ? ["trusted-host", "veteran"] : event.host.eventCount > 5 ? ["trusted-host"] : ["rising-star"],
               }}
               variant="compact"
