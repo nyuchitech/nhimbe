@@ -3128,12 +3128,12 @@ async function handleAdminEvents(request: Request, url: URL, env: Env): Promise<
   query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
 
   const [eventsResult, countResult] = await Promise.all([
-    env.DB.prepare(query).bind(...params, limit, offset).all(),
+    env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: Record<string, unknown>[] }>,
     env.DB.prepare(countQuery).bind(...params).first() as Promise<{ count: number } | null>,
   ]);
 
   const nowDate = new Date();
-  const events = eventsResult.results.map((row: Record<string, unknown>) => {
+  const events = eventsResult.results.map((row) => {
     const event = dbRowToEvent(row);
     const eventDate = new Date(event.date.iso);
     let eventStatus: 'upcoming' | 'ongoing' | 'past' | 'cancelled' = 'upcoming';
@@ -3181,7 +3181,7 @@ async function handleAdminDeleteEvent(eventId: string, request: Request, env: En
 
   // Remove from vector index
   try {
-    await removeEventFromIndex(eventId, env);
+    await removeEventFromIndex(env.VECTORIZE, eventId);
   } catch (error) {
     console.error("Failed to remove event from index:", error);
   }
