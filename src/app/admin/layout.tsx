@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/auth/auth-context";
+import { useAuth, hasPermission, type UserRole } from "@/components/auth/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -17,25 +17,19 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-// Admin email whitelist - in production, this would be in the database
-const ADMIN_EMAILS = [
-  "admin@nhimbe.com",
-  "support@nhimbe.com",
-  "admin@nyuchi.com",
-];
-
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  requiredRole: UserRole;
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Events", href: "/admin/events", icon: Calendar },
-  { label: "Support", href: "/admin/support", icon: MessageSquare },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, requiredRole: "moderator" },
+  { label: "Users", href: "/admin/users", icon: Users, requiredRole: "admin" },
+  { label: "Events", href: "/admin/events", icon: Calendar, requiredRole: "moderator" },
+  { label: "Support", href: "/admin/support", icon: MessageSquare, requiredRole: "admin" },
+  { label: "Settings", href: "/admin/settings", icon: Settings, requiredRole: "super_admin" },
 ];
 
 export default function AdminLayout({
@@ -49,17 +43,24 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
+  // Check if user has at least moderator role (minimum for admin access)
+  const userRole = user?.role || 'user';
+  const canAccessAdmin = user && hasPermission(userRole, 'moderator');
+
+  // Filter nav items based on user's role
+  const visibleNavItems = navItems.filter(item =>
+    user && hasPermission(userRole, item.requiredRole)
+  );
 
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push("/auth/signin?returnUrl=/admin");
-      } else if (!isAdmin) {
+      } else if (!canAccessAdmin) {
         router.push("/?error=unauthorized");
       }
     }
-  }, [isLoading, isAuthenticated, isAdmin, router]);
+  }, [isLoading, isAuthenticated, canAccessAdmin, router]);
 
   if (isLoading) {
     return (
@@ -69,7 +70,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  if (!isAuthenticated || !canAccessAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -118,7 +119,7 @@ export default function AdminLayout({
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/admin" && pathname.startsWith(item.href));
