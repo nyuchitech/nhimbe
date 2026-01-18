@@ -19,15 +19,6 @@ interface ReferralLeaderboardProps {
   className?: string;
 }
 
-// Fallback data when API fails
-const fallbackReferrers: Referrer[] = [
-  { id: "1", name: "Sarah M.", initials: "SM", referrals: 12, rank: 1 },
-  { id: "2", name: "John K.", initials: "JK", referrals: 8, rank: 2 },
-  { id: "3", name: "Lisa T.", initials: "LT", referrals: 6, rank: 3 },
-  { id: "4", name: "Mike R.", initials: "MR", referrals: 4, rank: 4 },
-  { id: "5", name: "Anna P.", initials: "AP", referrals: 3, rank: 5 },
-];
-
 const rankIcons = {
   1: { icon: Crown, color: "text-accent", bg: "bg-accent/20" },
   2: { icon: Medal, color: "text-gray-300", bg: "bg-gray-300/20" },
@@ -62,21 +53,34 @@ export function ReferralLeaderboard({
   }, [eventId]);
 
   // Transform API data to component format
-  const referrers: Referrer[] = leaderboard.length > 0
-    ? leaderboard.map((entry) => ({
-        id: entry.userId,
-        name: entry.userName,
-        initials: entry.userInitials,
-        referrals: entry.conversionCount,
-        rank: entry.rank,
-      }))
-    : fallbackReferrers;
+  const referrers: Referrer[] = leaderboard.map((entry) => ({
+    id: entry.userId,
+    name: entry.userName,
+    initials: entry.userInitials,
+    referrals: entry.conversionCount,
+    rank: entry.rank,
+  }));
 
   const totalReferrals = referrers.reduce((sum, r) => sum + r.referrals, 0);
   const handleCopyReferralLink = () => {
     const link = `${window.location.origin}/events/${eventId}?ref=${userReferralCode}`;
     navigator.clipboard.writeText(link);
   };
+
+  if (loading) {
+    return (
+      <div className={`bg-surface rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render the component if there's no data and no user referral code
+  if (referrers.length === 0 && !userReferralCode) {
+    return null;
+  }
 
   return (
     <div className={`bg-surface rounded-2xl p-6 ${className}`}>
@@ -85,15 +89,18 @@ export function ReferralLeaderboard({
           <Trophy className="w-5 h-5 text-accent" />
           <h3 className="font-bold text-lg">Community Builders</h3>
         </div>
-        <div className="flex items-center gap-1 text-sm text-text-secondary">
-          <Users className="w-4 h-4" />
-          <span>{totalReferrals} referrals</span>
-        </div>
+        {totalReferrals > 0 && (
+          <div className="flex items-center gap-1 text-sm text-text-secondary">
+            <Users className="w-4 h-4" />
+            <span>{totalReferrals} referrals</span>
+          </div>
+        )}
       </div>
 
       {/* Leaderboard */}
-      <div className="space-y-2 mb-6">
-        {referrers.slice(0, 5).map((referrer) => {
+      {referrers.length > 0 ? (
+        <div className="space-y-2 mb-6">
+          {referrers.slice(0, 5).map((referrer) => {
           const rankStyle = rankIcons[referrer.rank as keyof typeof rankIcons];
           const RankIcon = rankStyle?.icon;
 
@@ -139,7 +146,14 @@ export function ReferralLeaderboard({
             </div>
           );
         })}
-      </div>
+        </div>
+      ) : (
+        <div className="text-center py-6 mb-6">
+          <p className="text-sm text-text-secondary">
+            Be the first to invite friends!
+          </p>
+        </div>
+      )}
 
       {/* User's Referral Section */}
       {userReferralCode && (

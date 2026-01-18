@@ -22,39 +22,6 @@ interface EventRatingsProps {
   className?: string;
 }
 
-// Fallback data when API fails
-const fallbackReviews: Review[] = [
-  {
-    id: "1",
-    userName: "Sarah M.",
-    userInitials: "SM",
-    rating: 5,
-    comment: "Amazing event! Great networking opportunities and the speaker was fantastic. Would definitely attend again.",
-    date: "2 days ago",
-    helpful: 8,
-  },
-  {
-    id: "2",
-    userName: "John K.",
-    userInitials: "JK",
-    rating: 4,
-    comment: "Well organized event. Venue was nice but could have used better seating arrangements.",
-    date: "3 days ago",
-    helpful: 3,
-  },
-  {
-    id: "3",
-    userName: "Lisa T.",
-    userInitials: "LT",
-    rating: 5,
-    comment: "Loved it! The host was welcoming and made everyone feel included. True Ubuntu spirit.",
-    date: "1 week ago",
-    helpful: 12,
-  },
-];
-
-const fallbackDistribution = { 5: 45, 4: 28, 3: 12, 2: 8, 1: 3 };
-
 // Helper to format date
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -98,7 +65,6 @@ export function EventRatings({
         setStats(data.stats);
       } catch (error) {
         console.error("Failed to fetch event reviews:", error);
-        setReviews(fallbackReviews);
       } finally {
         setLoading(false);
       }
@@ -106,9 +72,9 @@ export function EventRatings({
     fetchReviews();
   }, [eventId]);
 
-  const averageRating = stats?.averageRating || 4.3;
-  const totalReviews = stats?.totalReviews || 96;
-  const ratingDistribution = stats?.distribution || fallbackDistribution;
+  const averageRating = stats?.averageRating ?? 0;
+  const totalReviews = stats?.totalReviews ?? 0;
+  const ratingDistribution = stats?.distribution ?? { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [helpfulClicked, setHelpfulClicked] = useState<Set<string>>(new Set());
 
@@ -171,6 +137,32 @@ export function EventRatings({
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if there are no reviews and user can't write one
+  if (reviews.length === 0 && !userCanReview) {
+    return null;
+  }
+
+  // Show empty state with option to write review
+  if (reviews.length === 0) {
+    return (
+      <div className={`bg-surface rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center gap-2 mb-6">
+          <MessageSquare className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-lg">Community Feedback</h3>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-text-secondary mb-4">No reviews yet. Be the first to share your experience!</p>
+          {userCanReview && isPastEvent && (
+            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity mx-auto">
+              <Star className="w-4 h-4" />
+              Write a Review
+            </button>
+          )}
         </div>
       </div>
     );

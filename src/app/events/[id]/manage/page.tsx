@@ -73,26 +73,7 @@ interface EventStats {
   approved: number;
   pending: number;
   checkedIn: number;
-  viewsToday: number;
-  viewsWeek: number;
-  viewsMonth: number;
 }
-
-// Simulated page views data for the chart
-const generateViewsData = () => {
-  const data = [];
-  const now = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    data.push({
-      date: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-      shortDate: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      views: Math.floor(Math.random() * 15) + 1,
-    });
-  }
-  return data;
-};
 
 function ManageEventContent() {
   const params = useParams();
@@ -111,7 +92,6 @@ function ManageEventContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [blastMessage, setBlastMessage] = useState("");
-  const [viewsData] = useState(generateViewsData);
 
   useEffect(() => {
     async function fetchData() {
@@ -207,14 +187,11 @@ function ManageEventContent() {
   }
 
   const stats: EventStats = {
-    views: event?.attendeeCount ? event.attendeeCount * 8 : 0,
+    views: 0, // Will be populated by real analytics API when available
     registrations: registrations.length,
     approved: registrations.filter((r) => r.status === "approved" || r.status === "registered").length,
     pending: registrations.filter((r) => r.status === "pending").length,
     checkedIn: registrations.filter((r) => r.checkedIn).length,
-    viewsToday: viewsData[viewsData.length - 1]?.views || 0,
-    viewsWeek: viewsData.reduce((sum, d) => sum + d.views, 0),
-    viewsMonth: viewsData.reduce((sum, d) => sum + d.views, 0) * 4,
   };
 
   const filteredRegistrations = registrations.filter((r) => {
@@ -311,7 +288,6 @@ function ManageEventContent() {
 
   const capacity = event.capacity || 100;
   const capacityUsed = stats.approved;
-  const capacityPercentage = (capacityUsed / capacity) * 100;
 
   return (
     <div className="max-w-280 mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -852,39 +828,15 @@ function ManageEventContent() {
               <Button variant="secondary" size="default">Past 7 Days</Button>
             </CardHeader>
             <CardContent>
-              {/* Simple Chart */}
-              <div className="h-48 flex items-end gap-2">
-                {viewsData.map((day, i) => {
-                  const maxViews = Math.max(...viewsData.map(d => d.views));
-                  const height = maxViews > 0 ? (day.views / maxViews) * 100 : 0;
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="w-full flex flex-col justify-end h-32">
-                        <div
-                          className="w-full bg-primary rounded-t transition-all"
-                          style={{ height: `${height}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-text-tertiary">{day.shortDate}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-elevated">
-                <div>
-                  <div className="text-sm text-text-secondary mb-1">24 hours</div>
-                  <div className="text-2xl font-bold">{stats.viewsToday}</div>
+              {/* Empty state - analytics data will come from API */}
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-elevated rounded-full flex items-center justify-center">
+                  <Eye className="w-8 h-8 text-text-tertiary" />
                 </div>
-                <div>
-                  <div className="text-sm text-text-secondary mb-1">7 days</div>
-                  <div className="text-2xl font-bold">{stats.viewsWeek}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-text-secondary mb-1">30 days</div>
-                  <div className="text-2xl font-bold">{stats.viewsMonth}</div>
-                </div>
+                <h4 className="font-medium text-text-secondary mb-1">No Page Views Yet</h4>
+                <p className="text-sm text-text-tertiary">
+                  Share your event to start tracking page views.
+                </p>
               </div>
             </CardContent>
           </Card>

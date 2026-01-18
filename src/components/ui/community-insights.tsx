@@ -27,25 +27,6 @@ interface CommunityInsightsProps {
   className?: string;
 }
 
-// Fallback data when API fails
-const fallbackTrendingCategories: TrendingCategory[] = [
-  { name: "Tech", change: 23, events: 45 },
-  { name: "Networking", change: 15, events: 32 },
-  { name: "Workshop", change: 8, events: 28 },
-];
-
-const fallbackPopularVenues: PopularVenue[] = [
-  { name: "The Hub", city: "Johannesburg", eventCount: 12 },
-  { name: "Innovation Center", city: "Cape Town", eventCount: 9 },
-  { name: "Community Hall", city: "Nairobi", eventCount: 7 },
-];
-
-const fallbackPeakTimes: PeakTime[] = [
-  { day: "Wednesday", time: "6-8pm", percentage: 34 },
-  { day: "Saturday", time: "2-4pm", percentage: 28 },
-  { day: "Thursday", time: "7-9pm", percentage: 22 },
-];
-
 export function CommunityInsights({
   city,
   className = "",
@@ -72,21 +53,41 @@ export function CommunityInsights({
     name: c.category,
     change: c.change,
     events: c.events,
-  })) || fallbackTrendingCategories;
+  })) ?? [];
 
   const popularVenues: PopularVenue[] = stats?.popularVenues?.map((v) => ({
     name: v.venue,
     city: city || "Various",
     eventCount: v.events,
-  })) || fallbackPopularVenues;
+  })) ?? [];
 
   // Parse peak time from string
   const peakTimes: PeakTime[] = stats?.peakTime
-    ? [{ day: stats.peakTime.split(" ")[0], time: stats.peakTime.split(" ").slice(1).join(" "), percentage: 34 }]
-    : fallbackPeakTimes;
+    ? [{ day: stats.peakTime.split(" ")[0], time: stats.peakTime.split(" ").slice(1).join(" "), percentage: 100 }]
+    : [];
 
-  const totalEvents = stats?.totalEvents || 156;
-  const totalAttendees = stats?.totalAttendees || 2847;
+  const totalEvents = stats?.totalEvents ?? 0;
+  const totalAttendees = stats?.totalAttendees ?? 0;
+
+  if (loading) {
+    return (
+      <div className={`bg-surface rounded-2xl p-6 ${className}`}>
+        <div className="flex items-center gap-2 mb-6">
+          <TrendingUp className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-lg">Community Insights</h3>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if there's no data
+  if (!stats || (totalEvents === 0 && trendingCategories.length === 0)) {
+    return null;
+  }
+
   return (
     <div className={`bg-surface rounded-2xl p-6 ${className}`}>
       <div className="flex items-center gap-2 mb-6">
@@ -222,36 +223,55 @@ export function CommunityInsightsCompact({ city, className = "" }: { city?: stri
   const topCategory = stats?.trendingCategories?.[0];
   const topVenue = stats?.popularVenues?.[0];
 
+  if (loading) {
+    return (
+      <div className={`bg-surface rounded-xl p-4 ${className}`}>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <span className="font-semibold text-sm">What&apos;s Trending</span>
+        </div>
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if there's no data
+  if (!stats || (!topCategory && !topVenue && !stats.peakTime)) {
+    return null;
+  }
+
   return (
     <div className={`bg-surface rounded-xl p-4 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-primary" />
         <span className="font-semibold text-sm">What&apos;s Trending</span>
       </div>
-      {loading ? (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="space-y-3">
+      <div className="space-y-3">
+        {topCategory && (
           <div className="flex items-center justify-between">
-            <span className="text-sm">{topCategory?.category || "Tech"} events</span>
+            <span className="text-sm">{topCategory.category} events</span>
             <span className={`text-xs font-medium ${
-              (topCategory?.change || 23) > 0 ? "text-green-400" : "text-red-400"
+              topCategory.change > 0 ? "text-green-400" : topCategory.change < 0 ? "text-red-400" : "text-text-tertiary"
             }`}>
-              {(topCategory?.change || 23) > 0 ? "↑" : "↓"} {Math.abs(topCategory?.change || 23)}%
+              {topCategory.change > 0 ? "↑" : topCategory.change < 0 ? "↓" : "→"} {Math.abs(topCategory.change)}%
             </span>
           </div>
+        )}
+        {stats.peakTime && (
           <div className="flex items-center justify-between">
             <span className="text-sm">Peak time</span>
-            <span className="text-xs text-text-secondary">{stats?.peakTime || "Wed 6-8pm"}</span>
+            <span className="text-xs text-text-secondary">{stats.peakTime}</span>
           </div>
+        )}
+        {topVenue && (
           <div className="flex items-center justify-between">
             <span className="text-sm">Hot venue</span>
-            <span className="text-xs text-text-secondary">{topVenue?.venue || "The Hub"}</span>
+            <span className="text-xs text-text-secondary">{topVenue.venue}</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
