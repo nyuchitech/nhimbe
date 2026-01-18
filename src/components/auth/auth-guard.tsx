@@ -16,8 +16,8 @@ export function AuthGuard({ children, requireOnboarding = true }: AuthGuardProps
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated && !needsOnboarding) {
-        // Not authenticated at all - redirect to sign in
+      if (!isAuthenticated) {
+        // Not authenticated - always redirect to sign in first
         router.push("/auth/signin");
       } else if (requireOnboarding && needsOnboarding) {
         // Authenticated but needs to complete onboarding
@@ -34,7 +34,7 @@ export function AuthGuard({ children, requireOnboarding = true }: AuthGuardProps
     );
   }
 
-  if (!isAuthenticated && !needsOnboarding) {
+  if (!isAuthenticated) {
     return null;
   }
 
