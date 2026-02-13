@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useStytch } from "@stytch/nextjs";
 import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { getCities, getCategories, type Category } from "@/lib/api";
@@ -16,20 +17,6 @@ import {
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
-
-// Helper to get cookie value
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  if (match) {
-    try {
-      return decodeURIComponent(match[2]);
-    } catch {
-      return match[2];
-    }
-  }
-  return null;
-}
 
 interface OnboardingData {
   name: string;
@@ -52,6 +39,7 @@ export default function OnboardingForm() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
+  const stytch = useStytch();
   const { user, isAuthenticated, isLoading: authLoading, refreshUser, signOut } = useAuth();
 
   // Redirect if not authenticated
@@ -152,8 +140,9 @@ export default function OnboardingForm() {
     setError(null);
 
     try {
-      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
-      if (!accessToken) {
+      const tokens = stytch.session.getTokens();
+      const sessionJwt = tokens?.session_jwt;
+      if (!sessionJwt) {
         throw new Error("No session found");
       }
 
@@ -161,10 +150,11 @@ export default function OnboardingForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${sessionJwt}`,
         },
         body: JSON.stringify({
           name: data.name,
+          email: user?.email || "",
           city: data.city,
           country: data.country,
           interests: data.interests,

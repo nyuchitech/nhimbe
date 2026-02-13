@@ -171,9 +171,7 @@ const worker: ExportedHandler<Env> = {
       if (url.pathname === "/api/auth/onboarding") {
         return handleAuthOnboarding(request, env);
       }
-      if (url.pathname === "/api/auth/logout") {
-        return handleAuthLogout(request);
-      }
+      // Logout is handled by the Stytch frontend SDK — no backend route needed.
 
       // Recommendations endpoint
       if (url.pathname === "/api/recommendations") {
@@ -1198,8 +1196,8 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     role: string | null;
   }
   const result = await env.DB.prepare(
-    "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
-  ).bind(stytchUser.userId, stytchUser.email).first() as DbUserRow | null;
+    "SELECT * FROM users WHERE stytch_user_id = ?"
+  ).bind(stytchUser.userId).first() as DbUserRow | null;
 
   if (!result) {
     return jsonResponse({ error: "User not found" }, 404);
@@ -1234,19 +1232,20 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
 
   const body = await request.json() as {
     name: string;
+    email: string;
     city: string;
     country: string;
     interests: string[];
   };
 
-  if (!body.name || !body.city || !body.country) {
-    return jsonResponse({ error: "Name, city, and country are required" }, 400);
+  if (!body.name || !body.email || !body.city || !body.country) {
+    return jsonResponse({ error: "Name, email, city, and country are required" }, 400);
   }
 
   // Check if user already exists
   const existingUser = await env.DB.prepare(
-    "SELECT id FROM users WHERE stytch_user_id = ? OR email = ?"
-  ).bind(stytchUser.userId, stytchUser.email).first() as { id: string } | null;
+    "SELECT id FROM users WHERE stytch_user_id = ?"
+  ).bind(stytchUser.userId).first() as { id: string } | null;
 
   let userId: string;
 
@@ -1286,7 +1285,7 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'))
     `).bind(
       userId,
-      stytchUser.email,
+      body.email,
       body.name,
       handle,
       stytchUser.userId,
@@ -1365,13 +1364,13 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
 
   const existingUser = await env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
-  ).bind(body.stytch_user_id, body.email).first() as DbUser | null;
+  ).bind(stytchUser.userId, body.email).first() as DbUser | null;
 
   if (existingUser) {
     // Update last login and ensure stytch_user_id is set
     await env.DB.prepare(
       "UPDATE users SET last_login_at = datetime('now'), stytch_user_id = ? WHERE id = ?"
-    ).bind(body.stytch_user_id, existingUser.id).run();
+    ).bind(stytchUser.userId, existingUser.id).run();
 
     const user = {
       id: existingUser.id,
@@ -1383,7 +1382,7 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
       country: existingUser.country,
       interests: safeParseJSON(existingUser.interests, []) as string[],
       onboardingCompleted: !!(existingUser.onboarding_completed),
-      stytchUserId: body.stytch_user_id,
+      stytchUserId: stytchUser.userId,
       role: existingUser.role || 'user',
     };
 
@@ -1401,23 +1400,15 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
     country: null,
     interests: [],
     onboardingCompleted: false,
-    stytchUserId: body.stytch_user_id,
+    stytchUserId: stytchUser.userId,
     role: 'user',
   };
 
   return jsonResponse({ user });
 }
 
-function handleAuthLogout(request: Request): Response {
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
-
-  // For OAuth tokens, we can't revoke them server-side easily
-  // The client should clear local storage
-  // In the future, we could implement token revocation with Stytch
-  return jsonResponse({ message: "Logged out successfully" });
-}
+// Logout is handled entirely by the Stytch frontend SDK (session.revoke()).
+// No backend endpoint needed.
 
 function generateHandle(name: string): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -2837,8 +2828,8 @@ async function getAdminUser(request: Request, env: Env, requiredRole: UserRole):
   }
 
   const user = await env.DB.prepare(
-    "SELECT id, email, name, role FROM users WHERE stytch_user_id = ? OR email = ?"
-  ).bind(stytchUser.userId, stytchUser.email).first() as DbUserRow | null;
+    "SELECT id, email, name, role FROM users WHERE stytch_user_id = ?"
+  ).bind(stytchUser.userId).first() as DbUserRow | null;
 
   if (!user) return null;
 
