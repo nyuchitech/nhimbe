@@ -72,16 +72,31 @@ function validateApiKey(request: Request, env: Env): boolean {
   return apiKey === env.API_KEY;
 }
 
+// Trusted domains — always allow these and all their subdomains
+const TRUSTED_DOMAINS = ["nyuchi.com", "mukoko.com", "nhimbe.com"];
+
 // Check if request is from allowed origin (frontend)
 function isAllowedOrigin(request: Request, env: Env): boolean {
   const origin = request.headers.get("Origin") || "";
-  const allowedOrigins = [
-    "http://localhost:3000",
-    "https://nhimbe.com",
-    "https://www.nhimbe.com",
-    env.ALLOWED_ORIGIN,
-  ].filter(Boolean);
-  return allowedOrigins.some(allowed => origin.startsWith(allowed as string));
+  if (!origin) return false;
+
+  // Always allow localhost in development
+  if (origin.startsWith("http://localhost:")) return true;
+
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    // Allow trusted domains and all their subdomains
+    if (TRUSTED_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`))) {
+      return true;
+    }
+  } catch {
+    // Invalid origin URL
+  }
+
+  // Also check ALLOWED_ORIGINS env var for any additional origins
+  const extraOrigins = (env.ALLOWED_ORIGINS || "").split(",").filter(Boolean);
+  return extraOrigins.some(allowed => origin === allowed.trim());
 }
 
 const worker: ExportedHandler<Env> = {
