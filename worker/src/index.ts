@@ -24,7 +24,7 @@ import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search
 import { chat, generateSuggestions } from "./ai/assistant";
 import { indexEvent, indexEvents, removeEventFromIndex } from "./ai/embeddings";
 import { generateDescription, regenerateDescription, getWizardSteps, type DescriptionContext } from "./ai/description-generator";
-import { getAuthenticatedUser, exchangeCodeForTokens, getUserInfo } from "./auth/stytch";
+import { getAuthenticatedUser } from "./auth/stytch";
 
 const VERSION = "0.2.0";
 
@@ -162,8 +162,8 @@ const worker: ExportedHandler<Env> = {
       }
 
       // Auth endpoints
-      if (url.pathname === "/api/auth/token") {
-        return handleAuthToken(request, env);
+      if (url.pathname === "/api/auth/sync") {
+        return handleAuthSync(request, env);
       }
       if (url.pathname === "/api/auth/me") {
         return handleAuthMe(request, env);
@@ -1328,33 +1328,27 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
   return jsonResponse({ user, message: "Onboarding completed" }, 201);
 }
 
-async function handleAuthToken(request: Request, env: Env): Promise<Response> {
+async function handleAuthSync(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  const stytchUser = await getAuthenticatedUser(request, env);
+  if (!stytchUser) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
   const body = await request.json() as {
-    code: string;
-    redirect_uri: string;
+    stytch_user_id: string;
+    email: string;
+    name: string;
   };
 
-  if (!body.code || !body.redirect_uri) {
-    return jsonResponse({ error: "Code and redirect_uri are required" }, 400);
+  if (!body.stytch_user_id || !body.email) {
+    return jsonResponse({ error: "stytch_user_id and email are required" }, 400);
   }
 
-  // Exchange authorization code for tokens
-  const tokens = await exchangeCodeForTokens(body.code, body.redirect_uri, env);
-  if (!tokens) {
-    return jsonResponse({ error: "Failed to exchange authorization code" }, 400);
-  }
-
-  // Get user info from the access token
-  const userInfo = await getUserInfo(tokens.access_token);
-  if (!userInfo) {
-    return jsonResponse({ error: "Failed to get user info" }, 400);
-  }
-
-  // Look up or prepare user data
+  // Look up user by stytch_user_id or email
   interface DbUser {
     id: string;
     email: string;
@@ -1369,54 +1363,49 @@ async function handleAuthToken(request: Request, env: Env): Promise<Response> {
     role: string | null;
   }
 
-  let user = null;
   const existingUser = await env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
-  ).bind(userInfo.sub, userInfo.email).first() as DbUser | null;
+  ).bind(body.stytch_user_id, body.email).first() as DbUser | null;
 
   if (existingUser) {
-    // Update last login
+    // Update last login and ensure stytch_user_id is set
     await env.DB.prepare(
       "UPDATE users SET last_login_at = datetime('now'), stytch_user_id = ? WHERE id = ?"
-    ).bind(userInfo.sub, existingUser.id).run();
+    ).bind(body.stytch_user_id, existingUser.id).run();
 
-    user = {
+    const user = {
       id: existingUser.id,
       email: existingUser.email,
-      name: existingUser.name || userInfo.name || `${userInfo.given_name || ""} ${userInfo.family_name || ""}`.trim(),
+      name: existingUser.name || body.name,
       handle: existingUser.handle,
       avatarUrl: existingUser.avatar_url,
       city: existingUser.city,
       country: existingUser.country,
       interests: safeParseJSON(existingUser.interests, []) as string[],
       onboardingCompleted: !!(existingUser.onboarding_completed),
-      stytchUserId: userInfo.sub,
+      stytchUserId: body.stytch_user_id,
       role: existingUser.role || 'user',
     };
-  } else {
-    // New user - will need onboarding
-    user = {
-      id: null,
-      email: userInfo.email,
-      name: userInfo.name || `${userInfo.given_name || ""} ${userInfo.family_name || ""}`.trim() || "",
-      handle: null,
-      avatarUrl: null,
-      city: null,
-      country: null,
-      interests: [],
-      onboardingCompleted: false,
-      stytchUserId: userInfo.sub,
-      role: 'user',
-    };
+
+    return jsonResponse({ user });
   }
 
-  return jsonResponse({
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    token_type: tokens.token_type,
-    expires_in: tokens.expires_in,
-    user,
-  });
+  // New user — return stub, actual record created during onboarding
+  const user = {
+    id: null,
+    email: body.email,
+    name: body.name || "",
+    handle: null,
+    avatarUrl: null,
+    city: null,
+    country: null,
+    interests: [],
+    onboardingCompleted: false,
+    stytchUserId: body.stytch_user_id,
+    role: 'user',
+  };
+
+  return jsonResponse({ user });
 }
 
 function handleAuthLogout(request: Request): Response {

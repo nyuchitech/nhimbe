@@ -18,7 +18,7 @@
 | Database       | Cloudflare D1 (SQLite)                        | Cloudflare   |
 | Vector Search  | Cloudflare Vectorize                          | Cloudflare   |
 | AI/ML          | Workers AI (embeddings, LLMs)                 | Cloudflare   |
-| Auth           | Stytch OAuth                                  | Stytch       |
+| Auth           | Stytch Consumer SDK                           | Stytch       |
 | Storage        | Cloudflare R2                                 | Cloudflare   |
 | Cache          | Cloudflare KV                                 | Cloudflare   |
 
@@ -29,7 +29,8 @@ nhimbe/
 ├── src/                           # Next.js frontend
 │   ├── app/                       # App Router (file-based routing)
 │   │   ├── api/                   # Route handlers (auth callbacks, OG images)
-│   │   ├── auth/                  # Auth pages (signin, callback, error)
+│   │   ├── auth/                  # Auth pages (signin, error)
+│   │   ├── authenticate/         # Stytch magic link token exchange
 │   │   ├── events/                # Event pages (browse, create, [id] details)
 │   │   ├── my-events/             # User's RSVPed/hosted events
 │   │   ├── search/                # AI-powered search
@@ -38,7 +39,7 @@ nhimbe/
 │   │   ├── onboarding/            # New user flow
 │   │   └── globals.css            # Theme system & global styles
 │   ├── components/                # React components
-│   │   ├── auth/                  # AuthContext provider
+│   │   ├── auth/                  # AuthContext, StytchProvider
 │   │   ├── layout/                # Header, Footer
 │   │   └── ui/                    # Reusable components (cards, badges, etc.)
 │   └── lib/                       # Utilities
@@ -50,7 +51,7 @@ nhimbe/
 │   └── src/
 │       ├── index.ts               # Main API router (~2700 lines)
 │       ├── types.ts               # TypeScript definitions
-│       ├── auth/stytch.ts         # OAuth token handling
+│       ├── auth/stytch.ts         # Stytch session JWT validation
 │       ├── ai/                    # AI features
 │       │   ├── search.ts          # RAG semantic search
 │       │   ├── assistant.ts       # AI chat (Shamwari)
@@ -205,7 +206,7 @@ POST   /api/media/upload      # Upload media
 ### Auth Endpoints
 
 ```
-POST /api/auth/token          # OAuth token exchange
+POST /api/auth/sync           # Sync Stytch session with backend user
 GET  /api/auth/me             # Current user
 POST /api/auth/logout         # Logout
 POST /api/auth/onboarding     # Complete onboarding
@@ -244,13 +245,10 @@ Always lowercase: **nhimbe** (even at sentence start)
 ### Frontend (.env.local)
 
 ```bash
+NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN=public-token-live-xxxxx
 NEXT_PUBLIC_API_URL=http://localhost:8787
-NEXT_PUBLIC_STYTCH_CLIENT_ID=your-client-id
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-maps-key
-NEXT_PUBLIC_MUKOKO_CLIENT_ID=your-client-id
-NEXT_PUBLIC_MUKOKO_REDIRECT_URI=http://localhost:3000/api/auth/callback
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-MUKOKO_CLIENT_SECRET=your-secret
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-maps-key
 ```
 
 ### Backend (worker/.dev.vars)
@@ -260,8 +258,6 @@ ENVIRONMENT=development
 API_KEY=your-api-key
 STYTCH_PROJECT_ID=your-project-id
 STYTCH_SECRET=your-secret
-STYTCH_CLIENT_ID=your-client-id
-STYTCH_CLIENT_SECRET=your-client-secret
 ```
 
 ## Cloudflare Bindings
@@ -295,10 +291,10 @@ STYTCH_CLIENT_SECRET=your-client-secret
 
 ### Authentication
 
-- Stytch OAuth 2.0 + PKCE flow
-- Token storage in httpOnly cookies
-- Client-side user data in localStorage
-- Auto token refresh
+- Stytch Consumer SDK with email magic links and OTP
+- Stytch session JWT validation on backend
+- Session managed by Stytch SDK (automatic cookie handling)
+- Backend sync via `/api/auth/sync` after authentication
 
 ## Common Tasks
 
@@ -369,10 +365,9 @@ npm run deploy --env staging      # Staging
 
 ## Security Considerations
 
-- PKCE flow for OAuth
+- Stytch session JWT validation on all protected endpoints
 - API key required for write operations
 - CORS whitelist in backend
-- httpOnly cookies for tokens
 - Input sanitization
 - No secrets in code (use .dev.vars)
 

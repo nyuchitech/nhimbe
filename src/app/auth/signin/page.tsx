@@ -2,33 +2,66 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/components/auth/auth-context";
+import { useStytchUser, useStytchSession, StytchLogin } from "@stytch/nextjs";
+import { Products, OTPMethods } from "@stytch/vanilla-js";
+import type { StyleConfig } from "@stytch/vanilla-js";
 import Image from "next/image";
+
+const stytchStyles: StyleConfig = {
+  container: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    width: "100%",
+  },
+  colors: {
+    primary: "#64FFDA",
+    secondary: "#B388FF",
+    success: "#64FFDA",
+    error: "#FF5252",
+  },
+  buttons: {
+    primary: {
+      backgroundColor: "#64FFDA",
+      textColor: "#0A0A0A",
+      borderColor: "#64FFDA",
+      borderRadius: "12px",
+    },
+    secondary: {
+      backgroundColor: "#1A1A1A",
+      textColor: "#F5F5F4",
+      borderColor: "#333333",
+      borderRadius: "12px",
+    },
+  },
+  inputs: {
+    backgroundColor: "#1A1A1A",
+    borderColor: "#333333",
+    borderRadius: "8px",
+    textColor: "#FFFFFF",
+    placeholderColor: "#8A8A85",
+  },
+  fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
+  hideHeaderText: false,
+};
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { user: stytchUser, isInitialized: userInit } = useStytchUser();
+  const { session, isInitialized: sessionInit } = useStytchSession();
 
   const redirectTo = searchParams.get("redirect") || "/";
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (userInit && sessionInit && stytchUser && session) {
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo]);
+  }, [stytchUser, session, userInit, sessionInit, router, redirectTo]);
 
-  const handleSignIn = () => {
-    // Store redirect destination for after auth
-    if (typeof window !== "undefined") {
-      localStorage.setItem("auth_redirect", redirectTo);
-    }
-    signIn();
-  };
+  const isLoading = !userInit || !sessionInit;
 
   if (isLoading) {
     return (
@@ -40,6 +73,15 @@ function SignInContent() {
       </div>
     );
   }
+
+  if (stytchUser && session) {
+    return null;
+  }
+
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://nhimbe.com";
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
@@ -71,13 +113,27 @@ function SignInContent() {
           </div>
           <h1 className="text-2xl font-semibold mb-2">Welcome to nhimbe</h1>
           <p className="text-text-secondary">
-            Sign in with your Mukoko account to discover events and connect with your community
+            Sign in or create an account to discover events and connect with
+            your community
           </p>
         </div>
 
-        <Button onClick={handleSignIn} className="w-full py-6 text-base">
-          Continue with Mukoko
-        </Button>
+        <StytchLogin
+          config={{
+            products: [Products.emailMagicLinks, Products.otp],
+            emailMagicLinksOptions: {
+              loginRedirectURL: `${origin}/authenticate`,
+              signupRedirectURL: `${origin}/authenticate`,
+              loginExpirationMinutes: 30,
+              signupExpirationMinutes: 30,
+            },
+            otpOptions: {
+              methods: [OTPMethods.Email],
+              expirationMinutes: 10,
+            },
+          }}
+          styles={stytchStyles}
+        />
 
         <p className="mt-6 text-center text-sm text-text-secondary">
           By continuing, you agree to our{" "}
@@ -91,7 +147,7 @@ function SignInContent() {
         </p>
 
         <p className="mt-4 text-center text-xs text-text-tertiary">
-          nhimbe is part of the Mukoko ecosystem
+          Powered by Mukoko Identity
         </p>
       </div>
     </div>

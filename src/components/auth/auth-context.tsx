@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useStytchUser, useStytchSession, useStytch } from "@stytch/nextjs";
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'super_admin';
 
@@ -52,148 +53,128 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
-// Helper to get cookie value
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  if (match) {
-    try {
-      return decodeURIComponent(match[2]);
-    } catch {
-      return match[2];
-    }
-  }
-  return null;
-}
-
-// Helper to delete cookie
-function deleteCookie(name: string) {
-  if (typeof document === "undefined") return;
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<NhimbeUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [nhimbeUser, setNhimbeUser] = useState<NhimbeUser | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [hasSynced, setHasSynced] = useState(false);
   const router = useRouter();
 
-  // Check for existing session on mount
-  useEffect(() => {
-    checkSession();
-  }, []);
+  const { user: stytchUser, isInitialized: userInitialized } = useStytchUser();
+  const { session, isInitialized: sessionInitialized } = useStytchSession();
+  const stytch = useStytch();
 
-  const checkSession = async () => {
+  const isSDKReady = userInitialized && sessionInitialized;
+
+  // Sync with backend when Stytch session is available
+  const syncWithBackend = useCallback(async () => {
+    if (!stytchUser || !session) return;
+
+    setSyncing(true);
     try {
-      // First check for user data in cookie (set by callback)
-      const userCookie = getCookie("nhimbe_user");
-      if (userCookie) {
-        try {
-          const userData = JSON.parse(userCookie);
-          setUser(userData);
-          // Also store in localStorage for easy access
-          localStorage.setItem("nhimbe_user", userCookie);
-          setIsLoading(false);
-          return;
-        } catch (e) {
-          console.error("Failed to parse user cookie:", e);
-        }
+      const tokens = stytch.session.getTokens();
+      const sessionJwt = tokens?.session_jwt;
+      if (!sessionJwt) {
+        setSyncing(false);
+        return;
       }
 
-      // Fallback to localStorage
-      const storedUser = localStorage.getItem("nhimbe_user");
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setIsLoading(false);
-          return;
-        } catch (e) {
-          console.error("Failed to parse stored user:", e);
-        }
-      }
+      const email = stytchUser.emails?.[0]?.email || "";
+      const name =
+        `${stytchUser.name?.first_name || ""} ${stytchUser.name?.last_name || ""}`.trim();
 
-      // Try to validate session with backend
-      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
-      if (accessToken) {
-        const response = await fetch(`${API_URL}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          credentials: "include",
+      const response = await fetch(`${API_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionJwt}`,
+        },
+        body: JSON.stringify({
+          stytch_user_id: stytchUser.user_id,
+          email,
+          name,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNhimbeUser(data.user);
+      } else {
+        // Fallback: create user from Stytch data
+        setNhimbeUser({
+          id: stytchUser.user_id,
+          email,
+          name: name || "User",
+          onboardingCompleted: false,
+          stytchUserId: stytchUser.user_id,
+          role: "user",
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user);
-          localStorage.setItem("nhimbe_user", JSON.stringify(data.user));
-        } else {
-          // Token invalid, clear storage
-          clearAuth();
-        }
       }
-    } catch (error) {
-      console.error("Session check failed:", error);
+    } catch {
+      // Fallback on network error
+      const email = stytchUser.emails?.[0]?.email || "";
+      const name =
+        `${stytchUser.name?.first_name || ""} ${stytchUser.name?.last_name || ""}`.trim();
+      setNhimbeUser({
+        id: stytchUser.user_id,
+        email,
+        name: name || "User",
+        onboardingCompleted: false,
+        stytchUserId: stytchUser.user_id,
+        role: "user",
+      });
     } finally {
-      setIsLoading(false);
+      setSyncing(false);
+      setHasSynced(true);
     }
-  };
+  }, [stytchUser, session, stytch]);
 
-  const clearAuth = () => {
-    deleteCookie("nhimbe_access_token");
-    deleteCookie("nhimbe_refresh_token");
-    deleteCookie("nhimbe_user");
-    localStorage.removeItem("nhimbe_access_token");
-    localStorage.removeItem("nhimbe_refresh_token");
-    localStorage.removeItem("nhimbe_user");
-  };
-
-  const signIn = useCallback((returnUrl?: string) => {
-    // Use API route for OAuth flow with PKCE
-    const loginUrl = new URL("/api/auth/login", window.location.origin);
-    if (returnUrl) {
-      loginUrl.searchParams.set("returnUrl", returnUrl);
+  // Sync when Stytch user/session become available
+  useEffect(() => {
+    if (isSDKReady && stytchUser && session && !hasSynced) {
+      syncWithBackend();
     }
-    window.location.href = loginUrl.toString();
-  }, []);
+    // Clear nhimbe user if Stytch session is gone
+    if (isSDKReady && !stytchUser && !session) {
+      setNhimbeUser(null);
+      setHasSynced(false);
+    }
+  }, [isSDKReady, stytchUser, session, hasSynced, syncWithBackend]);
+
+  const signIn = useCallback(
+    (returnUrl?: string) => {
+      if (returnUrl && typeof window !== "undefined") {
+        localStorage.setItem("auth_redirect", returnUrl);
+      }
+      router.push("/auth/signin");
+    },
+    [router]
+  );
 
   const signOut = useCallback(async () => {
     try {
-      // Call logout API to clear cookies
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      }).catch(() => {});
-
-      // Also try backend logout
-      const accessToken = getCookie("nhimbe_access_token") || localStorage.getItem("nhimbe_access_token");
-      if (accessToken) {
-        await fetch(`${API_URL}/api/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          credentials: "include",
-        }).catch(() => {});
-      }
+      await stytch.session.revoke();
+    } catch {
+      // Session may already be expired
     } finally {
-      clearAuth();
-      setUser(null);
+      setNhimbeUser(null);
+      setHasSynced(false);
       router.push("/");
     }
-  }, [router]);
+  }, [stytch, router]);
 
   const refreshUser = useCallback(async () => {
-    setIsLoading(true);
-    await checkSession();
-  }, []);
+    setHasSynced(false);
+    await syncWithBackend();
+  }, [syncWithBackend]);
 
-  const isAuthenticated = !!user?.id;
-  const needsOnboarding = !!user && !user.onboardingCompleted;
+  const isLoading = !isSDKReady || syncing;
+  const isAuthenticated = !!stytchUser && !!session && !!nhimbeUser;
+  const needsOnboarding = !!nhimbeUser && !nhimbeUser.onboardingCompleted;
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: nhimbeUser,
         isAuthenticated,
         isLoading,
         needsOnboarding,
