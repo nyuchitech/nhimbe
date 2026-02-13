@@ -1,0 +1,152 @@
+/* Stytch UI Brand Overrides for nhimbe */
+
+/* Container */
+[data-stytch-element="sdk-container"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* Primary buttons */
+[data-stytch-element="button"] {
+  background-color: #64FFDA !important;
+  color: #0A0A0A !important;
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+  min-height: 44px !important;
+  transition: opacity 0.2s ease !important;
+}
+
+[data-stytch-element="button"]:hover {
+  opacity: 0.9 !important;
+}
+
+/* Text inputs */
+[data-stytch-element="input"] {
+  background-color: #1A1A1A !important;
+  border: 1px solid #333333 !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+  min-height: 44px !important;
+}
+
+[data-stytch-element="input"]::placeholder {
+  color: #8A8A85 !important;
+}
+
+[data-stytch-element="input"]:focus {
+  border-color: #64FFDA !important;
+  box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.15) !important;
+  outline: none !important;
+}
+
+/* OTP input cells */
+[data-stytch-element="otp-input"] input {
+  background-color: #1A1A1A !important;
+  border: 1px solid #333333 !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+  font-size: 24px !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-stytch-element="otp-input"] input:focus {
+  border-color: #64FFDA !important;
+  box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.15) !important;
+  outline: none !important;
+}
+
+/* Labels and text */
+[data-stytch-element] label {
+  color: #F5F5F4 !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[data-stytch-element] p {
+  color: #B8B8B3 !important;
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* Links */
+[data-stytch-element] a {
+  color: #64FFDA !important;
+}
+
+[data-stytch-element] a:hover {
+  opacity: 0.8 !important;
+}
+
+/* Error messages */
+[data-stytch-element="error-message"] {
+  color: #FF5252 !important;
+}
+
+/* Dividers */
+[data-stytch-element="divider"] {
+  border-color: #333333 !important;
+}
+
+[data-stytch-element="divider"] span {
+  color: #8A8A85 !important;
+  background: transparent !important;
+}
+
+/* Light mode overrides */
+.light [data-stytch-element="sdk-container"] {
+  background: transparent !important;
+}
+
+.light [data-stytch-element="button"] {
+  background-color: #00574B !important;
+  color: #FFFFFF !important;
+}
+
+.light [data-stytch-element="input"] {
+  background-color: #FFFFFF !important;
+  border-color: #E0E0E0 !important;
+  color: #171717 !important;
+}
+
+.light [data-stytch-element="input"]::placeholder {
+  color: #595959 !important;
+}
+
+.light [data-stytch-element="input"]:focus {
+  border-color: #00574B !important;
+  box-shadow: 0 0 0 3px rgba(0, 87, 75, 0.15) !important;
+}
+
+.light [data-stytch-element="otp-input"] input {
+  background-color: #FFFFFF !important;
+  border-color: #E0E0E0 !important;
+  color: #171717 !important;
+}
+
+.light [data-stytch-element="otp-input"] input:focus {
+  border-color: #00574B !important;
+  box-shadow: 0 0 0 3px rgba(0, 87, 75, 0.15) !important;
+}
+
+.light [data-stytch-element] label {
+  color: #171717 !important;
+}
+
+.light [data-stytch-element] p {
+  color: #404040 !important;
+}
+
+.light [data-stytch-element] a {
+  color: #00574B !important;
+}
+
+.light [data-stytch-element="divider"] {
+  border-color: #E0E0E0 !important;
+}
+
+.light [data-stytch-element="divider"] span {
+  color: #595959 !important;
+}

@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { AnimatedBackground } from "@/components/ui/animated-background";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth/auth-context";
+import { StytchProvider } from "@/components/auth/stytch-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -124,14 +125,16 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <AuthProvider>
-          <ThemeProvider defaultTheme="system">
-            <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
-            <Header />
-            <main className="flex-1 relative z-10">{children}</main>
-            <Footer />
-          </ThemeProvider>
-        </AuthProvider>
+        <StytchProvider>
+          <AuthProvider>
+            <ThemeProvider defaultTheme="system">
+              <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
+              <Header />
+              <main className="flex-1 relative z-10">{children}</main>
+              <Footer />
+            </ThemeProvider>
+          </AuthProvider>
+        </StytchProvider>
         <Analytics />
       </body>
     </html>
