@@ -322,12 +322,9 @@ export interface RateLimitOutcome {
 export interface Env {
   ENVIRONMENT: string;
   API_KEY: string;
-  ALLOWED_ORIGIN?: string;
-  // Stytch OAuth Connected App
+  ALLOWED_ORIGINS?: string;
+  // Stytch (frontend SDK handles auth; backend only needs project ID for local JWT validation)
   STYTCH_PROJECT_ID: string;
-  STYTCH_SECRET: string;
-  STYTCH_CLIENT_ID: string;
-  STYTCH_CLIENT_SECRET: string;
   // Cloudflare bindings
   AI: Ai;
   VECTORIZE: VectorizeIndex;

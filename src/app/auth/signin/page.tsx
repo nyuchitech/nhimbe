@@ -8,49 +8,55 @@ import { useStytchUser, useStytchSession, StytchLogin } from "@stytch/nextjs";
 import { Products, OTPMethods } from "@stytch/vanilla-js";
 import type { StyleConfig } from "@stytch/vanilla-js";
 import Image from "next/image";
+import { useTheme } from "@/components/theme-provider";
 
-const stytchStyles: StyleConfig = {
-  container: {
-    backgroundColor: "transparent",
-    borderColor: "transparent",
-    width: "100%",
-  },
-  colors: {
-    primary: "#64FFDA",
-    secondary: "#B388FF",
-    success: "#64FFDA",
-    error: "#FF5252",
-  },
-  buttons: {
-    primary: {
-      backgroundColor: "#64FFDA",
-      textColor: "#0A0A0A",
-      borderColor: "#64FFDA",
-      borderRadius: "12px",
+function getStytchStyles(resolvedTheme: "light" | "dark"): StyleConfig {
+  const isDark = resolvedTheme === "dark";
+
+  return {
+    container: {
+      backgroundColor: "transparent",
+      borderColor: "transparent",
+      width: "100%",
     },
-    secondary: {
-      backgroundColor: "#1A1A1A",
-      textColor: "#F5F5F4",
-      borderColor: "#333333",
-      borderRadius: "12px",
+    colors: {
+      primary: isDark ? "#64FFDA" : "#00574B",
+      secondary: isDark ? "#B388FF" : "#4B0082",
+      success: isDark ? "#64FFDA" : "#00574B",
+      error: "#FF5252",
     },
-  },
-  inputs: {
-    backgroundColor: "#1A1A1A",
-    borderColor: "#333333",
-    borderRadius: "8px",
-    textColor: "#FFFFFF",
-    placeholderColor: "#8A8A85",
-  },
-  fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
-  hideHeaderText: false,
-};
+    buttons: {
+      primary: {
+        backgroundColor: isDark ? "#64FFDA" : "#00574B",
+        textColor: isDark ? "#0A0A0A" : "#FFFFFF",
+        borderColor: isDark ? "#64FFDA" : "#00574B",
+        borderRadius: "12px",
+      },
+      secondary: {
+        backgroundColor: isDark ? "#1A1A1A" : "#F0F0ED",
+        textColor: isDark ? "#F5F5F4" : "#171717",
+        borderColor: isDark ? "#333333" : "#E0E0E0",
+        borderRadius: "12px",
+      },
+    },
+    inputs: {
+      backgroundColor: isDark ? "#1A1A1A" : "#FFFFFF",
+      borderColor: isDark ? "#333333" : "#E0E0E0",
+      borderRadius: "8px",
+      textColor: isDark ? "#FFFFFF" : "#171717",
+      placeholderColor: isDark ? "#8A8A85" : "#595959",
+    },
+    fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
+    hideHeaderText: false,
+  };
+}
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: stytchUser, isInitialized: userInit } = useStytchUser();
   const { session, isInitialized: sessionInit } = useStytchSession();
+  const { resolvedTheme } = useTheme();
 
   const redirectTo = searchParams.get("redirect") || "/";
 
@@ -78,14 +84,11 @@ function SignInContent() {
     return null;
   }
 
-  const origin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://nhimbe.com";
+  const stytchStyles = getStytchStyles(resolvedTheme);
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-foreground mb-8"
@@ -120,13 +123,7 @@ function SignInContent() {
 
         <StytchLogin
           config={{
-            products: [Products.emailMagicLinks, Products.otp],
-            emailMagicLinksOptions: {
-              loginRedirectURL: `${origin}/authenticate`,
-              signupRedirectURL: `${origin}/authenticate`,
-              loginExpirationMinutes: 30,
-              signupExpirationMinutes: 30,
-            },
+            products: [Products.otp],
             otpOptions: {
               methods: [OTPMethods.Email],
               expirationMinutes: 10,

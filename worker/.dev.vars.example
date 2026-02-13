@@ -4,5 +4,7 @@
 # Secrets (use wrangler secret put for production)
 # API_SECRET_KEY=your-secret-key
 
-# External Services
-# MUKOKO_API_URL=https://api.mukoko.com
+# Stytch — only the project ID is needed (no secret required).
+# Auth is handled entirely by the Stytch frontend SDK.
+# The backend validates session JWTs locally via Stytch's public JWKS.
+STYTCH_PROJECT_ID=project-live-86090362-2491-4ca7-9037-f7688c7699ce

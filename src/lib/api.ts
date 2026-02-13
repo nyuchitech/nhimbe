@@ -3,7 +3,7 @@
  * Handles all communication with the Cloudflare Workers backend
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://mukoko-nhimbe-api.nyuchi.workers.dev";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://events-api.mukoko.com";
 
 // Types matching backend
 export interface EventLocation {
