@@ -1,13 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { AuthProvider, useAuth, NhimbeUser } from './auth-context';
+import { AuthProvider, useAuth, type NhimbeUser } from './auth-context';
 
 // Mock next/navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
   }),
+}));
+
+// Mock Stytch SDK — this is the critical fix.
+// AuthProvider calls useStytchUser, useStytchSession, useStytch internally.
+const mockStytchRevoke = vi.fn().mockResolvedValue(undefined);
+const mockGetTokens = vi.fn().mockReturnValue({ session_jwt: 'mock-jwt-token' });
+let mockStytchUser: { user_id: string; emails: { email: string }[]; name: { first_name: string; last_name: string } } | null = null;
+let mockStytchSession: { session_id: string } | null = null;
+let mockUserInitialized = true;
+let mockSessionInitialized = true;
+
+vi.mock('@stytch/nextjs', () => ({
+  useStytchUser: () => ({ user: mockStytchUser, isInitialized: mockUserInitialized }),
+  useStytchSession: () => ({ session: mockStytchSession, isInitialized: mockSessionInitialized }),
+  useStytch: () => ({ session: { revoke: mockStytchRevoke, getTokens: mockGetTokens } }),
 }));
 
 // Test component that uses the auth context
@@ -26,126 +43,74 @@ function TestConsumer() {
 }
 
 describe('AuthContext', () => {
-  let mockLocalStorage: Record<string, string | null>;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocalStorage = {};
+    mockStytchUser = null;
+    mockStytchSession = null;
+    mockUserInitialized = true;
+    mockSessionInitialized = true;
 
     // Mock localStorage
     Object.defineProperty(global, 'localStorage', {
       value: {
-        getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
-        setItem: vi.fn((key: string, value: string) => {
-          mockLocalStorage[key] = value;
-        }),
-        removeItem: vi.fn((key: string) => {
-          delete mockLocalStorage[key];
-        }),
+        getItem: vi.fn().mockReturnValue(null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
         clear: vi.fn(),
       },
       configurable: true,
-    });
-
-    // Mock document.cookie
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: '',
     });
 
     // Mock fetch
     global.fetch = vi.fn();
   });
 
-  it('finishes loading when no session data exists', async () => {
+  it('finishes loading when no Stytch session exists', async () => {
     render(
       <AuthProvider>
         <TestConsumer />
       </AuthProvider>
     );
 
-    // When no session data exists, loading completes quickly
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('not-loading');
     });
     expect(screen.getByTestId('authenticated').textContent).toBe('no');
   });
 
-  it('loads user from cookie', async () => {
-    const mockUser: NhimbeUser = {
-      id: 'user-123',
+  it('shows loading when SDK is not initialized', async () => {
+    mockUserInitialized = false;
+    mockSessionInitialized = false;
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('loading').textContent).toBe('loading');
+  });
+
+  it('syncs with backend when Stytch user and session exist', async () => {
+    const backendUser: NhimbeUser = {
+      id: 'usr-backend-1',
       email: 'test@example.com',
-      name: 'Test User',
-      onboardingCompleted: true,
-      stytchUserId: 'stytch-123',
-    };
-
-    // Set cookie with user data
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(mockUser))}`,
-    });
-
-    render(
-      <AuthProvider>
-        <TestConsumer />
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('not-loading');
-    });
-
-    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-    expect(screen.getByTestId('user-name').textContent).toBe('Test User');
-    expect(screen.getByTestId('needs-onboarding').textContent).toBe('no');
-  });
-
-  it('loads user from localStorage when no cookie', async () => {
-    const mockUser: NhimbeUser = {
-      id: 'user-456',
-      email: 'local@example.com',
-      name: 'Local User',
-      onboardingCompleted: false,
-      stytchUserId: 'stytch-456',
-    };
-
-    mockLocalStorage['nhimbe_user'] = JSON.stringify(mockUser);
-
-    render(
-      <AuthProvider>
-        <TestConsumer />
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('not-loading');
-    });
-
-    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-    expect(screen.getByTestId('user-name').textContent).toBe('Local User');
-    expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
-  });
-
-  it('validates session with backend when token exists but no user data', async () => {
-    const mockUser: NhimbeUser = {
-      id: 'user-789',
-      email: 'backend@example.com',
       name: 'Backend User',
       onboardingCompleted: true,
-      stytchUserId: 'stytch-789',
+      stytchUserId: 'stytch-123',
+      role: 'user',
     };
 
-    // Set access token in cookie
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: 'nhimbe_access_token=valid-token',
-    });
+    mockStytchUser = {
+      user_id: 'stytch-123',
+      emails: [{ email: 'test@example.com' }],
+      name: { first_name: 'Backend', last_name: 'User' },
+    };
+    mockStytchSession = { session_id: 'session-abc' };
 
-    // Mock successful backend response
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ user: mockUser }),
+      json: async () => ({ user: backendUser }),
     });
 
     render(
@@ -159,22 +124,25 @@ describe('AuthContext', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/auth/me'),
-      expect.objectContaining({
-        headers: { Authorization: 'Bearer valid-token' },
-      })
+      expect.stringContaining('/api/auth/sync'),
+      expect.objectContaining({ method: 'POST' })
     );
+
     expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(screen.getByTestId('user-name').textContent).toBe('Backend User');
   });
 
-  it('clears auth when backend validation fails', async () => {
-    // Set access token in localStorage
-    mockLocalStorage['nhimbe_access_token'] = 'invalid-token';
+  it('falls back to Stytch data when backend sync fails', async () => {
+    mockStytchUser = {
+      user_id: 'stytch-456',
+      emails: [{ email: 'fallback@example.com' }],
+      name: { first_name: 'Fallback', last_name: 'User' },
+    };
+    mockStytchSession = { session_id: 'session-xyz' };
 
-    // Mock failed backend response
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
-      status: 401,
+      status: 500,
     });
 
     render(
@@ -187,48 +155,31 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('loading').textContent).toBe('not-loading');
     });
 
-    expect(screen.getByTestId('authenticated').textContent).toBe('no');
+    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(screen.getByTestId('user-name').textContent).toBe('Fallback User');
+    expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
   });
 
-  it('computes isAuthenticated correctly', async () => {
-    // User with id should be authenticated
-    const authenticatedUser: NhimbeUser = {
-      id: 'user-123',
-      email: 'test@example.com',
-      name: 'Test',
-      onboardingCompleted: true,
-      stytchUserId: 'stytch-123',
-    };
-
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(authenticatedUser))}`,
-    });
-
-    render(
-      <AuthProvider>
-        <TestConsumer />
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-    });
-  });
-
-  it('computes needsOnboarding correctly', async () => {
-    // User who hasn't completed onboarding
-    const newUser: NhimbeUser = {
-      id: 'user-123',
+  it('computes needsOnboarding when onboarding not completed', async () => {
+    const backendUser: NhimbeUser = {
+      id: 'usr-new',
       email: 'new@example.com',
       name: 'New User',
       onboardingCompleted: false,
-      stytchUserId: 'stytch-123',
+      stytchUserId: 'stytch-789',
+      role: 'user',
     };
 
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(newUser))}`,
+    mockStytchUser = {
+      user_id: 'stytch-789',
+      emails: [{ email: 'new@example.com' }],
+      name: { first_name: 'New', last_name: 'User' },
+    };
+    mockStytchSession = { session_id: 'session-new' };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: backendUser }),
     });
 
     render(
@@ -242,14 +193,7 @@ describe('AuthContext', () => {
     });
   });
 
-  it('signIn redirects to login URL with return path', async () => {
-    // Mock window.location
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { ...originalLocation, origin: 'http://localhost:3000', href: '' },
-    });
-
+  it('signIn redirects to /auth/signin and stores return URL', async () => {
     render(
       <AuthProvider>
         <TestConsumer />
@@ -265,33 +209,30 @@ describe('AuthContext', () => {
       signInButton.click();
     });
 
-    expect(window.location.href).toContain('/api/auth/login');
-    expect(window.location.href).toContain('returnUrl=%2Fdashboard');
-
-    // Restore
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: originalLocation,
-    });
+    expect(localStorage.setItem).toHaveBeenCalledWith('auth_redirect', '/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/auth/signin');
   });
 
-  it('signOut clears auth and redirects to home', async () => {
-    const mockUser: NhimbeUser = {
-      id: 'user-123',
+  it('signOut revokes Stytch session and redirects home', async () => {
+    const backendUser: NhimbeUser = {
+      id: 'usr-123',
       email: 'test@example.com',
       name: 'Test',
       onboardingCompleted: true,
       stytchUserId: 'stytch-123',
+      role: 'user',
     };
 
-    Object.defineProperty(document, 'cookie', {
-      writable: true,
-      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(mockUser))}; nhimbe_access_token=test-token`,
-    });
+    mockStytchUser = {
+      user_id: 'stytch-123',
+      emails: [{ email: 'test@example.com' }],
+      name: { first_name: 'Test', last_name: '' },
+    };
+    mockStytchSession = { session_id: 'session-123' };
 
-    // Mock logout API calls
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
+      json: async () => ({ user: backendUser }),
     });
 
     render(
@@ -309,15 +250,11 @@ describe('AuthContext', () => {
       signOutButton.click();
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('authenticated').textContent).toBe('no');
-    });
-
+    expect(mockStytchRevoke).toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
   it('throws error when useAuth is used outside AuthProvider', () => {
-    // Suppress console.error for this test
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => {

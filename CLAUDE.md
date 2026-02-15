@@ -328,21 +328,83 @@ wrangler d1 execute mukoko-nhimbe-db --file=./src/db/migrations/your-migration.s
 
 ## Testing
 
-**Current state:** No test framework configured
+**Framework:** Vitest (both frontend and backend)
+**Total Tests:** 333 (162 frontend + 171 backend)
+**CI:** GitHub Actions runs both suites on every push/PR
 
-**Recommended approach:**
-- Use Vitest for unit tests
-- React Testing Library for components
-- Playwright for E2E tests
+### Running Tests
+
+```bash
+# Frontend tests (root directory)
+npx vitest run                    # Run all frontend tests
+npx vitest run --watch            # Watch mode
+
+# Backend tests (worker directory)
+cd worker
+npx vitest run                    # Run all backend tests
+npx vitest run --watch            # Watch mode
+```
+
+### Test Architecture (Tiered)
+
+The backend test infrastructure uses a 4-layer mock architecture (`worker/src/__tests__/mocks.ts`):
+
+| Layer | Purpose | Examples |
+|-------|---------|---------|
+| L1: Primitives | Mock Cloudflare bindings | `createMockD1()`, `createMockKV()`, `createMockR2()`, `createMockAI()` |
+| L2: Env Factory | Combine all bindings | `createMockEnv()` |
+| L3: Request Builders | HTTP request factories | `createRequest()`, `createAuthenticatedRequest()` |
+| L4: Domain Fixtures | Business objects | `createEventFixture()`, `createUserFixture()` |
+
+### Test Suites
+
+#### Backend (`worker/src/__tests__/`)
+
+| Suite | File | Tests | Coverage |
+|-------|------|-------|----------|
+| Auth & JWT | `auth.test.ts` | 24 | Bearer token extraction, JWT structure, JWKS cache, claim validation |
+| Input Validation | `validation.test.ts` | 52 | Sanitization, slugify, date parsing, referral codes, event transform |
+| Security | `security.test.ts` | 33 | CORS, API key, RBAC hierarchy, XSS prevention, circuit breakers |
+| AI Layers | `ai-layers.test.ts` | 45 | Embeddings, RAG search, assistant intent, description wizard |
+| Observability | `observability.test.ts` | 17 | Analytics pipeline, rate limiting, KV cache, error tracking |
+
+#### Frontend (`src/`)
+
+| Suite | File | Tests | Coverage |
+|-------|------|-------|----------|
+| API Client | `lib/api.test.ts` | 38 | All API functions, error handling, query params, media URLs |
+| Timezone | `lib/timezone.test.ts` | 26 | Date formatting, weather icons, timezone detection |
+| Calendar | `lib/calendar.test.ts` | 32 | ICS generation, Google/Outlook/Yahoo URLs, date parsing |
+| Utils | `lib/utils.test.ts` | 8 | `cn()` class merging |
+| Auth Context | `components/auth/auth-context.test.tsx` | 8 | Stytch SDK integration, login/logout, session sync |
+| Auth Guard | `components/auth/auth-guard.test.tsx` | 7 | Route protection, redirects |
+| Accessibility | `__tests__/accessibility.test.ts` | 18 | WCAG contrast ratios, touch targets, semantic HTML |
+| SEO | `__tests__/seo.test.ts` | 25 | Metadata, Open Graph, Twitter Cards, robots, brand consistency |
+
+### Writing New Tests
+
+1. Backend tests go in `worker/src/__tests__/`
+2. Frontend tests go alongside the module (e.g., `lib/api.test.ts`) or in `src/__tests__/`
+3. Use shared mocks from `worker/src/__tests__/mocks.ts` for backend tests
+4. Follow the existing pattern: describe blocks grouped by feature, clear assertions
+
+### Design Token Constants
+
+Theme colors are centralized in `src/lib/themes.ts`:
+- `mineralThemes` — all mineral theme definitions (malachite, tanzanite, gold, tiger's eye, obsidian)
+- `brandColors` — light/dark mode brand colors for backgrounds
+- `getThemeColors()` — extract color tuples from theme IDs
 
 ## Important Files to Know
 
 | File                              | Purpose                          |
 |-----------------------------------|----------------------------------|
 | `src/lib/api.ts`                  | All frontend API calls           |
+| `src/lib/themes.ts`              | Shared mineral theme constants   |
 | `src/components/auth/auth-context.tsx` | Auth state management      |
 | `worker/src/index.ts`             | All backend API routes           |
 | `worker/src/types.ts`             | Backend type definitions         |
+| `worker/src/__tests__/mocks.ts`  | Shared test mock factories       |
 | `worker/src/db/schema.sql`        | Database schema                  |
 | `src/app/globals.css`             | Theme variables, global styles   |
 | `worker/wrangler.toml`            | Cloudflare configuration         |
@@ -373,11 +435,13 @@ npm run deploy --env staging      # Staging
 
 ## Accessibility
 
-- WCAG 2.2 AAA compliant
-- 7:1+ contrast ratios
+- WCAG 2.2 compliant (AAA for primary/secondary text, AA for tertiary/accent)
+- 7:1+ contrast ratios for primary and secondary text
+- 4.5:1+ contrast ratios for tertiary text and accent colors
+- 44px minimum touch targets
 - Keyboard navigation support
 - Screen reader compatible (semantic HTML, ARIA)
-- System theme preference support
+- System theme preference support with FOUC prevention
 
 ---
 

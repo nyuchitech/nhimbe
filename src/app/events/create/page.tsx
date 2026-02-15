@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type CreateEventInput, type Category } from "@/lib/api";
+import { mineralThemes, mineralThemeIds, getThemeColors } from "@/lib/themes";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
 import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
@@ -53,39 +54,16 @@ const DEFAULT_CITIES = [
   { city: "Lagos", country: "Nigeria" },
 ];
 
-// Mineral gradient themes - all will have Three.js background
-const mineralThemes = [
-  {
-    id: "malachite",
-    name: "Malachite",
-    gradient: "linear-gradient(135deg, #004D40 0%, #00796B 50%, #64FFDA 100%)",
-    colors: ["#004D40", "#00796B", "#64FFDA"],
-  },
-  {
-    id: "tanzanite",
-    name: "Tanzanite",
-    gradient: "linear-gradient(135deg, #1A0A2E 0%, #4B0082 50%, #B388FF 100%)",
-    colors: ["#1A0A2E", "#4B0082", "#B388FF"],
-  },
-  {
-    id: "gold",
-    name: "Gold",
-    gradient: "linear-gradient(135deg, #5D4037 0%, #8B5A00 50%, #FFD740 100%)",
-    colors: ["#5D4037", "#8B5A00", "#FFD740"],
-  },
-  {
-    id: "tigers-eye",
-    name: "Tiger's Eye",
-    gradient: "linear-gradient(135deg, #4A2C00 0%, #8B4513 50%, #D4A574 100%)",
-    colors: ["#4A2C00", "#8B4513", "#D4A574"],
-  },
-  {
-    id: "obsidian",
-    name: "Obsidian",
-    gradient: "linear-gradient(135deg, #0A0A0A 0%, #1E1E1E 50%, #3A3A3A 100%)",
-    colors: ["#0A0A0A", "#1E1E1E", "#3A3A3A"],
-  },
-];
+// Mineral gradient themes derived from shared theme constants
+const mineralThemeList = mineralThemeIds.map((id) => {
+  const theme = mineralThemes[id];
+  return {
+    id,
+    name: theme.name,
+    gradient: theme.gradient,
+    colors: getThemeColors(id),
+  };
+});
 
 function CreateEventForm() {
   const router = useRouter();
@@ -287,7 +265,7 @@ function CreateEventForm() {
         category,
         tags,
         coverImage: uploadedCoverImageUrl,
-        coverGradient: uploadedCoverImageUrl ? undefined : mineralThemes[selectedTheme].gradient,
+        coverGradient: uploadedCoverImageUrl ? undefined : mineralThemeList[selectedTheme].gradient,
         capacity: capacity || undefined,
         isOnline,
         meetingUrl: isOnline ? meetingUrl.trim() : undefined,
@@ -321,7 +299,7 @@ function CreateEventForm() {
         style={{
           background: coverImage
             ? `url(${coverImage}) center/cover`
-            : mineralThemes[selectedTheme].gradient,
+            : mineralThemeList[selectedTheme].gradient,
         }}
       >
         {/* Gradient overlay */}
@@ -363,25 +341,25 @@ function CreateEventForm() {
           {/* Theme Preview */}
           <div
             className="w-10 h-10 rounded-lg shrink-0"
-            style={{ background: mineralThemes[selectedTheme].gradient }}
+            style={{ background: mineralThemeList[selectedTheme].gradient }}
           />
 
           {/* Theme Name */}
           <div className="flex-1 min-w-0">
             <div className="text-xs text-text-tertiary">Theme</div>
-            <div className="font-medium truncate">{mineralThemes[selectedTheme].name}</div>
+            <div className="font-medium truncate">{mineralThemeList[selectedTheme].name}</div>
           </div>
 
           {/* Slider Controls */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setSelectedTheme((prev) => (prev > 0 ? prev - 1 : mineralThemes.length - 1))}
+              onClick={() => setSelectedTheme((prev) => (prev > 0 ? prev - 1 : mineralThemeList.length - 1))}
               className="w-8 h-8 rounded-lg bg-elevated flex items-center justify-center hover:bg-foreground/10 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setSelectedTheme((prev) => (prev < mineralThemes.length - 1 ? prev + 1 : 0))}
+              onClick={() => setSelectedTheme((prev) => (prev < mineralThemeList.length - 1 ? prev + 1 : 0))}
               className="w-8 h-8 rounded-lg bg-elevated flex items-center justify-center hover:bg-foreground/10 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
