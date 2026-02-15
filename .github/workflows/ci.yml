@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
 
 env:
   NODE_VERSION: '20'
@@ -31,6 +31,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN: placeholder
+          NEXT_PUBLIC_API_URL: https://api.example.com
+          NEXT_PUBLIC_SITE_URL: https://example.com
 
   frontend-tests:
     name: Frontend Tests

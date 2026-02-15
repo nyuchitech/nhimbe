@@ -139,7 +139,7 @@ function CreateEventForm() {
   }, []);
 
   const randomizeTheme = () => {
-    const randomIndex = Math.floor(Math.random() * mineralThemes.length);
+    const randomIndex = Math.floor(Math.random() * mineralThemeList.length);
     setSelectedTheme(randomIndex);
   };
 
