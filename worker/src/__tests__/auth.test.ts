@@ -77,34 +77,38 @@ describe('getAuthenticatedUser', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns null when no token present', async () => {
+  it('returns no_token when no token present', async () => {
     const request = new Request('https://api.test.com');
     const result = await getAuthenticatedUser(request, mockEnv);
-    expect(result).toBeNull();
+    expect(result.user).toBeNull();
+    expect(result.failureReason).toBe('no_token');
   });
 
-  it('returns null when token is non-Bearer', async () => {
+  it('returns no_token when token is non-Bearer', async () => {
     const request = new Request('https://api.test.com', {
       headers: { Authorization: 'Basic invalid' },
     });
     const result = await getAuthenticatedUser(request, mockEnv);
-    expect(result).toBeNull();
+    expect(result.user).toBeNull();
+    expect(result.failureReason).toBe('no_token');
   });
 
-  it('returns null for malformed JWT (wrong segment count)', async () => {
+  it('returns failure reason for malformed JWT (wrong segment count)', async () => {
     const request = new Request('https://api.test.com', {
       headers: { Authorization: 'Bearer not-a-jwt' },
     });
     const result = await getAuthenticatedUser(request, mockEnv);
-    expect(result).toBeNull();
+    expect(result.user).toBeNull();
+    expect(result.failureReason).toBe('malformed_token');
   });
 
-  it('returns null for JWT with invalid base64 segments', async () => {
+  it('returns failure reason for JWT with invalid base64 segments', async () => {
     const request = new Request('https://api.test.com', {
       headers: { Authorization: 'Bearer !!!.!!!.!!!' },
     });
     const result = await getAuthenticatedUser(request, mockEnv);
-    expect(result).toBeNull();
+    expect(result.user).toBeNull();
+    expect(result.failureReason).toBeDefined();
   });
 });
 

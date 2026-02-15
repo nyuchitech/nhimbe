@@ -163,7 +163,8 @@ export default function OnboardingForm() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to complete onboarding");
+        const reason = errorData.reason ? ` (${errorData.reason})` : "";
+        throw new Error((errorData.error || "Failed to complete onboarding") + reason);
       }
 
       // Refresh auth context to get updated user
