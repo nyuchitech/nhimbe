@@ -192,7 +192,7 @@ export function GradientBackground({
 
 // Static gradient fallback for SSR
 export function StaticGradientBackground({ theme = "dark" }: { theme?: "light" | "dark" }) {
-  const colors = COLORS[theme];
+  const colors = brandColors[theme];
   const gradient =
     theme === "dark"
       ? `radial-gradient(ellipse at 20% 80%, ${colors.primary}15 0%, transparent 50%),
