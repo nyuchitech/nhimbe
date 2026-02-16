@@ -1191,10 +1191,12 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const stytchUser = await getAuthenticatedUser(request, env);
-  if (!stytchUser) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+  const authResult = await getAuthenticatedUser(request, env);
+  if (!authResult.user) {
+    console.error("Auth failed (me):", authResult.failureReason, authResult.detail);
+    return jsonResponse({ error: "Unauthorized", reason: authResult.failureReason }, 401);
   }
+  const stytchUser = authResult.user;
 
   // Look up user in our database by Stytch user ID
   interface DbUserRow {
@@ -1240,10 +1242,12 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const stytchUser = await getAuthenticatedUser(request, env);
-  if (!stytchUser) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+  const authResult = await getAuthenticatedUser(request, env);
+  if (!authResult.user) {
+    console.error("Auth failed (onboarding):", authResult.failureReason, authResult.detail);
+    return jsonResponse({ error: "Unauthorized", reason: authResult.failureReason }, 401);
   }
+  const stytchUser = authResult.user;
 
   const body = await request.json() as {
     name: string;
@@ -1347,10 +1351,12 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const stytchUser = await getAuthenticatedUser(request, env);
-  if (!stytchUser) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+  const authResult = await getAuthenticatedUser(request, env);
+  if (!authResult.user) {
+    console.error("Auth failed (sync):", authResult.failureReason, authResult.detail);
+    return jsonResponse({ error: "Unauthorized", reason: authResult.failureReason }, 401);
   }
+  const stytchUser = authResult.user;
 
   const body = await request.json() as {
     stytch_user_id: string;
@@ -2832,8 +2838,9 @@ interface AdminUser {
 
 // Helper to get authenticated admin user with role check
 async function getAdminUser(request: Request, env: Env, requiredRole: UserRole): Promise<AdminUser | null> {
-  const stytchUser = await getAuthenticatedUser(request, env);
-  if (!stytchUser) return null;
+  const authResult = await getAuthenticatedUser(request, env);
+  if (!authResult.user) return null;
+  const stytchUser = authResult.user;
 
   interface DbUserRow {
     id: string;

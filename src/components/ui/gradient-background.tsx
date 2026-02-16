@@ -2,20 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-
-// Subtle color palette - on brand, minimal
-const COLORS = {
-  light: {
-    primary: "#00574B",    // Primary teal
-    secondary: "#004D40",  // Darker teal
-    background: "#FAFAF8", // Light background
-  },
-  dark: {
-    primary: "#64FFDA",    // Primary teal (malachite)
-    secondary: "#00BFA5",  // Secondary teal
-    background: "#0A0A0A", // Dark background
-  },
-};
+import { brandColors } from "@/lib/themes";
 
 interface GradientBackgroundProps {
   theme?: "light" | "dark";
@@ -51,7 +38,7 @@ export function GradientBackground({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    const colors = COLORS[theme];
+    const colors = brandColors[theme];
     const primaryColor = new THREE.Color(colors.primary);
     const secondaryColor = new THREE.Color(colors.secondary);
     const bgColor = new THREE.Color(colors.background);
@@ -205,7 +192,7 @@ export function GradientBackground({
 
 // Static gradient fallback for SSR
 export function StaticGradientBackground({ theme = "dark" }: { theme?: "light" | "dark" }) {
-  const colors = COLORS[theme];
+  const colors = brandColors[theme];
   const gradient =
     theme === "dark"
       ? `radial-gradient(ellipse at 20% 80%, ${colors.primary}15 0%, transparent 50%),

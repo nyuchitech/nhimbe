@@ -147,16 +147,12 @@ describe('AuthGuard', () => {
     expect(mockPush).toHaveBeenCalledWith('/onboarding');
   });
 
-  // Edge case: This test exposes a bug in the current implementation
+  // Edge case: unauthenticated users always go to sign-in, never onboarding
   it('should redirect unauthenticated users to sign in even if needsOnboarding is true', async () => {
-    // This state can happen if:
-    // - User object exists but has no id (malformed data)
-    // - needsOnboarding is computed as: !!user && !user.onboardingCompleted
-    // - isAuthenticated is computed as: !!user?.id
     mockAuthState = {
       isAuthenticated: false,
       isLoading: false,
-      needsOnboarding: true, // User exists but no id, hasn't completed onboarding
+      needsOnboarding: true,
     };
 
     render(
@@ -165,11 +161,7 @@ describe('AuthGuard', () => {
       </AuthGuard>
     );
 
-    // BUG: Current behavior redirects to /onboarding instead of /auth/signin
-    // An unauthenticated user should ALWAYS go to sign in, not onboarding
-    // The current condition `!isAuthenticated && !needsOnboarding` is flawed
-
-    // This test currently FAILS because it redirects to /onboarding
+    // The fixed auth-guard checks !isAuthenticated first, so this redirects to signin
     expect(mockPush).toHaveBeenCalledWith('/auth/signin');
     expect(mockPush).not.toHaveBeenCalledWith('/onboarding');
   });

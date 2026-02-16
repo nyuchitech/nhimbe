@@ -100,13 +100,31 @@ interface JWTPayload {
   nbf?: number;
 }
 
+export type JWTFailureReason =
+  | "malformed_token"
+  | "unsupported_algorithm"
+  | "jwks_fetch_failed"
+  | "key_not_found"
+  | "invalid_signature"
+  | "token_expired"
+  | "token_not_yet_valid"
+  | "issuer_mismatch"
+  | "audience_mismatch"
+  | "verification_error";
+
+export interface JWTResult {
+  payload: JWTPayload | null;
+  failureReason?: JWTFailureReason;
+  detail?: string;
+}
+
 async function verifyJWT(
   token: string,
   projectId: string
-): Promise<JWTPayload | null> {
+): Promise<JWTResult> {
   try {
     const parts = token.split(".");
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) return { payload: null, failureReason: "malformed_token" };
 
     const [headerB64, payloadB64, signatureB64] = parts;
 
@@ -114,17 +132,30 @@ async function verifyJWT(
     const header: JWTHeader = JSON.parse(
       new TextDecoder().decode(base64urlDecode(headerB64))
     );
-    if (header.alg !== "RS256" || !header.kid) return null;
+    if (header.alg !== "RS256" || !header.kid) {
+      return { payload: null, failureReason: "unsupported_algorithm", detail: `alg=${header.alg}, kid=${header.kid}` };
+    }
 
     // Get JWKS and find matching key
-    let jwks = await getJWKS(projectId);
+    let jwks: JWKS;
+    try {
+      jwks = await getJWKS(projectId);
+    } catch (e) {
+      return { payload: null, failureReason: "jwks_fetch_failed", detail: String(e) };
+    }
     let jwk = jwks.keys.find((k) => k.kid === header.kid);
 
     // If key not found, force refresh JWKS (handles key rotation)
     if (!jwk) {
-      jwks = await getJWKS(projectId, true);
+      try {
+        jwks = await getJWKS(projectId, true);
+      } catch (e) {
+        return { payload: null, failureReason: "jwks_fetch_failed", detail: `refresh: ${String(e)}` };
+      }
       jwk = jwks.keys.find((k) => k.kid === header.kid);
-      if (!jwk) return null;
+      if (!jwk) {
+        return { payload: null, failureReason: "key_not_found", detail: `kid=${header.kid}` };
+      }
     }
 
     // Verify signature
@@ -138,7 +169,7 @@ async function verifyJWT(
       signature,
       data
     );
-    if (!valid) return null;
+    if (!valid) return { payload: null, failureReason: "invalid_signature" };
 
     // Decode and validate payload claims
     const payload: JWTPayload = JSON.parse(
@@ -147,15 +178,23 @@ async function verifyJWT(
 
     const now = Math.floor(Date.now() / 1000);
 
-    if (payload.exp && now >= payload.exp) return null;
-    if (payload.nbf && now < payload.nbf) return null;
-    if (payload.iss !== `stytch.com/${projectId}`) return null;
-    if (!payload.aud?.includes(projectId)) return null;
+    if (payload.exp && now >= payload.exp) {
+      return { payload: null, failureReason: "token_expired", detail: `exp=${payload.exp}, now=${now}, expired ${now - payload.exp}s ago` };
+    }
+    if (payload.nbf && now < payload.nbf) {
+      return { payload: null, failureReason: "token_not_yet_valid", detail: `nbf=${payload.nbf}, now=${now}` };
+    }
+    if (payload.iss !== `stytch.com/${projectId}`) {
+      return { payload: null, failureReason: "issuer_mismatch", detail: `got="${payload.iss}", expected="stytch.com/${projectId}"` };
+    }
+    if (!payload.aud?.includes(projectId)) {
+      return { payload: null, failureReason: "audience_mismatch", detail: `aud=${JSON.stringify(payload.aud)}, expected="${projectId}"` };
+    }
 
-    return payload;
+    return { payload };
   } catch (error) {
     console.error("JWT verification error:", error);
-    return null;
+    return { payload: null, failureReason: "verification_error", detail: String(error) };
   }
 }
 
@@ -174,6 +213,12 @@ export function extractBearerToken(request: Request): string | null {
   return authHeader.substring(7);
 }
 
+export interface AuthResult {
+  user: AuthenticatedUser | null;
+  failureReason?: JWTFailureReason | "no_token";
+  detail?: string;
+}
+
 /**
  * Validate the Stytch session JWT locally and return the authenticated user.
  * No Stytch API calls are made — verification uses the public JWKS.
@@ -181,12 +226,14 @@ export function extractBearerToken(request: Request): string | null {
 export async function getAuthenticatedUser(
   request: Request,
   env: StytchEnv
-): Promise<AuthenticatedUser | null> {
+): Promise<AuthResult> {
   const token = extractBearerToken(request);
-  if (!token) return null;
+  if (!token) return { user: null, failureReason: "no_token" };
 
-  const payload = await verifyJWT(token, env.STYTCH_PROJECT_ID);
-  if (!payload) return null;
+  const result = await verifyJWT(token, env.STYTCH_PROJECT_ID);
+  if (!result.payload) {
+    return { user: null, failureReason: result.failureReason, detail: result.detail };
+  }
 
-  return { userId: payload.sub };
+  return { user: { userId: result.payload.sub } };
 }
