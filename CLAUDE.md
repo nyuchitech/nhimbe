@@ -88,6 +88,8 @@ Protected endpoints use either:
 
 All backend tests use these shared mocks. Frontend tests live alongside modules (e.g., `src/lib/api.test.ts`) or in `src/__tests__/`.
 
+**Note:** Worker test files (`__tests__/**`, `*.test.ts`, `*.spec.ts`) are excluded from `worker/tsconfig.json` so `tsc --noEmit` only checks production code. Test types are provided by vitest's `globals: true` setting in `worker/vitest.config.ts`.
+
 ## Key Files
 
 | File | Purpose |
