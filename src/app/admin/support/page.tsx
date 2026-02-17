@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  MessageSquare,
   Send,
   X,
   User,
@@ -63,11 +62,7 @@ export default function SupportPage() {
 
   const limit = 20;
 
-  useEffect(() => {
-    fetchTickets();
-  }, [page, search, statusFilter]);
-
-  async function fetchTickets() {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -95,7 +90,11 @@ export default function SupportPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, search, statusFilter]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   async function handleStatusChange(
     ticketId: string,

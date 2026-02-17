@@ -24,7 +24,11 @@ import { searchEvents, findSimilarEvents, getRecommendations } from "./ai/search
 import { chat, generateSuggestions } from "./ai/assistant";
 import { indexEvent, indexEvents, removeEventFromIndex } from "./ai/embeddings";
 import { generateDescription, regenerateDescription, getWizardSteps, type DescriptionContext } from "./ai/description-generator";
+<<<<<<< Updated upstream
 import { getAuthenticatedUser } from "./auth/stytch";
+=======
+import { getAuthenticatedUser, revokeSession, extractSessionToken } from "./auth/stytch";
+>>>>>>> Stashed changes
 
 const VERSION = "0.2.0";
 
@@ -60,11 +64,26 @@ function safeParseJSON(value: string | null, defaultValue: unknown = []): unknow
   }
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
-};
+const ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "https://nhimbe.com",
+  "https://www.nhimbe.com",
+];
+
+// Get CORS headers with dynamic origin
+function getCorsHeaders(request: Request, env: Env): Record<string, string> {
+  const origin = request.headers.get("Origin") || "";
+  const allowedOrigins = env.ALLOWED_ORIGIN
+    ? [...ALLOWED_ORIGINS, env.ALLOWED_ORIGIN]
+    : ALLOWED_ORIGINS;
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : ALLOWED_ORIGINS[1];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
 
 // Validate API key from request
 function validateApiKey(request: Request, env: Env): boolean {
@@ -72,6 +91,7 @@ function validateApiKey(request: Request, env: Env): boolean {
   return apiKey === env.API_KEY;
 }
 
+<<<<<<< Updated upstream
 // Trusted domains — always allow these and all their subdomains
 const TRUSTED_DOMAINS = ["nyuchi.com", "mukoko.com", "nhimbe.com"];
 
@@ -97,11 +117,114 @@ function isAllowedOrigin(request: Request, env: Env): boolean {
   // Also check ALLOWED_ORIGINS env var for any additional origins
   const extraOrigins = (env.ALLOWED_ORIGINS || "").split(",").filter(Boolean);
   return extraOrigins.some(allowed => origin === allowed.trim());
+=======
+// Check if request is from allowed origin (frontend) — exact match only
+function isAllowedOrigin(request: Request, env: Env): boolean {
+  const origin = request.headers.get("Origin") || "";
+  const allowedOrigins = env.ALLOWED_ORIGIN
+    ? [...ALLOWED_ORIGINS, env.ALLOWED_ORIGIN]
+    : ALLOWED_ORIGINS;
+  return allowedOrigins.includes(origin);
+}
+
+// Request-scoped CORS headers (set at start of each request)
+let corsHeaders: Record<string, string> = {};
+
+// ============================================
+// Container Proxy
+// Routes that should be forwarded to the Hono container
+// ============================================
+
+const CONTAINER_ROUTES = [
+  "/api/auth/me",
+  "/api/auth/onboarding",
+  "/api/auth/token",
+  "/api/categories",
+  "/api/cities",
+  "/api/community/",
+  "/api/registrations",
+  "/api/referrals/",
+  "/api/admin/stats",
+  "/api/admin/users",
+  "/api/admin/events",
+  "/api/admin/support",
+];
+
+// Patterns that need post-processing (Vectorize indexing after DB write)
+const CONTAINER_WITH_VECTORIZE = [
+  { pattern: /^\/api\/events$/, methods: ["POST"] },
+  { pattern: /^\/api\/events\/[^/]+$/, methods: ["PUT", "DELETE"] },
+  { pattern: /^\/api\/admin\/events\/[^/]+$/, methods: ["DELETE"] },
+];
+
+function shouldProxyToContainer(pathname: string, method: string): boolean {
+  // Static prefix matches
+  if (CONTAINER_ROUTES.some(route => pathname.startsWith(route))) {
+    return true;
+  }
+
+  // Event CRUD reads go to container
+  if (pathname === "/api/events" && method === "GET") return true;
+  if (pathname === "/api/events/trending" && method === "GET") return true;
+  if (/^\/api\/events\/[^/]+$/.test(pathname) && method === "GET") return true;
+  if (/^\/api\/events\/[^/]+\/view$/.test(pathname) && method === "POST") return true;
+  if (/^\/api\/events\/[^/]+\/reviews$/.test(pathname)) return true;
+  if (/^\/api\/events\/[^/]+\/stats$/.test(pathname) && method === "GET") return true;
+  if (/^\/api\/events\/[^/]+\/referrals$/.test(pathname) && method === "GET") return true;
+  if (/^\/api\/reviews\/[^/]+\/helpful$/.test(pathname) && method === "POST") return true;
+  if (/^\/api\/users\/[^/]+$/.test(pathname)) return true;
+  if (/^\/api\/users\/[^/]+\/referral-code$/.test(pathname)) return true;
+  if (/^\/api\/users\/[^/]+\/reputation$/.test(pathname) && method === "GET") return true;
+
+  // Event writes go to container + Vectorize post-processing
+  if (CONTAINER_WITH_VECTORIZE.some(r => r.pattern.test(pathname) && r.methods.includes(method))) {
+    return true;
+  }
+
+  return false;
+}
+
+function needsVectorizePostProcessing(pathname: string, method: string): boolean {
+  return CONTAINER_WITH_VECTORIZE.some(r => r.pattern.test(pathname) && r.methods.includes(method));
+}
+
+async function proxyToContainer(request: Request, env: Env, url: URL): Promise<Response> {
+  // If container binding not available, fall through to local handlers
+  if (!env.CONTAINER) {
+    return new Response(null, { status: 0 }); // Sentinel: not proxied
+  }
+
+  const containerResponse = await env.CONTAINER.fetch(request);
+
+  // If the route needs Vectorize post-processing, handle it
+  if (needsVectorizePostProcessing(url.pathname, request.method) && containerResponse.ok) {
+    try {
+      const body = await containerResponse.clone().json() as Record<string, unknown>;
+
+      // Event create/update: re-index in Vectorize
+      if (body.event && (request.method === "POST" || request.method === "PUT")) {
+        const event = body.event as Event;
+        await indexEvent(env.AI, env.VECTORIZE, event);
+      }
+
+      // Event delete: remove from Vectorize
+      if (body._vectorizeRemove) {
+        await removeEventFromIndex(env.VECTORIZE, body._vectorizeRemove as string);
+      }
+    } catch (error) {
+      console.error("Vectorize post-processing error:", error);
+      // Don't fail the response — DB write succeeded
+    }
+  }
+
+  return containerResponse;
+>>>>>>> Stashed changes
 }
 
 const worker: ExportedHandler<Env> = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
+    corsHeaders = getCorsHeaders(request, env);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
@@ -138,6 +261,15 @@ const worker: ExportedHandler<Env> = {
         });
       }
 
+      // ── Proxy to container for CRUD routes ──
+      if (shouldProxyToContainer(url.pathname, request.method)) {
+        const containerResponse = await proxyToContainer(request, env, url);
+        if (containerResponse.status !== 0) {
+          return containerResponse;
+        }
+        // Fall through to local handlers if container unavailable
+      }
+
       // Event view tracking (before general events handler)
       const viewMatch = url.pathname.match(/^\/api\/events\/([^/]+)\/view$/);
       if (viewMatch && request.method === "POST") {
@@ -155,24 +287,36 @@ const worker: ExportedHandler<Env> = {
         return handleEvents(request, url, env);
       }
 
-      // AI Search endpoint
+      // AI Search endpoint (origin-restricted — consumes Workers AI credits)
       if (url.pathname === "/api/search") {
+        if (!validateApiKey(request, env) && !isAllowedOrigin(request, env)) {
+          return jsonResponse({ error: "Unauthorized" }, 401);
+        }
         return handleSearch(request, env);
       }
 
-      // AI Assistant endpoint
+      // AI Assistant endpoint (origin-restricted)
       if (url.pathname === "/api/assistant") {
+        if (!validateApiKey(request, env) && !isAllowedOrigin(request, env)) {
+          return jsonResponse({ error: "Unauthorized" }, 401);
+        }
         return handleAssistant(request, env);
       }
 
-      // AI Description Generator endpoints
+      // AI Description Generator endpoints (origin-restricted)
       if (url.pathname === "/api/ai/description/wizard-steps") {
         return handleDescriptionWizardSteps(request);
       }
       if (url.pathname === "/api/ai/description/generate") {
+        if (!validateApiKey(request, env) && !isAllowedOrigin(request, env)) {
+          return jsonResponse({ error: "Unauthorized" }, 401);
+        }
         return handleGenerateDescription(request, env);
       }
       if (url.pathname === "/api/ai/description/regenerate") {
+        if (!validateApiKey(request, env) && !isAllowedOrigin(request, env)) {
+          return jsonResponse({ error: "Unauthorized" }, 401);
+        }
         return handleRegenerateDescription(request, env);
       }
 
@@ -186,7 +330,13 @@ const worker: ExportedHandler<Env> = {
       if (url.pathname === "/api/auth/onboarding") {
         return handleAuthOnboarding(request, env);
       }
+<<<<<<< Updated upstream
       // Logout is handled by the Stytch frontend SDK — no backend route needed.
+=======
+      if (url.pathname === "/api/auth/logout") {
+        return handleAuthLogout(request, env);
+      }
+>>>>>>> Stashed changes
 
       // Recommendations endpoint
       if (url.pathname === "/api/recommendations") {
@@ -356,10 +506,11 @@ const worker: ExportedHandler<Env> = {
       return jsonResponse({ error: "Not Found" }, 404);
     } catch (error) {
       console.error("API Error:", error);
+      const isDev = env.ENVIRONMENT === "development";
       return jsonResponse(
         {
           error: "Internal Server Error",
-          message: error instanceof Error ? error.message : "Unknown error",
+          ...(isDev && { message: error instanceof Error ? error.message : "Unknown error" }),
         },
         500
       );
@@ -406,7 +557,7 @@ async function processAnalyticsMessage(message: AnalyticsQueueMessage, env: Env)
   switch (message.type) {
     case "view":
       await env.DB.prepare(
-        `UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?`
+        `UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE _id = ?`
       ).bind(message.eventId).run();
       break;
     case "rsvp":
@@ -421,6 +572,7 @@ async function processAnalyticsMessage(message: AnalyticsQueueMessage, env: Env)
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function processEmailMessage(message: EmailQueueMessage, env: Env): Promise<void> {
   console.log(`Processing email message: ${message.type} to ${message.to}`);
 
@@ -762,11 +914,11 @@ async function handleEvents(
     const limit = safeParseInt(url.searchParams.get("limit"), 20, 1, 100);
     const offset = safeParseInt(url.searchParams.get("offset"), 0, 0, 10000);
 
-    let query = "SELECT * FROM events WHERE is_published = TRUE AND is_cancelled = FALSE";
+    let query = "SELECT * FROM events WHERE is_published = TRUE AND event_status = 'EventScheduled'";
     const params: unknown[] = [];
 
     if (city) {
-      query += " AND location_city = ?";
+      query += " AND location_locality = ?";
       params.push(city);
     }
     if (category) {
@@ -774,7 +926,7 @@ async function handleEvents(
       params.push(category);
     }
 
-    query += " ORDER BY date_iso ASC LIMIT ? OFFSET ?";
+    query += " ORDER BY start_date ASC LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
     const result = await env.DB.prepare(query).bind(...params).all();
@@ -791,7 +943,7 @@ async function handleEvents(
   if (eventIdMatch && method === "GET") {
     const eventId = eventIdMatch[1];
 
-    const result = await env.DB.prepare("SELECT * FROM events WHERE id = ? OR slug = ? OR short_code = ?")
+    const result = await env.DB.prepare("SELECT * FROM events WHERE _id = ? OR slug = ? OR short_code = ?")
       .bind(eventId, eventId, eventId)
       .first();
 
@@ -804,82 +956,121 @@ async function handleEvents(
 
   // POST /api/events - Create event
   if (url.pathname === "/api/events" && method === "POST") {
-    const body = await request.json() as Partial<Event>;
+    const body = await request.json() as Record<string, unknown>;
 
     // Generate IDs
-    const id = body.id || generateId();
-    const shortCode = body.shortCode || generateShortCode();
-    const slug = body.slug || slugify(body.title || "");
+    const id = (body._id as string) || generateId();
+    const shortCode = (body.shortCode as string) || generateShortCode();
+    const slug = (body.slug as string) || slugify((body.name as string) || "");
 
-    // Insert into database
+    // Extract location fields for D1 columns
+    const location = body.location as Record<string, unknown> | undefined;
+    const isPlace = location?.["@type"] === "Place";
+    const address = isPlace ? (location?.address as Record<string, unknown>) : undefined;
+    const organizer = body.organizer as Record<string, unknown> | undefined;
+    const offers = body.offers as Record<string, unknown> | undefined;
+    const dateDisplay = body.dateDisplay as Record<string, unknown> | undefined;
+    const isOnline = !isPlace;
+
+    // Insert into database (schema.org-aligned D1 column names)
     await env.DB.prepare(`
       INSERT INTO events (
-        id, short_code, slug, title, description,
-        date_day, date_month, date_full, date_time, date_iso,
-        location_venue, location_address, location_city, location_country,
-        category, tags, cover_image, cover_gradient,
-        attendee_count, capacity, is_online, meeting_url, meeting_platform,
-        host_name, host_handle, host_initials, host_event_count,
-        is_free, ticket_url,
-        price_amount, price_currency, price_label
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        _id, short_code, slug, name, description,
+        date_display_day, date_display_month, date_display_full, date_display_time, start_date,
+        location_name, location_street_address, location_locality, location_country,
+        category, keywords, image, cover_gradient,
+        attendee_count, maximum_attendee_capacity, event_attendance_mode, meeting_url, meeting_platform,
+        organizer_name, organizer_alternate_name, organizer_initials, organizer_event_count,
+        offer_url,
+        offer_price, offer_price_currency
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       shortCode,
       slug,
-      body.title,
+      body.name,
       body.description,
-      body.date?.day,
-      body.date?.month,
-      body.date?.full,
-      body.date?.time,
-      body.date?.iso,
-      body.location?.venue,
-      body.location?.address,
-      body.location?.city,
-      body.location?.country,
+      dateDisplay?.day,
+      dateDisplay?.month,
+      dateDisplay?.full,
+      dateDisplay?.time,
+      body.startDate,
+      isPlace ? location?.name : null,
+      isPlace ? address?.streetAddress : null,
+      isPlace ? address?.addressLocality : null,
+      isPlace ? address?.addressCountry : null,
       body.category,
-      JSON.stringify(body.tags || []),
-      body.coverImage,
+      JSON.stringify(body.keywords || []),
+      body.image,
       body.coverGradient,
-      body.attendeeCount || 0,
-      body.capacity,
-      body.isOnline || false,
-      body.meetingUrl,
+      (body.attendeeCount as number) || 0,
+      body.maximumAttendeeCapacity,
+      isOnline ? "OnlineEventAttendanceMode" : "OfflineEventAttendanceMode",
+      body.meetingUrl || (isOnline && location ? (location as Record<string, unknown>).url : null),
       body.meetingPlatform,
-      body.host?.name,
-      body.host?.handle,
-      body.host?.initials,
-      body.host?.eventCount || 0,
-      body.isFree !== false, // Default to true (free events)
-      body.ticketUrl || null,
-      body.price?.amount,
-      body.price?.currency,
-      body.price?.label
+      organizer?.name,
+      organizer?.alternateName,
+      organizer?.initials,
+      (organizer?.eventCount as number) || 0,
+      offers?.url || null,
+      offers?.price,
+      offers?.priceCurrency
     ).run();
 
-    // Index in Vectorize for search
+    // Build Event object for Vectorize indexing
     const event: Event = {
-      id,
+      _id: id,
+      name: (body.name as string) || "",
+      description: (body.description as string) || "",
+      startDate: (body.startDate as string) || "",
+      eventAttendanceMode: isOnline ? "OnlineEventAttendanceMode" : "OfflineEventAttendanceMode",
+      eventStatus: "EventScheduled",
+      image: body.image as string | undefined,
+      keywords: (body.keywords as string[]) || [],
+      maximumAttendeeCapacity: body.maximumAttendeeCapacity as number | undefined,
+      location: isOnline
+        ? { "@type": "VirtualLocation" as const, url: ((location as Record<string, unknown>)?.url as string) || "" }
+        : {
+            "@type": "Place" as const,
+            name: (location?.name as string) || "",
+            address: {
+              "@type": "PostalAddress" as const,
+              streetAddress: (address?.streetAddress as string) || "",
+              addressLocality: (address?.addressLocality as string) || "",
+              addressCountry: (address?.addressCountry as string) || "",
+            },
+          },
+      organizer: {
+        "@type": "Person" as const,
+        name: (organizer?.name as string) || "",
+        alternateName: organizer?.alternateName as string | undefined,
+        initials: organizer?.initials as string | undefined,
+        eventCount: (organizer?.eventCount as number) || 0,
+      },
+      offers: offers
+        ? {
+            "@type": "Offer" as const,
+            price: (offers.price as number) || 0,
+            priceCurrency: (offers.priceCurrency as string) || "USD",
+            availability: "InStock",
+            url: offers.url as string | undefined,
+          }
+        : undefined,
       shortCode,
       slug,
-      title: body.title || "",
-      description: body.description || "",
-      date: body.date!,
-      location: body.location!,
-      category: body.category || "",
-      tags: body.tags || [],
-      coverImage: body.coverImage,
-      coverGradient: body.coverGradient,
-      attendeeCount: body.attendeeCount || 0,
-      capacity: body.capacity,
-      isOnline: body.isOnline,
-      meetingUrl: body.meetingUrl,
-      meetingPlatform: body.meetingPlatform,
-      host: body.host!,
-      isFree: body.isFree !== false,
-      ticketUrl: body.ticketUrl,
-      price: body.price,
+      category: (body.category as string) || "",
+      attendeeCount: (body.attendeeCount as number) || 0,
+      coverGradient: body.coverGradient as string | undefined,
+      meetingUrl: body.meetingUrl as string | undefined,
+      meetingPlatform: body.meetingPlatform as "zoom" | "google_meet" | "teams" | "other" | undefined,
+      dateDisplay: {
+        day: (dateDisplay?.day as string) || "",
+        month: (dateDisplay?.month as string) || "",
+        full: (dateDisplay?.full as string) || "",
+        time: (dateDisplay?.time as string) || "",
+      },
+      dateCreated: new Date().toISOString(),
+      dateModified: new Date().toISOString(),
     };
 
     await indexEvent(env.AI, env.VECTORIZE, event);
@@ -896,21 +1087,21 @@ async function handleEvents(
     const updates: string[] = [];
     const params: unknown[] = [];
 
-    if (body.title) { updates.push("title = ?"); params.push(body.title); }
+    if (body.name) { updates.push("name = ?"); params.push(body.name); }
     if (body.description) { updates.push("description = ?"); params.push(body.description); }
     if (body.category) { updates.push("category = ?"); params.push(body.category); }
-    if (body.tags) { updates.push("tags = ?"); params.push(JSON.stringify(body.tags)); }
+    if (body.keywords) { updates.push("keywords = ?"); params.push(JSON.stringify(body.keywords)); }
     // Add more fields as needed...
 
-    updates.push("updated_at = datetime('now')");
+    updates.push("date_modified = datetime('now')");
     params.push(eventId);
 
     await env.DB.prepare(
-      `UPDATE events SET ${updates.join(", ")} WHERE id = ?`
+      `UPDATE events SET ${updates.join(", ")} WHERE _id = ?`
     ).bind(...params).run();
 
     // Re-index in Vectorize
-    const result = await env.DB.prepare("SELECT * FROM events WHERE id = ?")
+    const result = await env.DB.prepare("SELECT * FROM events WHERE _id = ?")
       .bind(eventId)
       .first();
 
@@ -925,7 +1116,7 @@ async function handleEvents(
   if (eventIdMatch && method === "DELETE") {
     const eventId = eventIdMatch[1];
 
-    await env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId).run();
+    await env.DB.prepare("DELETE FROM events WHERE _id = ?").bind(eventId).run();
     await removeEventFromIndex(env.VECTORIZE, eventId);
 
     return jsonResponse({ message: "Event deleted successfully" });
@@ -1148,7 +1339,7 @@ async function handleUsers(
     const userId = userIdMatch[1];
 
     const result = await env.DB.prepare(
-      "SELECT * FROM users WHERE id = ? OR handle = ?"
+      "SELECT * FROM users WHERE _id = ? OR alternate_name = ?"
     ).bind(userId, userId).first();
 
     if (!result) {
@@ -1164,7 +1355,7 @@ async function handleUsers(
     const id = generateId();
 
     await env.DB.prepare(`
-      INSERT INTO users (id, email, name, handle, city, country, interests)
+      INSERT INTO users (_id, email, name, alternate_name, address_locality, address_country, interests)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
@@ -1200,13 +1391,13 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
 
   // Look up user in our database by Stytch user ID
   interface DbUserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
-    handle: string | null;
-    avatar_url: string | null;
-    city: string | null;
-    country: string | null;
+    alternate_name: string | null;
+    image: string | null;
+    address_locality: string | null;
+    address_country: string | null;
     interests: string | null;
     onboarding_completed: number | null;
     stytch_user_id: string | null;
@@ -1221,13 +1412,13 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
   }
 
   const user = {
-    id: result.id,
+    id: result._id,
     email: result.email,
     name: result.name,
-    handle: result.handle,
-    avatarUrl: result.avatar_url,
-    city: result.city,
-    country: result.country,
+    handle: result.alternate_name,
+    avatarUrl: result.image,
+    city: result.address_locality,
+    country: result.address_country,
     interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: !!(result.onboarding_completed),
     stytchUserId: result.stytch_user_id,
@@ -1263,26 +1454,31 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
 
   // Check if user already exists
   const existingUser = await env.DB.prepare(
+<<<<<<< Updated upstream
     "SELECT id FROM users WHERE stytch_user_id = ?"
   ).bind(stytchUser.userId).first() as { id: string } | null;
+=======
+    "SELECT _id FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(stytchUser.userId, stytchUser.email).first() as { _id: string } | null;
+>>>>>>> Stashed changes
 
   let userId: string;
 
   if (existingUser) {
     // Update existing user
-    userId = existingUser.id;
+    userId = existingUser._id;
     await env.DB.prepare(`
       UPDATE users SET
         name = ?,
         stytch_user_id = ?,
-        city = ?,
-        country = ?,
+        address_locality = ?,
+        address_country = ?,
         interests = ?,
         email_verified = 1,
         onboarding_completed = 1,
         last_login_at = datetime('now'),
-        updated_at = datetime('now')
-      WHERE id = ?
+        date_modified = datetime('now')
+      WHERE _id = ?
     `).bind(
       body.name,
       stytchUser.userId,
@@ -1298,8 +1494,8 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
 
     await env.DB.prepare(`
       INSERT INTO users (
-        id, email, name, handle, stytch_user_id,
-        city, country, interests,
+        _id, email, name, alternate_name, stytch_user_id,
+        address_locality, address_country, interests,
         email_verified, onboarding_completed, last_login_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, datetime('now'))
     `).bind(
@@ -1316,28 +1512,28 @@ async function handleAuthOnboarding(request: Request, env: Env): Promise<Respons
 
   // Fetch the created/updated user
   interface UserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
-    handle: string;
-    avatar_url: string | null;
-    city: string;
-    country: string;
+    alternate_name: string;
+    image: string | null;
+    address_locality: string;
+    address_country: string;
     interests: string;
     stytch_user_id: string;
   }
   const result = await env.DB.prepare(
-    "SELECT * FROM users WHERE id = ?"
+    "SELECT * FROM users WHERE _id = ?"
   ).bind(userId).first() as UserRow;
 
   const user = {
-    id: result.id,
+    id: result._id,
     email: result.email,
     name: result.name,
-    handle: result.handle,
-    avatarUrl: result.avatar_url,
-    city: result.city,
-    country: result.country,
+    handle: result.alternate_name,
+    avatarUrl: result.image,
+    city: result.address_locality,
+    country: result.address_country,
     interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: true,
     stytchUserId: result.stytch_user_id,
@@ -1359,6 +1555,7 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
   const stytchUser = authResult.user;
 
   const body = await request.json() as {
+<<<<<<< Updated upstream
     stytch_user_id: string;
     email: string;
     name: string;
@@ -1369,14 +1566,32 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
   }
 
   // Look up user by stytch_user_id or email
+=======
+    session_token?: string;
+    session_jwt?: string;
+    stytch_user_id?: string;
+    email?: string;
+    name?: string;
+  };
+
+  const stytchUserId = body.stytch_user_id;
+  const email = body.email;
+  const name = body.name || email?.split("@")[0] || "User";
+
+  if (!stytchUserId || !email) {
+    return jsonResponse({ error: "stytch_user_id and email are required" }, 400);
+  }
+
+  // Look up or prepare user data
+>>>>>>> Stashed changes
   interface DbUser {
-    id: string;
+    _id: string;
     email: string;
     name: string | null;
-    handle: string | null;
-    avatar_url: string | null;
-    city: string | null;
-    country: string | null;
+    alternate_name: string | null;
+    image: string | null;
+    address_locality: string | null;
+    address_country: string | null;
     interests: string | null;
     onboarding_completed: number | null;
     stytch_user_id: string | null;
@@ -1385,6 +1600,7 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
 
   const existingUser = await env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
+<<<<<<< Updated upstream
   ).bind(stytchUser.userId, body.email).first() as DbUser | null;
 
   if (existingUser) {
@@ -1430,6 +1646,62 @@ async function handleAuthSync(request: Request, env: Env): Promise<Response> {
 
 // Logout is handled entirely by the Stytch frontend SDK (session.revoke()).
 // No backend endpoint needed.
+=======
+  ).bind(stytchUserId, email).first() as DbUser | null;
+
+  if (existingUser) {
+    // Update last login and stytch_user_id
+    await env.DB.prepare(
+      "UPDATE users SET last_login_at = datetime('now'), stytch_user_id = ? WHERE _id = ?"
+    ).bind(stytchUserId, existingUser._id).run();
+
+    user = {
+      id: existingUser._id,
+      email: existingUser.email,
+      name: existingUser.name || name,
+      handle: existingUser.alternate_name,
+      avatarUrl: existingUser.image,
+      city: existingUser.address_locality,
+      country: existingUser.address_country,
+      interests: safeParseJSON(existingUser.interests, []) as string[],
+      onboardingCompleted: !!(existingUser.onboarding_completed),
+      stytchUserId,
+      role: existingUser.role || 'user',
+    };
+  } else {
+    // New user - will need onboarding
+    user = {
+      id: null,
+      email,
+      name,
+      handle: null,
+      avatarUrl: null,
+      city: null,
+      country: null,
+      interests: [],
+      onboardingCompleted: false,
+      stytchUserId,
+      role: 'user',
+    };
+  }
+
+  return jsonResponse({ user });
+}
+
+async function handleAuthLogout(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  // Revoke Stytch session if we have a session token
+  const { sessionToken } = extractSessionToken(request);
+  if (sessionToken) {
+    await revokeSession(sessionToken, env).catch(() => {});
+  }
+
+  return jsonResponse({ message: "Logged out successfully" });
+}
+>>>>>>> Stashed changes
 
 function generateHandle(name: string): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1455,14 +1727,14 @@ async function handleRegistrations(
 
     if (eventId) {
       const result = await env.DB.prepare(
-        "SELECT * FROM registrations WHERE event_id = ?"
+        "SELECT * FROM registrations WHERE event = ?"
       ).bind(eventId).all();
       return jsonResponse({ registrations: result.results });
     }
 
     if (userId) {
       const result = await env.DB.prepare(
-        "SELECT * FROM registrations WHERE user_id = ?"
+        "SELECT * FROM registrations WHERE agent = ?"
       ).bind(userId).all();
       return jsonResponse({ registrations: result.results });
     }
@@ -1487,25 +1759,25 @@ async function handleRegistrations(
 
     // Verify event exists and is available for registration
     const event = await env.DB.prepare(
-      "SELECT id, capacity, attendee_count, is_published, is_cancelled FROM events WHERE id = ?"
-    ).bind(body.event_id).first() as { id: string; capacity: number | null; attendee_count: number; is_published: boolean; is_cancelled: boolean } | null;
+      "SELECT _id, maximum_attendee_capacity, attendee_count, is_published, event_status FROM events WHERE _id = ?"
+    ).bind(body.event_id).first() as { _id: string; maximum_attendee_capacity: number | null; attendee_count: number; is_published: boolean; event_status: string } | null;
 
     if (!event) {
       return jsonResponse({ error: "Event not found" }, 404);
     }
 
-    if (!event.is_published || event.is_cancelled) {
+    if (!event.is_published || event.event_status === 'EventCancelled') {
       return jsonResponse({ error: "Event is not available for registration" }, 400);
     }
 
     // Check capacity
-    if (event.capacity && event.attendee_count >= event.capacity) {
+    if (event.maximum_attendee_capacity && event.attendee_count >= event.maximum_attendee_capacity) {
       return jsonResponse({ error: "Event is at capacity" }, 400);
     }
 
     // Check if user is already registered
     const existingReg = await env.DB.prepare(
-      "SELECT id FROM registrations WHERE event_id = ? AND user_id = ? AND status NOT IN ('cancelled', 'rejected')"
+      "SELECT _id FROM registrations WHERE event = ? AND agent = ? AND rsvp_response NOT IN ('cancelled', 'rejected')"
     ).bind(body.event_id, body.user_id).first();
 
     if (existingReg) {
@@ -1515,7 +1787,7 @@ async function handleRegistrations(
     const id = generateId();
 
     await env.DB.prepare(`
-      INSERT INTO registrations (id, event_id, user_id, ticket_type, ticket_price, ticket_currency)
+      INSERT INTO registrations (_id, event, agent, ticket_type, ticket_price, ticket_currency)
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(
       id,
@@ -1528,7 +1800,7 @@ async function handleRegistrations(
 
     // Update attendee count
     await env.DB.prepare(
-      "UPDATE events SET attendee_count = attendee_count + 1 WHERE id = ?"
+      "UPDATE events SET attendee_count = attendee_count + 1 WHERE _id = ?"
     ).bind(body.event_id).run();
 
     return jsonResponse({ id, message: "Registration successful" }, 201);
@@ -1551,11 +1823,11 @@ async function handleRegistrations(
 
     // Get the registration and event to verify ownership
     const reg = await env.DB.prepare(`
-      SELECT r.*, e.host_name, e.host_handle
+      SELECT r.*, e.organizer_name, e.organizer_alternate_name
       FROM registrations r
-      JOIN events e ON r.event_id = e.id
-      WHERE r.id = ?
-    `).bind(regId).first() as { id: string; user_id: string; event_id: string; host_name: string; host_handle: string } | null;
+      JOIN events e ON r.event = e._id
+      WHERE r._id = ?
+    `).bind(regId).first() as { _id: string; agent: string; event: string; organizer_name: string; organizer_alternate_name: string } | null;
 
     if (!reg) {
       return jsonResponse({ error: "Registration not found" }, 404);
@@ -1568,9 +1840,9 @@ async function handleRegistrations(
     // In production, this should come from an authenticated session
     if (body.user_id) {
       const requestingUser = body.user_id;
-      const isHost = reg.host_handle === `@${requestingUser}` ||
-                     reg.host_name?.toLowerCase() === requestingUser.toLowerCase();
-      const isRegistrant = reg.user_id === requestingUser;
+      const isHost = reg.organizer_alternate_name === `@${requestingUser}` ||
+                     reg.organizer_name?.toLowerCase() === requestingUser.toLowerCase();
+      const isRegistrant = reg.agent === requestingUser;
 
       // Registrant can't approve/reject - only host can
       if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {
@@ -1584,7 +1856,7 @@ async function handleRegistrations(
     }
 
     await env.DB.prepare(
-      "UPDATE registrations SET status = ? WHERE id = ?"
+      "UPDATE registrations SET rsvp_response = ? WHERE _id = ?"
     ).bind(body.status, regId).run();
 
     return jsonResponse({ message: `Registration ${body.status}` });
@@ -1596,18 +1868,18 @@ async function handleRegistrations(
 
     // Get registration to find event
     const reg = await env.DB.prepare(
-      "SELECT * FROM registrations WHERE id = ?"
-    ).bind(regId).first() as { event_id: string } | null;
+      "SELECT * FROM registrations WHERE _id = ?"
+    ).bind(regId).first() as { event: string } | null;
 
     if (reg) {
       await env.DB.prepare(
-        "UPDATE registrations SET status = 'cancelled', cancelled_at = datetime('now') WHERE id = ?"
+        "UPDATE registrations SET rsvp_response = 'cancelled', date_cancelled = datetime('now') WHERE _id = ?"
       ).bind(regId).run();
 
       // Update attendee count
       await env.DB.prepare(
-        "UPDATE events SET attendee_count = attendee_count - 1 WHERE id = ?"
-      ).bind(reg.event_id).run();
+        "UPDATE events SET attendee_count = attendee_count - 1 WHERE _id = ?"
+      ).bind(reg.event).run();
     }
 
     return jsonResponse({ message: "Registration cancelled" });
@@ -1799,213 +2071,210 @@ async function handleSeedData(request: Request, env: Env): Promise<Response> {
   // Sample events data - marked as sample data
   const sampleEvents = [
     {
-      id: "african-tech-summit-2025",
+      _id: "african-tech-summit-2025",
       short_code: "aTs25xKp",
       slug: "african-tech-summit-2025",
-      title: "African Tech Summit 2025",
+      name: "African Tech Summit 2025",
       description: "Join us for the biggest tech gathering in Zimbabwe! The African Tech Summit brings together innovators, entrepreneurs, investors, and tech enthusiasts from across the continent.\n\nThis year's theme: \"Building Africa's Digital Future\"\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "28",
-      date_month: "Dec",
-      date_full: "Saturday, December 28, 2025",
-      date_time: "9:00 AM - 6:00 PM (CAT)",
-      date_iso: "2025-12-28T09:00:00+02:00",
-      location_venue: "Rainbow Towers Hotel",
-      location_address: "Pennefather Ave",
-      location_city: "Harare",
+      date_display_day: "28",
+      date_display_month: "Dec",
+      date_display_full: "Saturday, December 28, 2025",
+      date_display_time: "9:00 AM - 6:00 PM (CAT)",
+      start_date: "2025-12-28T09:00:00+02:00",
+      location_name: "Rainbow Towers Hotel",
+      location_street_address: "Pennefather Ave",
+      location_locality: "Harare",
       location_country: "Zimbabwe",
       category: "Tech",
-      tags: JSON.stringify(["startup", "innovation", "networking", "AI", "fintech", "sample"]),
-      cover_image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+      keywords: JSON.stringify(["startup", "innovation", "networking", "AI", "fintech", "sample"]),
+      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
       attendee_count: 247,
-      capacity: 500,
-      host_name: "Zimbabwe Tech Hub",
-      host_handle: "@zimtechhub",
-      host_initials: "ZT",
-      host_event_count: 12,
-      price_amount: 25,
-      price_currency: "USD",
-      price_label: "Early Bird Ticket",
+      maximum_attendee_capacity: 500,
+      organizer_name: "Zimbabwe Tech Hub",
+      organizer_alternate_name: "@zimtechhub",
+      organizer_initials: "ZT",
+      organizer_event_count: 12,
+      offer_price: 25,
+      offer_price_currency: "USD",
     },
     {
-      id: "amapiano-night-nye",
+      _id: "amapiano-night-nye",
       short_code: "nYe31vFx",
       slug: "amapiano-night-nye-edition",
-      title: "Amapiano Night: NYE Edition",
+      name: "Amapiano Night: NYE Edition",
       description: "Ring in the new year with the best Amapiano beats! Live DJs, great vibes, and an unforgettable night at Victoria Falls.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "31",
-      date_month: "Dec",
-      date_full: "Tuesday, December 31, 2025",
-      date_time: "8:00 PM - 4:00 AM (CAT)",
-      date_iso: "2025-12-31T20:00:00+02:00",
-      location_venue: "The Venue",
-      location_address: "Park Way Drive",
-      location_city: "Victoria Falls",
+      date_display_day: "31",
+      date_display_month: "Dec",
+      date_display_full: "Tuesday, December 31, 2025",
+      date_display_time: "8:00 PM - 4:00 AM (CAT)",
+      start_date: "2025-12-31T20:00:00+02:00",
+      location_name: "The Venue",
+      location_street_address: "Park Way Drive",
+      location_locality: "Victoria Falls",
       location_country: "Zimbabwe",
       category: "Music",
-      tags: JSON.stringify(["amapiano", "nye", "party", "dj", "dance", "sample"]),
-      cover_image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+      keywords: JSON.stringify(["amapiano", "nye", "party", "dj", "dance", "sample"]),
+      image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
       attendee_count: 89,
-      capacity: 200,
-      host_name: "Vic Falls Events",
-      host_handle: "@vicfallsevents",
-      host_initials: "VF",
-      host_event_count: 24,
-      price_amount: 50,
-      price_currency: "USD",
-      price_label: "General Admission",
+      maximum_attendee_capacity: 200,
+      organizer_name: "Vic Falls Events",
+      organizer_alternate_name: "@vicfallsevents",
+      organizer_initials: "VF",
+      organizer_event_count: 24,
+      offer_price: 50,
+      offer_price_currency: "USD",
     },
     {
-      id: "sunrise-yoga-chivero",
+      _id: "sunrise-yoga-chivero",
       short_code: "yGa15hRm",
       slug: "sunrise-yoga-lake-chivero",
-      title: "Sunrise Yoga at Lake Chivero",
+      name: "Sunrise Yoga at Lake Chivero",
       description: "Start your day with peace and tranquility. Join us for a sunrise yoga session overlooking the beautiful Lake Chivero. All levels welcome. Mats provided.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "15",
-      date_month: "Jan",
-      date_full: "Wednesday, January 15, 2025",
-      date_time: "5:30 AM - 7:30 AM (CAT)",
-      date_iso: "2025-01-15T05:30:00+02:00",
-      location_venue: "Lake Chivero Recreational Park",
-      location_address: "Lake Chivero",
-      location_city: "Harare",
+      date_display_day: "15",
+      date_display_month: "Jan",
+      date_display_full: "Wednesday, January 15, 2025",
+      date_display_time: "5:30 AM - 7:30 AM (CAT)",
+      start_date: "2025-01-15T05:30:00+02:00",
+      location_name: "Lake Chivero Recreational Park",
+      location_street_address: "Lake Chivero",
+      location_locality: "Harare",
       location_country: "Zimbabwe",
       category: "Wellness",
-      tags: JSON.stringify(["yoga", "meditation", "nature", "fitness", "mindfulness", "sample"]),
+      keywords: JSON.stringify(["yoga", "meditation", "nature", "fitness", "mindfulness", "sample"]),
       cover_gradient: "linear-gradient(135deg, #4B0082, #004D40)",
       attendee_count: 32,
-      capacity: 50,
-      host_name: "Harare Wellness",
-      host_handle: "@hararewellness",
-      host_initials: "HW",
-      host_event_count: 8,
+      maximum_attendee_capacity: 50,
+      organizer_name: "Harare Wellness",
+      organizer_alternate_name: "@hararewellness",
+      organizer_initials: "HW",
+      organizer_event_count: 8,
     },
     {
-      id: "startup-founders-meetup",
+      _id: "startup-founders-meetup",
       short_code: "sFm24kLp",
       slug: "startup-founders-meetup-harare",
-      title: "Startup Founders Meetup",
+      name: "Startup Founders Meetup",
       description: "Connect with fellow founders, share your journey, and learn from each other. Casual networking in a relaxed environment. Refreshments provided.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "24",
-      date_month: "Dec",
-      date_full: "Tuesday, December 24, 2025",
-      date_time: "6:00 PM - 9:00 PM (CAT)",
-      date_iso: "2025-12-24T18:00:00+02:00",
-      location_venue: "Impact Hub",
-      location_address: "16 Cork Road, Avondale",
-      location_city: "Harare",
+      date_display_day: "24",
+      date_display_month: "Dec",
+      date_display_full: "Tuesday, December 24, 2025",
+      date_display_time: "6:00 PM - 9:00 PM (CAT)",
+      start_date: "2025-12-24T18:00:00+02:00",
+      location_name: "Impact Hub",
+      location_street_address: "16 Cork Road, Avondale",
+      location_locality: "Harare",
       location_country: "Zimbabwe",
       category: "Professional",
-      tags: JSON.stringify(["startup", "founders", "networking", "entrepreneurship", "sample"]),
+      keywords: JSON.stringify(["startup", "founders", "networking", "entrepreneurship", "sample"]),
       cover_gradient: "linear-gradient(135deg, #004D40, #00796B)",
       attendee_count: 45,
-      capacity: 60,
-      host_name: "Impact Hub Harare",
-      host_handle: "@impactharare",
-      host_initials: "IH",
-      host_event_count: 32,
+      maximum_attendee_capacity: 60,
+      organizer_name: "Impact Hub Harare",
+      organizer_alternate_name: "@impactharare",
+      organizer_initials: "IH",
+      organizer_event_count: 32,
     },
     {
-      id: "poetry-wine-evening",
+      _id: "poetry-wine-evening",
       short_code: "pWe27bNx",
       slug: "poetry-wine-evening-book-cafe",
-      title: "Poetry & Wine Evening",
+      name: "Poetry & Wine Evening",
       description: "An intimate evening of spoken word, poetry readings, and fine wine. Share your work or simply enjoy the art. Open mic available.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "27",
-      date_month: "Dec",
-      date_full: "Friday, December 27, 2025",
-      date_time: "7:00 PM - 10:00 PM (CAT)",
-      date_iso: "2025-12-27T19:00:00+02:00",
-      location_venue: "Book Café",
-      location_address: "Fife Avenue",
-      location_city: "Harare",
+      date_display_day: "27",
+      date_display_month: "Dec",
+      date_display_full: "Friday, December 27, 2025",
+      date_display_time: "7:00 PM - 10:00 PM (CAT)",
+      start_date: "2025-12-27T19:00:00+02:00",
+      location_name: "Book Cafe",
+      location_street_address: "Fife Avenue",
+      location_locality: "Harare",
       location_country: "Zimbabwe",
       category: "Culture",
-      tags: JSON.stringify(["poetry", "spoken-word", "wine", "art", "literature", "sample"]),
+      keywords: JSON.stringify(["poetry", "spoken-word", "wine", "art", "literature", "sample"]),
       cover_gradient: "linear-gradient(135deg, #4B0082, #7B1FA2)",
       attendee_count: 28,
-      capacity: 40,
-      host_name: "Book Café",
-      host_handle: "@bookcafeharare",
-      host_initials: "BC",
-      host_event_count: 56,
+      maximum_attendee_capacity: 40,
+      organizer_name: "Book Cafe",
+      organizer_alternate_name: "@bookcafeharare",
+      organizer_initials: "BC",
+      organizer_event_count: 56,
     },
     {
-      id: "community-cleanup-borrowdale",
+      _id: "community-cleanup-borrowdale",
       short_code: "cCb28qWz",
       slug: "community-cleanup-borrowdale",
-      title: "Community Clean-Up: Borrowdale",
+      name: "Community Clean-Up: Borrowdale",
       description: "Join your neighbors in keeping Borrowdale beautiful. Gloves and bags provided. Coffee and snacks after! Bring the whole family.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "28",
-      date_month: "Dec",
-      date_full: "Saturday, December 28, 2025",
-      date_time: "7:00 AM - 11:00 AM (CAT)",
-      date_iso: "2025-12-28T07:00:00+02:00",
-      location_venue: "Borrowdale Park",
-      location_address: "Borrowdale Road",
-      location_city: "Harare",
+      date_display_day: "28",
+      date_display_month: "Dec",
+      date_display_full: "Saturday, December 28, 2025",
+      date_display_time: "7:00 AM - 11:00 AM (CAT)",
+      start_date: "2025-12-28T07:00:00+02:00",
+      location_name: "Borrowdale Park",
+      location_street_address: "Borrowdale Road",
+      location_locality: "Harare",
       location_country: "Zimbabwe",
       category: "Community",
-      tags: JSON.stringify(["volunteer", "environment", "cleanup", "community-service", "sample"]),
+      keywords: JSON.stringify(["volunteer", "environment", "cleanup", "community-service", "sample"]),
       cover_gradient: "linear-gradient(135deg, #5D4037, #8D6E63)",
       attendee_count: 67,
-      capacity: 100,
-      host_name: "Borrowdale Residents",
-      host_handle: "@borrowdalera",
-      host_initials: "BR",
-      host_event_count: 6,
+      maximum_attendee_capacity: 100,
+      organizer_name: "Borrowdale Residents",
+      organizer_alternate_name: "@borrowdalera",
+      organizer_initials: "BR",
+      organizer_event_count: 6,
     },
     {
-      id: "jozi-tech-meetup",
+      _id: "jozi-tech-meetup",
       short_code: "jTm15xRk",
       slug: "johannesburg-tech-meetup",
-      title: "Joburg Tech & Startups Meetup",
+      name: "Joburg Tech & Startups Meetup",
       description: "Monthly gathering of Johannesburg's tech community. Lightning talks, networking, and drinks. All welcome!\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "20",
-      date_month: "Jan",
-      date_full: "Monday, January 20, 2025",
-      date_time: "6:00 PM - 9:00 PM (SAST)",
-      date_iso: "2025-01-20T18:00:00+02:00",
-      location_venue: "Workshop17",
-      location_address: "Sandton City",
-      location_city: "Johannesburg",
+      date_display_day: "20",
+      date_display_month: "Jan",
+      date_display_full: "Monday, January 20, 2025",
+      date_display_time: "6:00 PM - 9:00 PM (SAST)",
+      start_date: "2025-01-20T18:00:00+02:00",
+      location_name: "Workshop17",
+      location_street_address: "Sandton City",
+      location_locality: "Johannesburg",
       location_country: "South Africa",
       category: "Tech",
-      tags: JSON.stringify(["startup", "tech", "networking", "south-africa", "sample"]),
+      keywords: JSON.stringify(["startup", "tech", "networking", "south-africa", "sample"]),
       cover_gradient: "linear-gradient(135deg, #1a1a2e, #16213e)",
       attendee_count: 156,
-      capacity: 200,
-      host_name: "Jozi Tech Community",
-      host_handle: "@jozitech",
-      host_initials: "JT",
-      host_event_count: 48,
+      maximum_attendee_capacity: 200,
+      organizer_name: "Jozi Tech Community",
+      organizer_alternate_name: "@jozitech",
+      organizer_initials: "JT",
+      organizer_event_count: 48,
     },
     {
-      id: "nairobi-design-week",
+      _id: "nairobi-design-week",
       short_code: "nDw10pLm",
       slug: "nairobi-design-week-2025",
-      title: "Nairobi Design Week 2025",
+      name: "Nairobi Design Week 2025",
       description: "East Africa's largest design festival. Exhibitions, workshops, talks, and networking with creatives from across the continent.\n\n⚠️ This is sample data for demonstration purposes.",
-      date_day: "10",
-      date_month: "Feb",
-      date_full: "Monday, February 10, 2025",
-      date_time: "10:00 AM - 6:00 PM (EAT)",
-      date_iso: "2025-02-10T10:00:00+03:00",
-      location_venue: "Nairobi National Museum",
-      location_address: "Museum Hill",
-      location_city: "Nairobi",
+      date_display_day: "10",
+      date_display_month: "Feb",
+      date_display_full: "Monday, February 10, 2025",
+      date_display_time: "10:00 AM - 6:00 PM (EAT)",
+      start_date: "2025-02-10T10:00:00+03:00",
+      location_name: "Nairobi National Museum",
+      location_street_address: "Museum Hill",
+      location_locality: "Nairobi",
       location_country: "Kenya",
       category: "Culture",
-      tags: JSON.stringify(["design", "art", "exhibition", "creative", "kenya", "sample"]),
-      cover_image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800",
+      keywords: JSON.stringify(["design", "art", "exhibition", "creative", "kenya", "sample"]),
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800",
       attendee_count: 320,
-      capacity: 500,
-      host_name: "Nairobi Design Week",
-      host_handle: "@nairobidesign",
-      host_initials: "ND",
-      host_event_count: 5,
-      price_amount: 20,
-      price_currency: "USD",
-      price_label: "Day Pass",
+      maximum_attendee_capacity: 500,
+      organizer_name: "Nairobi Design Week",
+      organizer_alternate_name: "@nairobidesign",
+      organizer_initials: "ND",
+      organizer_event_count: 5,
+      offer_price: 20,
+      offer_price_currency: "USD",
     },
   ];
 
@@ -2016,47 +2285,46 @@ async function handleSeedData(request: Request, env: Env): Promise<Response> {
     try {
       await env.DB.prepare(`
         INSERT OR REPLACE INTO events (
-          id, short_code, slug, title, description,
-          date_day, date_month, date_full, date_time, date_iso,
-          location_venue, location_address, location_city, location_country,
-          category, tags, cover_image, cover_gradient,
-          attendee_count, capacity, is_online,
-          host_name, host_handle, host_initials, host_event_count,
-          price_amount, price_currency, price_label
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          _id, short_code, slug, name, description,
+          date_display_day, date_display_month, date_display_full, date_display_time, start_date,
+          location_name, location_street_address, location_locality, location_country,
+          category, keywords, image, cover_gradient,
+          attendee_count, maximum_attendee_capacity, event_attendance_mode,
+          organizer_name, organizer_alternate_name, organizer_initials, organizer_event_count,
+          offer_price, offer_price_currency
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
-        event.id,
+        event._id,
         event.short_code,
         event.slug,
-        event.title,
+        event.name,
         event.description,
-        event.date_day,
-        event.date_month,
-        event.date_full,
-        event.date_time,
-        event.date_iso,
-        event.location_venue,
-        event.location_address,
-        event.location_city,
+        event.date_display_day,
+        event.date_display_month,
+        event.date_display_full,
+        event.date_display_time,
+        event.start_date,
+        event.location_name,
+        event.location_street_address,
+        event.location_locality,
         event.location_country,
         event.category,
-        event.tags,
-        event.cover_image || null,
+        event.keywords,
+        (event as Record<string, unknown>).image || null,
         event.cover_gradient || null,
         event.attendee_count,
-        event.capacity || null,
-        false,
-        event.host_name,
-        event.host_handle,
-        event.host_initials,
-        event.host_event_count,
-        event.price_amount || null,
-        event.price_currency || null,
-        event.price_label || null
+        event.maximum_attendee_capacity || null,
+        "OfflineEventAttendanceMode",
+        event.organizer_name,
+        event.organizer_alternate_name,
+        event.organizer_initials,
+        event.organizer_event_count,
+        (event as Record<string, unknown>).offer_price || null,
+        (event as Record<string, unknown>).offer_price_currency || null
       ).run();
       inserted++;
     } catch (e) {
-      console.error(`Error inserting ${event.id}:`, e);
+      console.error(`Error inserting ${event._id}:`, e);
       errors++;
     }
   }
@@ -2081,37 +2349,42 @@ async function handleEventReviews(
   // GET - List reviews for an event (PUBLIC)
   if (request.method === "GET") {
     interface ReviewRow {
-      id: string;
-      event_id: string;
-      user_id: string;
-      rating: number;
-      comment: string | null;
+      _id: string;
+      item_reviewed: string;
+      author: string;
+      rating_value: number;
+      review_body: string | null;
       helpful_count: number;
       is_verified_attendee: number;
-      created_at: string;
+      date_published: string;
       user_name: string | null;
     }
 
     const reviewsResult = await env.DB.prepare(`
       SELECT r.*, u.name as user_name
       FROM event_reviews r
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.event_id = ?
-      ORDER BY r.helpful_count DESC, r.created_at DESC
+      LEFT JOIN users u ON r.author = u._id
+      WHERE r.item_reviewed = ?
+      ORDER BY r.helpful_count DESC, r.date_published DESC
       LIMIT 50
     `).bind(eventId).all();
 
     const reviews: EventReview[] = (reviewsResult.results as ReviewRow[]).map((row) => ({
-      id: row.id,
-      eventId: row.event_id,
-      userId: row.user_id,
-      userName: row.user_name || "Anonymous",
-      userInitials: getInitials(row.user_name || "Anonymous"),
-      rating: row.rating,
-      comment: row.comment || undefined,
+      _id: row._id,
+      itemReviewed: row.item_reviewed,
+      author: row.author,
+      authorName: row.user_name || "Anonymous",
+      authorInitials: getInitials(row.user_name || "Anonymous"),
+      reviewRating: {
+        "@type": "Rating" as const,
+        ratingValue: row.rating_value,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      reviewBody: row.review_body || undefined,
       helpfulCount: row.helpful_count,
       isVerifiedAttendee: !!row.is_verified_attendee,
-      createdAt: row.created_at,
+      datePublished: row.date_published,
     }));
 
     // Get rating stats
@@ -2127,15 +2400,15 @@ async function handleEventReviews(
 
     const statsResult = await env.DB.prepare(`
       SELECT
-        AVG(rating) as avg_rating,
+        AVG(rating_value) as avg_rating,
         COUNT(*) as total_reviews,
-        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as rating_1,
-        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as rating_2,
-        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as rating_3,
-        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as rating_4,
-        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as rating_5
+        SUM(CASE WHEN rating_value = 1 THEN 1 ELSE 0 END) as rating_1,
+        SUM(CASE WHEN rating_value = 2 THEN 1 ELSE 0 END) as rating_2,
+        SUM(CASE WHEN rating_value = 3 THEN 1 ELSE 0 END) as rating_3,
+        SUM(CASE WHEN rating_value = 4 THEN 1 ELSE 0 END) as rating_4,
+        SUM(CASE WHEN rating_value = 5 THEN 1 ELSE 0 END) as rating_5
       FROM event_reviews
-      WHERE event_id = ?
+      WHERE item_reviewed = ?
     `).bind(eventId).first() as StatsRow | null;
 
     const stats: ReviewStats = {
@@ -2167,14 +2440,14 @@ async function handleEventReviews(
 
     // Check if user was a verified attendee
     const registration = await env.DB.prepare(
-      "SELECT id FROM registrations WHERE event_id = ? AND user_id = ? AND status IN ('registered', 'approved', 'checked_in')"
+      "SELECT _id FROM registrations WHERE event = ? AND agent = ? AND rsvp_response IN ('registered', 'approved', 'checked_in')"
     ).bind(eventId, body.userId).first();
 
     const id = generateId();
 
     try {
       await env.DB.prepare(`
-        INSERT INTO event_reviews (id, event_id, user_id, rating, comment, is_verified_attendee)
+        INSERT INTO event_reviews (_id, item_reviewed, author, rating_value, review_body, is_verified_attendee)
         VALUES (?, ?, ?, ?, ?, ?)
       `).bind(
         id,
@@ -2197,7 +2470,7 @@ async function handleEventReviews(
       }
 
       return jsonResponse({ id, message: "Review submitted successfully" }, 201);
-    } catch (e) {
+    } catch {
       // Likely duplicate review
       return jsonResponse({ error: "You have already reviewed this event" }, 409);
     }
@@ -2224,7 +2497,7 @@ async function handleReviewHelpful(
   try {
     // Check if already voted
     const existing = await env.DB.prepare(
-      "SELECT id FROM review_helpful_votes WHERE review_id = ? AND user_id = ?"
+      "SELECT _id FROM review_helpful_votes WHERE review_id = ? AND user_id = ?"
     ).bind(reviewId, body.userId).first();
 
     if (existing) {
@@ -2233,16 +2506,16 @@ async function handleReviewHelpful(
 
     // Add vote
     await env.DB.prepare(
-      "INSERT INTO review_helpful_votes (id, review_id, user_id) VALUES (?, ?, ?)"
+      "INSERT INTO review_helpful_votes (_id, review_id, user_id) VALUES (?, ?, ?)"
     ).bind(generateId(), reviewId, body.userId).run();
 
     // Update helpful count
     await env.DB.prepare(
-      "UPDATE event_reviews SET helpful_count = helpful_count + 1 WHERE id = ?"
+      "UPDATE event_reviews SET helpful_count = helpful_count + 1 WHERE _id = ?"
     ).bind(reviewId).run();
 
     return jsonResponse({ message: "Vote recorded" });
-  } catch (e) {
+  } catch {
     return jsonResponse({ error: "Failed to record vote" }, 500);
   }
 }
@@ -2266,10 +2539,10 @@ async function handleEventStats(eventId: string, env: Env): Promise<Response> {
     SELECT
       (SELECT COUNT(*) FROM event_views WHERE event_id = ?) as views,
       (SELECT COUNT(DISTINCT COALESCE(user_id, source || ip_hash)) FROM event_views WHERE event_id = ?) as unique_views,
-      (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND status != 'cancelled') as rsvps,
-      (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND checked_in_at IS NOT NULL) as checkins,
-      (SELECT COUNT(*) FROM referrals WHERE event_id = ? AND status = 'converted') as referrals,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = ? AND created_at < datetime('now', '-7 days')) as views_7_days_ago
+      (SELECT COUNT(*) FROM registrations WHERE event = ? AND rsvp_response != 'cancelled') as rsvps,
+      (SELECT COUNT(*) FROM registrations WHERE event = ? AND checked_in_at IS NOT NULL) as checkins,
+      (SELECT COUNT(*) FROM referrals WHERE event = ? AND status = 'converted') as referrals,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = ? AND date_created < datetime('now', '-7 days')) as views_7_days_ago
   `).bind(eventId, eventId, eventId, eventId, eventId, eventId).first() as StatsRow | null;
 
   // Calculate trend (week-over-week change)
@@ -2301,11 +2574,11 @@ async function handleEventStats(eventId: string, env: Env): Promise<Response> {
     count: number;
   }
   const citiesResult = await env.DB.prepare(`
-    SELECT u.city, COUNT(*) as count
+    SELECT u.address_locality as city, COUNT(*) as count
     FROM registrations r
-    JOIN users u ON r.user_id = u.id
-    WHERE r.event_id = ? AND u.city IS NOT NULL
-    GROUP BY u.city
+    JOIN users u ON r.agent = u._id
+    WHERE r.event = ? AND u.address_locality IS NOT NULL
+    GROUP BY u.address_locality
     ORDER BY count DESC
     LIMIT 5
   `).bind(eventId).all();
@@ -2360,8 +2633,8 @@ async function handleEventReferrals(eventId: string, env: Env): Promise<Response
       COUNT(*) as referral_count,
       SUM(CASE WHEN r.status = 'converted' THEN 1 ELSE 0 END) as conversion_count
     FROM referrals r
-    LEFT JOIN users u ON r.referrer_user_id = u.id
-    WHERE r.event_id = ?
+    LEFT JOIN users u ON r.referrer_user_id = u._id
+    WHERE r.event = ?
     GROUP BY r.referrer_user_id
     ORDER BY conversion_count DESC, referral_count DESC
     LIMIT 10
@@ -2409,7 +2682,7 @@ async function handleTrackReferral(request: Request, env: Env): Promise<Response
   const id = generateId();
 
   await env.DB.prepare(`
-    INSERT INTO referrals (id, event_id, referrer_user_id, referred_user_id, referral_code, status)
+    INSERT INTO referrals (_id, event, referrer_user_id, referred_user_id, referral_code, status)
     VALUES (?, ?, ?, ?, ?, ?)
   `).bind(
     id,
@@ -2480,7 +2753,7 @@ async function handleUserReferralCode(
     const code = generateReferralCode();
 
     await env.DB.prepare(`
-      INSERT INTO user_referral_codes (id, user_id, code)
+      INSERT INTO user_referral_codes (_id, user_id, code)
       VALUES (?, ?, ?)
     `).bind(generateId(), userId, code).run();
 
@@ -2496,14 +2769,14 @@ async function handleUserReferralCode(
 
 async function handleHostReputation(userId: string, env: Env): Promise<Response> {
   interface UserRow {
-    id: string;
+    _id: string;
     name: string;
-    handle: string | null;
+    alternate_name: string | null;
   }
 
   // Get user basic info
   const user = await env.DB.prepare(
-    "SELECT id, name, handle FROM users WHERE id = ?"
+    "SELECT _id, name, alternate_name FROM users WHERE _id = ?"
   ).bind(userId).first() as UserRow | null;
 
   if (!user) {
@@ -2523,10 +2796,10 @@ async function handleHostReputation(userId: string, env: Env): Promise<Response>
       SUM(attendee_count) as total_attendees,
       AVG(attendee_count) as avg_attendance
     FROM events
-    WHERE host_handle = ? OR id IN (
+    WHERE organizer_alternate_name = ? OR _id IN (
       SELECT event_id FROM event_hosts WHERE user_id = ?
     )
-  `).bind(user.handle || "", userId).first() as StatsRow | null;
+  `).bind(user.alternate_name || "", userId).first() as StatsRow | null;
 
   interface RatingRow {
     avg_rating: number;
@@ -2536,14 +2809,14 @@ async function handleHostReputation(userId: string, env: Env): Promise<Response>
   // Get average rating from all their events
   const ratings = await env.DB.prepare(`
     SELECT
-      AVG(r.rating) as avg_rating,
+      AVG(r.rating_value) as avg_rating,
       COUNT(*) as review_count
     FROM event_reviews r
-    JOIN events e ON r.event_id = e.id
-    WHERE e.host_handle = ? OR e.id IN (
+    JOIN events e ON r.item_reviewed = e._id
+    WHERE e.organizer_alternate_name = ? OR e._id IN (
       SELECT event_id FROM event_hosts WHERE user_id = ?
     )
-  `).bind(user.handle || "", userId).first() as RatingRow | null;
+  `).bind(user.alternate_name || "", userId).first() as RatingRow | null;
 
   // Determine badges
   const badges: string[] = [];
@@ -2558,15 +2831,15 @@ async function handleHostReputation(userId: string, env: Env): Promise<Response>
   if ((stats?.avg_attendance || 0) >= 50) badges.push("Crowd Puller");
 
   const hostStats: HostStats = {
-    userId: user.id,
+    userId: user._id,
     name: user.name,
-    handle: user.handle || undefined,
+    alternateName: user.alternate_name || undefined,
     initials: getInitials(user.name),
     eventsHosted,
     totalAttendees: stats?.total_attendees || 0,
-    avgAttendance: Math.round(stats?.avg_attendance || 0),
-    rating: Math.round((avgRating || 0) * 10) / 10,
-    reviewCount,
+    avgAttendanceRate: Math.round(stats?.avg_attendance || 0),
+    avgRating: Math.round((avgRating || 0) * 10) / 10,
+    totalReviews: reviewCount,
     badges,
   };
 
@@ -2591,14 +2864,14 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
     SELECT
       COUNT(*) as total_events,
       SUM(attendee_count) as total_attendees,
-      COUNT(DISTINCT host_handle) as active_hosts
+      COUNT(DISTINCT organizer_alternate_name) as active_hosts
     FROM events
-    WHERE is_published = TRUE AND is_cancelled = FALSE
+    WHERE is_published = TRUE AND event_status = 'EventScheduled'
   `;
   const params: string[] = [];
 
   if (city) {
-    statsQuery += " AND location_city = ?";
+    statsQuery += " AND location_locality = ?";
     params.push(city);
   }
 
@@ -2617,12 +2890,12 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
       COUNT(*) as count,
       (SELECT COUNT(*) FROM events e2
        WHERE e2.category = events.category
-       AND e2.created_at < datetime('now', '-7 days')
-       ${city ? "AND e2.location_city = ?" : ""}
+       AND e2.date_created < datetime('now', '-7 days')
+       ${city ? "AND e2.location_locality = ?" : ""}
       ) as last_week
     FROM events
-    WHERE created_at >= datetime('now', '-7 days')
-    ${city ? "AND location_city = ?" : ""}
+    WHERE date_created >= datetime('now', '-7 days')
+    ${city ? "AND location_locality = ?" : ""}
     GROUP BY category
     ORDER BY count DESC
     LIMIT 5
@@ -2638,11 +2911,11 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
 
   // Get popular venues
   const venueQuery = `
-    SELECT location_venue as venue, COUNT(*) as count
+    SELECT location_name as venue, COUNT(*) as count
     FROM events
     WHERE is_published = TRUE
-    ${city ? "AND location_city = ?" : ""}
-    GROUP BY location_venue
+    ${city ? "AND location_locality = ?" : ""}
+    GROUP BY location_name
     ORDER BY count DESC
     LIMIT 5
   `;
@@ -2657,13 +2930,12 @@ async function handleCommunityStats(url: URL, env: Env): Promise<Response> {
     activeHosts: stats?.active_hosts || 0,
     trendingCategories: (trendingResult.results as CategoryRow[]).map((row) => ({
       category: row.category,
-      change: row.last_week > 0 ? Math.round(((row.count - row.last_week) / row.last_week) * 100) : 100,
-      events: row.count,
+      count: row.count,
     })),
     peakTime: "Wed 6-8pm", // Would need more sophisticated query for real data
     popularVenues: (venuesResult.results as VenueRow[]).map((row) => ({
       venue: row.venue,
-      events: row.count,
+      count: row.count,
     })),
   };
 
@@ -2682,16 +2954,16 @@ async function handleTrendingEvents(url: URL, env: Env): Promise<Response> {
   // Get events with view counts and calculate trend
   let query = `
     SELECT e.*,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id) as views,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id AND created_at >= datetime('now', '-7 days')) as recent_views
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e._id) as views,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e._id AND date_created >= datetime('now', '-7 days')) as recent_views
     FROM events e
-    WHERE e.is_published = TRUE AND e.is_cancelled = FALSE
-    AND e.date_iso >= datetime('now')
+    WHERE e.is_published = TRUE AND e.event_status = 'EventScheduled'
+    AND e.start_date >= datetime('now')
   `;
   const params: (string | number)[] = [];
 
   if (city) {
-    query += " AND e.location_city = ?";
+    query += " AND e.location_locality = ?";
     params.push(city);
   }
 
@@ -2774,54 +3046,63 @@ function slugify(text: string): string {
 
 // Convert database row to Event object
 function dbRowToEvent(row: Record<string, unknown>): Event {
+  const attendanceMode = row.event_attendance_mode as string | undefined;
+  const isOnline = attendanceMode === "OnlineEventAttendanceMode";
   return {
-    id: row.id as string,
-    shortCode: row.short_code as string,
-    slug: row.slug as string,
-    title: row.title as string,
+    _id: row._id as string,
+    name: row.name as string,
     description: row.description as string,
-    date: {
-      day: row.date_day as string,
-      month: row.date_month as string,
-      full: row.date_full as string,
-      time: row.date_time as string,
-      iso: row.date_iso as string,
+    startDate: row.start_date as string,
+    eventAttendanceMode: isOnline ? "OnlineEventAttendanceMode" : "OfflineEventAttendanceMode",
+    eventStatus: ((row.event_status as string) === "EventCancelled" ? "EventCancelled" : "EventScheduled") as Event["eventStatus"],
+    image: row.image as string | undefined,
+    keywords: safeParseJSON((row.keywords as string), []) as string[],
+    maximumAttendeeCapacity: row.maximum_attendee_capacity as number | undefined,
+    location: isOnline
+      ? { "@type": "VirtualLocation" as const, url: (row.meeting_url as string) || "" }
+      : {
+          "@type": "Place" as const,
+          name: row.location_name as string,
+          address: {
+            "@type": "PostalAddress" as const,
+            streetAddress: row.location_street_address as string,
+            addressLocality: row.location_locality as string,
+            addressCountry: row.location_country as string,
+          },
+        },
+    organizer: {
+      "@type": "Person" as const,
+      name: row.organizer_name as string,
+      alternateName: row.organizer_alternate_name as string,
+      initials: row.organizer_initials as string,
+      eventCount: row.organizer_event_count as number,
     },
-    location: {
-      venue: row.location_venue as string,
-      address: row.location_address as string,
-      city: row.location_city as string,
-      country: row.location_country as string,
-    },
-    category: row.category as string,
-    tags: safeParseJSON((row.tags as string), []) as string[],
-    coverImage: row.cover_image as string | undefined,
-    coverGradient: row.cover_gradient as string | undefined,
-    attendeeCount: row.attendee_count as number,
-    friendsCount: row.friends_count as number | undefined,
-    capacity: row.capacity as number | undefined,
-    isOnline: row.is_online as boolean | undefined,
-    meetingUrl: row.meeting_url as string | undefined,
-    meetingPlatform: row.meeting_platform as "zoom" | "google_meet" | "teams" | "other" | undefined,
-    host: {
-      name: row.host_name as string,
-      handle: row.host_handle as string,
-      initials: row.host_initials as string,
-      eventCount: row.host_event_count as number,
-    },
-    // Ticketing - free events on nhimbe, paid events link to external
-    isFree: row.is_free !== false && row.is_free !== 0, // Default true
-    ticketUrl: row.ticket_url as string | undefined,
-    // Legacy price field (deprecated but still returned)
-    price: row.price_amount
+    offers: row.offer_price
       ? {
-          amount: row.price_amount as number,
-          currency: row.price_currency as string,
-          label: row.price_label as string,
+          "@type": "Offer" as const,
+          price: row.offer_price as number,
+          priceCurrency: (row.offer_price_currency as string) || "USD",
+          availability: "InStock",
+          url: row.offer_url as string | undefined,
         }
       : undefined,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    shortCode: row.short_code as string,
+    slug: row.slug as string,
+    category: row.category as string,
+    attendeeCount: row.attendee_count as number,
+    friendsCount: row.friends_count as number | undefined,
+    coverGradient: row.cover_gradient as string | undefined,
+    isPublished: row.is_published !== false && row.is_published !== 0,
+    meetingUrl: row.meeting_url as string | undefined,
+    meetingPlatform: row.meeting_platform as "zoom" | "google_meet" | "teams" | "other" | undefined,
+    dateDisplay: {
+      day: row.date_display_day as string,
+      month: row.date_display_month as string,
+      full: row.date_display_full as string,
+      time: row.date_display_time as string,
+    },
+    dateCreated: row.date_created as string,
+    dateModified: row.date_modified as string,
   };
 }
 
@@ -2843,15 +3124,20 @@ async function getAdminUser(request: Request, env: Env, requiredRole: UserRole):
   const stytchUser = authResult.user;
 
   interface DbUserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
     role: string | null;
   }
 
   const user = await env.DB.prepare(
+<<<<<<< Updated upstream
     "SELECT id, email, name, role FROM users WHERE stytch_user_id = ?"
   ).bind(stytchUser.userId).first() as DbUserRow | null;
+=======
+    "SELECT _id, email, name, role FROM users WHERE stytch_user_id = ? OR email = ?"
+  ).bind(stytchUser.userId, stytchUser.email).first() as DbUserRow | null;
+>>>>>>> Stashed changes
 
   if (!user) return null;
 
@@ -2859,7 +3145,7 @@ async function getAdminUser(request: Request, env: Env, requiredRole: UserRole):
   if (!hasPermission(userRole, requiredRole)) return null;
 
   return {
-    id: user.id,
+    id: user._id,
     email: user.email,
     name: user.name,
     role: userRole,
@@ -2882,7 +3168,7 @@ async function handleAdminStats(request: Request, env: Env): Promise<Response> {
 
   // Get active events (future events)
   const activeEventsResult = await env.DB.prepare(
-    "SELECT COUNT(*) as count FROM events WHERE date_iso >= datetime('now')"
+    "SELECT COUNT(*) as count FROM events WHERE start_date >= datetime('now')"
   ).first() as { count: number } | null;
 
   // Get recent views (last 30 days)
@@ -2892,27 +3178,27 @@ async function handleAdminStats(request: Request, env: Env): Promise<Response> {
 
   // Get recent events
   interface EventRow {
-    id: string;
-    title: string;
-    date_full: string;
+    _id: string;
+    name: string;
+    date_display_full: string;
     attendee_count: number;
-    date_iso: string;
+    start_date: string;
   }
   const recentEventsResult = await env.DB.prepare(
-    "SELECT id, title, date_full, attendee_count, date_iso FROM events ORDER BY created_at DESC LIMIT 5"
+    "SELECT _id, name, date_display_full, attendee_count, start_date FROM events ORDER BY date_created DESC LIMIT 5"
   ).all() as { results: EventRow[] };
 
   const now = new Date();
   const recentEvents = recentEventsResult.results.map(e => {
-    const eventDate = new Date(e.date_iso);
+    const eventDate = new Date(e.start_date);
     let status: 'upcoming' | 'ongoing' | 'past' = 'upcoming';
     if (eventDate < now) status = 'past';
     else if (eventDate.toDateString() === now.toDateString()) status = 'ongoing';
 
     return {
-      id: e.id,
-      title: e.title,
-      date: e.date_full,
+      _id: e._id,
+      name: e.name,
+      date: e.date_display_full,
       attendeeCount: e.attendee_count,
       status,
     };
@@ -2920,40 +3206,40 @@ async function handleAdminStats(request: Request, env: Env): Promise<Response> {
 
   // Get recent users
   interface UserRow {
-    id: string;
+    _id: string;
     name: string;
     email: string;
-    created_at: string;
+    date_created: string;
   }
   const recentUsersResult = await env.DB.prepare(
-    "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 5"
+    "SELECT _id, name, email, date_created FROM users ORDER BY date_created DESC LIMIT 5"
   ).all() as { results: UserRow[] };
 
   const recentUsers = recentUsersResult.results.map(u => ({
-    id: u.id,
+    _id: u._id,
     name: u.name,
     email: u.email,
-    createdAt: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    createdAt: new Date(u.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   }));
 
   // Get support tickets (if table exists)
-  let tickets: Array<{ id: string; subject: string; status: string; createdAt: string }> = [];
+  let tickets: Array<{ _id: string; subject: string; status: string; createdAt: string }> = [];
   try {
     interface TicketRow {
-      id: string;
+      _id: string;
       subject: string;
       status: string;
-      created_at: string;
+      date_created: string;
     }
     const ticketsResult = await env.DB.prepare(
-      "SELECT id, subject, status, created_at FROM support_tickets ORDER BY created_at DESC LIMIT 5"
+      "SELECT _id, subject, status, date_created FROM support_tickets ORDER BY date_created DESC LIMIT 5"
     ).all() as { results: TicketRow[] };
 
     tickets = ticketsResult.results.map(t => ({
-      id: t.id,
+      _id: t._id,
       subject: t.subject,
       status: t.status,
-      createdAt: new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      createdAt: new Date(t.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     }));
   } catch {
     // Table doesn't exist yet
@@ -2997,20 +3283,20 @@ async function handleAdminUsers(request: Request, url: URL, env: Env): Promise<R
     params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+  query += " ORDER BY date_created DESC LIMIT ? OFFSET ?";
 
   interface UserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
-    handle: string | null;
-    avatar_url: string | null;
-    city: string | null;
-    country: string | null;
+    alternate_name: string | null;
+    image: string | null;
+    address_locality: string | null;
+    address_country: string | null;
     events_attended: number;
     events_hosted: number;
     role: string | null;
-    created_at: string;
+    date_created: string;
   }
 
   const [usersResult, countResult] = await Promise.all([
@@ -3019,18 +3305,18 @@ async function handleAdminUsers(request: Request, url: URL, env: Env): Promise<R
   ]);
 
   const users = usersResult.results.map(u => ({
-    id: u.id,
+    id: u._id,
     email: u.email,
     name: u.name,
-    handle: u.handle,
-    avatar_url: u.avatar_url,
-    city: u.city,
-    country: u.country,
+    handle: u.alternate_name,
+    avatar_url: u.image,
+    city: u.address_locality,
+    country: u.address_country,
     events_attended: u.events_attended || 0,
     events_hosted: u.events_hosted || 0,
     role: u.role || 'user',
     status: 'active' as const, // Would need a status field in DB
-    created_at: u.created_at,
+    created_at: u.date_created,
   }));
 
   return jsonResponse({
@@ -3080,7 +3366,7 @@ async function handleAdminUserAction(
       }
 
       await env.DB.prepare(
-        "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?"
+        "UPDATE users SET role = ?, date_modified = datetime('now') WHERE _id = ?"
       ).bind(newRole, userId).run();
 
       return jsonResponse({ message: `User role updated to ${newRole}` });
@@ -3108,26 +3394,26 @@ async function handleAdminEvents(request: Request, url: URL, env: Env): Promise<
   const params: (string | number)[] = [];
 
   if (search) {
-    query += " AND (title LIKE ? OR description LIKE ?)";
-    countQuery += " AND (title LIKE ? OR description LIKE ?)";
+    query += " AND (name LIKE ? OR description LIKE ?)";
+    countQuery += " AND (name LIKE ? OR description LIKE ?)";
     params.push(`%${search}%`, `%${search}%`);
   }
 
   const now = new Date().toISOString();
   if (status === 'upcoming') {
-    query += " AND date_iso >= ?";
-    countQuery += " AND date_iso >= ?";
+    query += " AND start_date >= ?";
+    countQuery += " AND start_date >= ?";
     params.push(now);
   } else if (status === 'past') {
-    query += " AND date_iso < ?";
-    countQuery += " AND date_iso < ?";
+    query += " AND start_date < ?";
+    countQuery += " AND start_date < ?";
     params.push(now);
   } else if (status === 'cancelled') {
-    query += " AND is_cancelled = 1";
-    countQuery += " AND is_cancelled = 1";
+    query += " AND event_status = 'EventCancelled'";
+    countQuery += " AND event_status = 'EventCancelled'";
   }
 
-  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+  query += " ORDER BY date_created DESC LIMIT ? OFFSET ?";
 
   const [eventsResult, countResult] = await Promise.all([
     env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: Record<string, unknown>[] }>,
@@ -3137,25 +3423,26 @@ async function handleAdminEvents(request: Request, url: URL, env: Env): Promise<
   const nowDate = new Date();
   const events = eventsResult.results.map((row) => {
     const event = dbRowToEvent(row);
-    const eventDate = new Date(event.date.iso);
+    const eventDate = new Date(event.startDate);
     let eventStatus: 'upcoming' | 'ongoing' | 'past' | 'cancelled' = 'upcoming';
 
-    if (row.is_cancelled) eventStatus = 'cancelled';
+    if ((row.event_status as string) === 'EventCancelled') eventStatus = 'cancelled';
     else if (eventDate < nowDate) eventStatus = 'past';
     else if (eventDate.toDateString() === nowDate.toDateString()) eventStatus = 'ongoing';
 
     return {
-      id: event.id,
-      title: event.title,
+      _id: event._id,
+      name: event.name,
       description: event.description,
-      date: event.date,
+      startDate: event.startDate,
+      dateDisplay: event.dateDisplay,
       location: event.location,
       category: event.category,
       attendeeCount: event.attendeeCount,
-      capacity: event.capacity,
-      host: event.host,
+      maximumAttendeeCapacity: event.maximumAttendeeCapacity,
+      organizer: event.organizer,
       status: eventStatus,
-      createdAt: event.createdAt,
+      dateCreated: event.dateCreated,
     };
   });
 
@@ -3173,13 +3460,13 @@ async function handleAdminDeleteEvent(eventId: string, request: Request, env: En
   }
 
   // Check event exists
-  const event = await env.DB.prepare("SELECT id, title FROM events WHERE id = ?").bind(eventId).first();
+  const event = await env.DB.prepare("SELECT _id, name FROM events WHERE _id = ?").bind(eventId).first();
   if (!event) {
     return jsonResponse({ error: "Event not found" }, 404);
   }
 
   // Delete event (cascades to registrations via foreign key)
-  await env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId).run();
+  await env.DB.prepare("DELETE FROM events WHERE _id = ?").bind(eventId).run();
 
   // Remove from vector index
   try {
@@ -3207,7 +3494,7 @@ async function handleAdminSupport(request: Request, url: URL, env: Env): Promise
     let query = `
       SELECT t.*, u.name as user_name, u.email as user_email
       FROM support_tickets t
-      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN users u ON t.user_id = u._id
       WHERE 1=1
     `;
     let countQuery = "SELECT COUNT(*) as count FROM support_tickets WHERE 1=1";
@@ -3225,10 +3512,10 @@ async function handleAdminSupport(request: Request, url: URL, env: Env): Promise
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    query += " ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
+    query += " ORDER BY t.date_created DESC LIMIT ? OFFSET ?";
 
     interface TicketRow {
-      id: string;
+      _id: string;
       user_id: string | null;
       user_name: string | null;
       user_email: string | null;
@@ -3237,8 +3524,8 @@ async function handleAdminSupport(request: Request, url: URL, env: Env): Promise
       category: string;
       priority: string;
       status: string;
-      created_at: string;
-      updated_at: string;
+      date_created: string;
+      date_modified: string;
     }
 
     const [ticketsResult, countResult] = await Promise.all([
@@ -3249,38 +3536,38 @@ async function handleAdminSupport(request: Request, url: URL, env: Env): Promise
     // Get messages for each ticket
     const tickets = await Promise.all(ticketsResult.results.map(async (t) => {
       interface MessageRow {
-        id: string;
+        _id: string;
         sender_type: string;
         sender_id: string | null;
         content: string;
-        created_at: string;
+        date_created: string;
       }
 
       const messagesResult = await env.DB.prepare(
-        "SELECT m.*, u.name as sender_name FROM support_messages m LEFT JOIN users u ON m.sender_id = u.id WHERE m.ticket_id = ? ORDER BY m.created_at ASC"
-      ).bind(t.id).all() as { results: (MessageRow & { sender_name: string | null })[] };
+        "SELECT m.*, u.name as sender_name FROM support_messages m LEFT JOIN users u ON m.sender_id = u._id WHERE m.ticket_id = ? ORDER BY m.date_created ASC"
+      ).bind(t._id).all() as { results: (MessageRow & { sender_name: string | null })[] };
 
       return {
-        id: t.id,
+        _id: t._id,
         subject: t.subject,
         description: t.description,
         category: t.category,
         priority: t.priority as 'low' | 'medium' | 'high',
         status: t.status as 'open' | 'pending' | 'resolved',
         user: t.user_id ? {
-          id: t.user_id,
+          _id: t.user_id,
           name: t.user_name || 'Unknown',
           email: t.user_email || '',
         } : undefined,
         messages: messagesResult.results.map(m => ({
-          id: m.id,
+          _id: m._id,
           content: m.content,
           sender: m.sender_type as 'user' | 'admin',
           senderName: m.sender_name || (m.sender_type === 'admin' ? 'Support Team' : 'User'),
-          createdAt: m.created_at,
+          createdAt: m.date_created,
         })),
-        createdAt: t.created_at,
-        updatedAt: t.updated_at,
+        createdAt: t.date_created,
+        updatedAt: t.date_modified,
       };
     }));
 
@@ -3314,7 +3601,7 @@ async function handleAdminTicketStatus(ticketId: string, request: Request, env: 
 
   try {
     await env.DB.prepare(
-      "UPDATE support_tickets SET status = ?, updated_at = datetime('now') WHERE id = ?"
+      "UPDATE support_tickets SET status = ?, date_modified = datetime('now') WHERE _id = ?"
     ).bind(status, ticketId).run();
 
     return jsonResponse({ message: "Ticket status updated" });
@@ -3342,13 +3629,13 @@ async function handleAdminTicketReply(ticketId: string, request: Request, env: E
     const messageId = crypto.randomUUID();
 
     await env.DB.prepare(`
-      INSERT INTO support_messages (id, ticket_id, sender_type, sender_id, content, created_at)
+      INSERT INTO support_messages (_id, ticket_id, sender_type, sender_id, content, date_created)
       VALUES (?, ?, 'admin', ?, ?, datetime('now'))
     `).bind(messageId, ticketId, admin.id, content).run();
 
     // Update ticket status to pending and timestamp
     await env.DB.prepare(
-      "UPDATE support_tickets SET status = 'pending', updated_at = datetime('now') WHERE id = ?"
+      "UPDATE support_tickets SET status = 'pending', date_modified = datetime('now') WHERE _id = ?"
     ).bind(ticketId).run();
 
     return jsonResponse({

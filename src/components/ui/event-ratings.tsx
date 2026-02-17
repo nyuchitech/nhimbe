@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
-import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
+import { getEventReviews, markReviewHelpful, type ReviewStats } from "@/lib/api";
 
 interface Review {
   id: string;
@@ -53,12 +53,12 @@ export function EventRatings({
         const data = await getEventReviews(eventId);
         // Transform API data to component format
         const transformedReviews: Review[] = data.reviews.map((r) => ({
-          id: r.id,
-          userName: r.userName,
-          userInitials: r.userInitials,
-          rating: r.rating,
-          comment: r.comment || "",
-          date: formatRelativeDate(r.createdAt),
+          id: r._id,
+          userName: r.authorName || "Anonymous",
+          userInitials: r.authorInitials || "??",
+          rating: r.reviewRating.ratingValue,
+          comment: r.reviewBody || "",
+          date: formatRelativeDate(r.datePublished),
           helpful: r.helpfulCount,
         }));
         setReviews(transformedReviews);
@@ -114,8 +114,8 @@ export function EventRatings({
     // Call API if user is logged in
     if (currentUserId) {
       try {
-        await markReviewHelpful(reviewId, currentUserId);
-      } catch (error) {
+        await markReviewHelpful(reviewId);
+      } catch {
         // Revert on failure
         setHelpfulClicked((prev) => {
           const newSet = new Set(prev);

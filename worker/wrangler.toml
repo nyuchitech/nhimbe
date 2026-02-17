@@ -112,6 +112,15 @@ namespace_id = "1"
 simple = { limit = 100, period = 60 }  # 100 requests per minute
 
 # ============================================
+# CONTAINER - Hono app for CRUD routes
+# Deploy with: cd container && docker build -t mukoko-nhimbe-container .
+# The container handles DB-only CRUD; worker keeps AI/Vectorize/R2/Queue
+# ============================================
+[[services]]
+binding = "CONTAINER"
+service = "mukoko-nhimbe-container"
+
+# ============================================
 # PRODUCTION ENVIRONMENT
 # ============================================
 [env.production]

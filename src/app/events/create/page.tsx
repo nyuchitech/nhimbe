@@ -236,54 +236,57 @@ function CreateEventForm() {
         setUploading(false);
       }
 
-      const dateObj = new Date(eventDate);
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const startDateISO = new Date(`${eventDate}T${startTime}:00+02:00`).toISOString();
 
       const eventData: CreateEventInput = {
-        title: eventName.trim(),
+        name: eventName.trim(),
         description: description.trim() || "No description provided.",
-        date: {
-          day: dateObj.getDate().toString(),
-          month: months[dateObj.getMonth()],
-          full: dateObj.toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          }),
-          time: `${startTime} — ${endTime} GMT+2`,
-          iso: new Date(`${eventDate}T${startTime}:00+02:00`).toISOString(),
-        },
+        startDate: startDateISO,
+        endDate: endTime ? new Date(`${eventDate}T${endTime}:00+02:00`).toISOString() : undefined,
         location: isOnline
-          ? { venue: "Online Event", address: "", city: "Online", country: "" }
+          ? { "@type": "VirtualLocation" as const, url: meetingUrl.trim() || "" }
           : {
-              venue: venue.trim(),
-              address: address.trim(),
-              city: selectedCity?.city || "",
-              country: selectedCity?.country || "",
+              "@type": "Place" as const,
+              name: venue.trim(),
+              address: {
+                "@type": "PostalAddress" as const,
+                streetAddress: address.trim(),
+                addressLocality: selectedCity?.city || "",
+                addressCountry: selectedCity?.country || "",
+              },
             },
         category,
+<<<<<<< Updated upstream
         tags,
         coverImage: uploadedCoverImageUrl,
         coverGradient: uploadedCoverImageUrl ? undefined : mineralThemeList[selectedTheme].gradient,
         capacity: capacity || undefined,
         isOnline,
+=======
+        keywords: tags,
+        image: uploadedCoverImageUrl,
+        coverGradient: uploadedCoverImageUrl ? undefined : mineralThemes[selectedTheme].gradient,
+        maximumAttendeeCapacity: capacity || undefined,
+        eventAttendanceMode: isOnline ? "OnlineEventAttendanceMode" : "OfflineEventAttendanceMode",
+>>>>>>> Stashed changes
         meetingUrl: isOnline ? meetingUrl.trim() : undefined,
         meetingPlatform: isOnline ? meetingPlatform : undefined,
-        host: {
+        organizer: {
+          "@type": "Person" as const,
           name: user?.name || "Event Host",
-          handle: user?.handle || `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
+          alternateName: user?.alternateName || `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
           initials: user?.name
             ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
             : "EH",
           eventCount: 1,
         },
-        isFree,
-        ticketUrl: !isFree && ticketUrl.trim() ? ticketUrl.trim() : undefined,
+        offers: !isFree && ticketUrl.trim()
+          ? { "@type": "Offer" as const, price: 0, priceCurrency: "USD", url: ticketUrl.trim(), availability: "InStock" }
+          : undefined,
       };
 
       const result = await createEvent(eventData);
-      router.push(`/events/${result.event.id}`);
+      router.push(`/events/${result.event._id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {

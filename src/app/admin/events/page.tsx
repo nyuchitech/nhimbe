@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,32 +19,12 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { getPlaceInfo } from "@/lib/api";
+import type { Event } from "@/lib/api";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://mukoko-nhimbe-api.nyuchi.workers.dev";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  date: {
-    full: string;
-    iso: string;
-  };
-  location: {
-    venue: string;
-    city: string;
-  };
-  category: string;
-  attendeeCount: number;
-  capacity?: number;
-  host: {
-    name: string;
-  };
-  status: "upcoming" | "ongoing" | "past" | "cancelled";
-  createdAt: string;
-}
 
 export default function EventsPage() {
   const [loading, setLoading] = useState(true);
@@ -58,11 +38,7 @@ export default function EventsPage() {
 
   const limit = 20;
 
-  useEffect(() => {
-    fetchEvents();
-  }, [page, search, statusFilter]);
-
-  async function fetchEvents() {
+  const fetchEvents = useCallback(async function fetchEvents() {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -90,7 +66,11 @@ export default function EventsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, search, statusFilter]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   async function handleDelete(eventId: string) {
     try {
@@ -108,13 +88,13 @@ export default function EventsPage() {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case "upcoming":
+      case "EventScheduled":
         return "bg-primary/20 text-primary";
-      case "ongoing":
+      case "EventMovedOnline":
         return "bg-accent/20 text-accent";
-      case "past":
+      case "EventPostponed":
         return "bg-elevated text-text-tertiary";
-      case "cancelled":
+      case "EventCancelled":
         return "bg-red-500/20 text-red-400";
       default:
         return "bg-elevated text-text-tertiary";
@@ -199,11 +179,11 @@ export default function EventsPage() {
                   </thead>
                   <tbody className="divide-y divide-elevated">
                     {events.map((event) => (
-                      <tr key={event.id} className="hover:bg-elevated/50">
+                      <tr key={event._id} className="hover:bg-elevated/50">
                         <td className="py-3 pr-4">
                           <div className="min-w-0">
                             <div className="font-medium truncate max-w-[200px]">
-                              {event.title}
+                              {event.name}
                             </div>
                             <div className="text-sm text-text-tertiary">
                               {event.category}
@@ -214,49 +194,49 @@ export default function EventsPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-text-secondary text-sm">
                               <Calendar className="w-3 h-3" />
-                              <span>{event.date.full}</span>
+                              <span>{event.dateDisplay.full}</span>
                             </div>
                             <div className="flex items-center gap-1 text-text-tertiary text-sm">
                               <MapPin className="w-3 h-3" />
                               <span>
-                                {event.location.venue}, {event.location.city}
+                                {getPlaceInfo(event).venue}, {getPlaceInfo(event).city}
                               </span>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 pr-4 hidden lg:table-cell text-sm text-text-secondary">
-                          {event.host.name}
+                          {event.organizer.name}
                         </td>
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-1 text-text-secondary">
                             <Users className="w-4 h-4" />
                             <span>
                               {event.attendeeCount}
-                              {event.capacity && `/${event.capacity}`}
+                              {event.maximumAttendeeCapacity && `/${event.maximumAttendeeCapacity}`}
                             </span>
                           </div>
                         </td>
                         <td className="py-3 pr-4">
                           <span
                             className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              event.status
+                              event.eventStatus
                             )}`}
                           >
-                            {event.status}
+                            {event.eventStatus}
                           </span>
                         </td>
                         <td className="py-3 relative">
                           <button
                             onClick={() =>
                               setActionMenuOpen(
-                                actionMenuOpen === event.id ? null : event.id
+                                actionMenuOpen === event._id ? null : event._id
                               )
                             }
                             className="p-2 hover:bg-elevated rounded-lg"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
-                          {actionMenuOpen === event.id && (
+                          {actionMenuOpen === event._id && (
                             <>
                               <div
                                 className="fixed inset-0 z-10"
@@ -264,14 +244,14 @@ export default function EventsPage() {
                               />
                               <div className="absolute right-0 top-full mt-1 z-20 bg-surface border border-elevated rounded-lg shadow-lg py-1 min-w-[150px]">
                                 <Link
-                                  href={`/events/${event.id}`}
+                                  href={`/events/${event._id}`}
                                   className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated"
                                 >
                                   <Eye className="w-4 h-4" />
                                   View Event
                                 </Link>
                                 <Link
-                                  href={`/events/${event.id}/manage`}
+                                  href={`/events/${event._id}/manage`}
                                   className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated"
                                 >
                                   <ExternalLink className="w-4 h-4" />
@@ -347,7 +327,7 @@ export default function EventsPage() {
             <p className="text-text-secondary mb-6">
               Are you sure you want to delete{" "}
               <span className="text-foreground font-medium">
-                &quot;{deleteConfirm.title}&quot;
+                &quot;{deleteConfirm.name}&quot;
               </span>
               ? All registrations and data associated with this event will be
               permanently removed.
@@ -363,7 +343,7 @@ export default function EventsPage() {
               <Button
                 variant="primary"
                 className="flex-1 bg-red-500 hover:bg-red-600"
-                onClick={() => handleDelete(deleteConfirm.id)}
+                onClick={() => handleDelete(deleteConfirm._id)}
               >
                 <Trash2 className="w-4 h-4" />
                 Delete

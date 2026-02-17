@@ -2,12 +2,12 @@ import Link from "next/link";
 import { MapPin, Settings, Eye, TrendingUp, Flame, Star } from "lucide-react";
 
 interface EventCardProps {
-  id: string;
-  title: string;
-  date: { day: string; month: string };
-  location: { venue: string; city: string; country: string };
+  _id: string;
+  name: string;
+  dateDisplay: { day: string; month: string };
+  location: { city: string; country: string };
   category: string;
-  coverImage?: string;
+  image?: string;
   coverGradient?: string;
   attendeeCount: number;
   friendsCount?: number;
@@ -23,12 +23,12 @@ interface EventCardProps {
 }
 
 export function EventCard({
-  id,
-  title,
-  date,
+  _id,
+  name,
+  dateDisplay,
   location,
   category,
-  coverImage,
+  image,
   coverGradient,
   attendeeCount,
   friendsCount,
@@ -42,9 +42,9 @@ export function EventCard({
   spotsLeft,
   capacity,
 }: EventCardProps) {
-  const coverStyle = coverImage
+  const coverStyle = image
     ? {
-        background: `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url('${coverImage}') center/cover`,
+        background: `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url('${image}') center/cover`,
       }
     : { background: coverGradient || "linear-gradient(135deg, #004D40, #00796B)" };
 
@@ -57,17 +57,17 @@ export function EventCard({
   const isAlmostFull = spotsLeft !== undefined && capacity !== undefined && spotsLeft < capacity * 0.2;
 
   return (
-    <Link href={`/events/${id}`} className="block">
+    <Link href={`/events/${_id}`} className="block">
       <div className="rounded-(--radius-card) overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
         {/* Cover */}
         <div className="h-50 relative" style={coverStyle}>
           {/* Date Badge - theme-aware */}
           <div className="absolute top-4 left-4 bg-background/90 dark:bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center border border-foreground/10">
             <div className="text-2xl font-extrabold text-primary leading-none">
-              {date.day}
+              {dateDisplay.day}
             </div>
             <div className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wide">
-              {date.month}
+              {dateDisplay.month}
             </div>
           </div>
 
@@ -122,7 +122,7 @@ export function EventCard({
 
         {/* Info */}
         <div className="p-5">
-          <h3 className="text-lg font-bold mb-2.5 leading-tight">{title}</h3>
+          <h3 className="text-lg font-bold mb-2.5 leading-tight">{name}</h3>
 
           <div className="flex items-center gap-2 text-sm text-foreground/60 mb-4">
             <MapPin className="w-4 h-4" />
@@ -150,7 +150,7 @@ export function EventCard({
 
             {isHosting && (
               <Link
-                href={`/events/${id}/manage`}
+                href={`/events/${_id}/manage`}
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface hover:bg-elevated text-sm font-medium text-text-secondary hover:text-foreground transition-colors"
               >

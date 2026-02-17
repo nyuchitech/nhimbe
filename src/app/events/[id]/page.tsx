@@ -1,22 +1,14 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { findEvent, getEvents } from "@/lib/api";
+import { findEvent, getPlaceInfo } from "@/lib/api";
+import { eventToJsonLd } from "@/lib/schema";
 import { EventDetailContent } from "./event-detail-content";
+
+// Force dynamic rendering — API must be live at request time
+export const dynamic = "force-dynamic";
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>;
-}
-
-// Generate static params for all events (fetched at build time)
-export async function generateStaticParams() {
-  try {
-    const response = await getEvents({ limit: 100 });
-    return response.events.map((event) => ({
-      id: event.id,
-    }));
-  } catch {
-    return [];
-  }
 }
 
 // Dynamic OpenGraph metadata
@@ -30,16 +22,17 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     };
   }
 
-  const eventUrl = `https://nhimbe.com/events/${event.id}`;
+  const eventUrl = `https://nhimbe.com/events/${event._id}`;
   const shortUrl = `https://nhimbe.com/e/${event.shortCode}`;
-  const description = `${event.title} on ${event.date.full} at ${event.location.venue}, ${event.location.city}. ${event.description.slice(0, 150)}...`;
+  const place = getPlaceInfo(event);
+  const description = `${event.name} on ${event.dateDisplay.full} at ${place.venue}, ${place.city}. ${event.description.slice(0, 150)}...`;
 
   // Generate dynamic OG image URL with mineral gradient
   const ogImageParams = new URLSearchParams({
-    title: event.title,
-    subtitle: `${event.date.full} at ${event.location.venue}`,
-    date: `${event.date.day} ${event.date.month}`,
-    location: `${event.location.city}, ${event.location.country}`,
+    title: event.name,
+    subtitle: `${event.dateDisplay.full} at ${place.venue}`,
+    date: `${event.dateDisplay.day} ${event.dateDisplay.month}`,
+    location: `${place.city}, ${place.country}`,
     category: event.category,
     gradient: "mixed",
     type: "event",
@@ -47,21 +40,21 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const ogImageUrl = `https://nhimbe.com/api/og?${ogImageParams.toString()}`;
 
   // Use cover image if available, otherwise use dynamic OG image
-  const imageUrl = event.coverImage || ogImageUrl;
+  const imageUrl = event.image || ogImageUrl;
 
   return {
-    title: `${event.title} - nhimbe`,
+    title: `${event.name} - nhimbe`,
     description,
     keywords: [
       event.category,
-      ...event.tags,
-      event.location.city,
-      event.location.country,
+      ...event.keywords,
+      place.city,
+      place.country,
       "events",
       "nhimbe",
     ],
     openGraph: {
-      title: event.title,
+      title: event.name,
       description,
       type: "website",
       url: eventUrl,
@@ -72,13 +65,13 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: event.title,
+          alt: event.name,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: event.title,
+      title: event.name,
       description,
       images: [imageUrl],
     },
@@ -99,57 +92,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
-  const eventUrl = `https://nhimbe.com/e/${event.shortCode}`;
-
-  // JSON-LD structured data for SEO
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    name: event.title,
-    description: event.description,
-    startDate: event.date.iso,
-    eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: event.isOnline
-      ? "https://schema.org/OnlineEventAttendanceMode"
-      : "https://schema.org/OfflineEventAttendanceMode",
-    location: event.isOnline
-      ? {
-          "@type": "VirtualLocation",
-          url: eventUrl,
-        }
-      : {
-          "@type": "Place",
-          name: event.location.venue,
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: event.location.address,
-            addressLocality: event.location.city,
-            addressCountry: event.location.country,
-          },
-        },
-    organizer: {
-      "@type": "Organization",
-      name: event.host.name,
-      url: `https://nhimbe.com/${event.host.handle.replace("@", "")}`,
-    },
-    offers: event.price
-      ? {
-          "@type": "Offer",
-          price: event.price.amount,
-          priceCurrency: event.price.currency,
-          availability: "https://schema.org/InStock",
-          url: eventUrl,
-        }
-      : {
-          "@type": "Offer",
-          price: 0,
-          priceCurrency: "USD",
-          availability: "https://schema.org/InStock",
-          url: eventUrl,
-        },
-    image: event.coverImage,
-    maximumAttendeeCapacity: event.capacity,
-  };
+  const jsonLd = eventToJsonLd(event);
 
   return (
     <>

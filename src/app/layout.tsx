@@ -6,7 +6,11 @@ import { Footer } from "@/components/layout/footer";
 import { AnimatedBackground } from "@/components/ui/animated-background";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth/auth-context";
+<<<<<<< Updated upstream
 import { StytchProvider } from "@/components/auth/stytch-provider";
+=======
+import { organizationJsonLd } from "@/lib/schema";
+>>>>>>> Stashed changes
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -122,6 +126,10 @@ export default function RootLayout({
           id="nhimbe-theme-script"
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col">

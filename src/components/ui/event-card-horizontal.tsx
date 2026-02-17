@@ -5,9 +5,9 @@ import Image from "next/image";
 import { formatEventDateTime } from "@/lib/timezone";
 
 interface EventCardHorizontalProps {
-  id: string;
-  title: string;
-  date: {
+  _id: string;
+  name: string;
+  dateDisplay: {
     day: string;
     month: string;
     full?: string;
@@ -18,43 +18,43 @@ interface EventCardHorizontalProps {
     city: string;
     country: string;
   };
-  coverImage?: string;
+  image?: string;
   coverGradient?: string;
 }
 
 export function EventCardHorizontal({
-  id,
-  title,
-  date,
+  _id,
+  name,
+  dateDisplay,
   location,
-  coverImage,
+  image,
   coverGradient,
 }: EventCardHorizontalProps) {
   // Format the datetime for display
-  const dateTime = date.full
-    ? formatEventDateTime(date.full, date.time)
-    : `${date.month} ${date.day}${date.time ? `, ${date.time}` : ""}`;
+  const dateTime = dateDisplay.full
+    ? formatEventDateTime(dateDisplay.full, dateDisplay.time)
+    : `${dateDisplay.month} ${dateDisplay.day}${dateDisplay.time ? `, ${dateDisplay.time}` : ""}`;
 
   const venueDisplay = location.venue
     ? `${location.venue}`
     : `${location.city}, ${location.country}`;
 
   return (
-    <Link href={`/events/${id}`} className="block group">
+    <Link href={`/events/${_id}`} className="block group">
       <div className="flex gap-4 p-2 -m-2 rounded-xl hover:bg-surface/50 transition-colors">
         {/* Square Image Thumbnail */}
         <div
           className="w-[72px] h-[72px] shrink-0 rounded-lg overflow-hidden"
           style={
-            !coverImage
+            !image
               ? { background: coverGradient || "linear-gradient(135deg, #004D40, #00796B)" }
               : undefined
           }
         >
-          {coverImage && (
+          {image && (
             <Image
-              src={coverImage}
-              alt={title}
+              src={image}
+              alt={name}
               width={72}
               height={72}
               className="w-full h-full object-cover"
@@ -69,7 +69,7 @@ export function EventCardHorizontal({
 
           {/* Title */}
           <h3 className="font-semibold text-foreground leading-snug mb-1 group-hover:text-primary transition-colors line-clamp-2">
-            {title}
+            {name}
           </h3>
 
           {/* Venue */}

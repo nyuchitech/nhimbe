@@ -51,14 +51,14 @@ export function CommunityInsights({
   // Transform API data to component format
   const trendingCategories: TrendingCategory[] = stats?.trendingCategories?.map((c) => ({
     name: c.category,
-    change: c.change,
-    events: c.events,
+    change: 0,
+    events: c.count,
   })) ?? [];
 
   const popularVenues: PopularVenue[] = stats?.popularVenues?.map((v) => ({
     name: v.venue,
     city: city || "Various",
-    eventCount: v.events,
+    eventCount: v.count,
   })) ?? [];
 
   // Parse peak time from string
@@ -252,10 +252,8 @@ export function CommunityInsightsCompact({ city, className = "" }: { city?: stri
         {topCategory && (
           <div className="flex items-center justify-between">
             <span className="text-sm">{topCategory.category} events</span>
-            <span className={`text-xs font-medium ${
-              topCategory.change > 0 ? "text-green-400" : topCategory.change < 0 ? "text-red-400" : "text-text-tertiary"
-            }`}>
-              {topCategory.change > 0 ? "↑" : topCategory.change < 0 ? "↓" : "→"} {Math.abs(topCategory.change)}%
+            <span className="text-xs font-medium text-primary">
+              {topCategory.count} events
             </span>
           </div>
         )}

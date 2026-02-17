@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Star, Award, Users, Calendar, TrendingUp, CheckCircle, Shield, Loader2 } from "lucide-react";
-import { getHostReputation, type HostStats as ApiHostStats } from "@/lib/api";
+import { getHostReputation, type HostReputation as ApiHostReputation } from "@/lib/api";
 
 interface HostStats {
   name: string;
@@ -227,7 +227,7 @@ export function HostReputationFetch({
   className?: string;
 }) {
   const [loading, setLoading] = useState(true);
-  const [hostStats, setHostStats] = useState<ApiHostStats | null>(null);
+  const [hostStats, setHostStats] = useState<ApiHostReputation | null>(null);
 
   useEffect(() => {
     async function fetchHost() {
@@ -257,7 +257,7 @@ export function HostReputationFetch({
 
   const host: HostStats = {
     name: hostStats.name,
-    handle: hostStats.handle,
+    handle: hostStats.alternateName,
     initials: hostStats.initials,
     eventsHosted: hostStats.eventsHosted,
     totalAttendees: hostStats.totalAttendees,

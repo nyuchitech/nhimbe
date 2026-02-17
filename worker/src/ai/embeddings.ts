@@ -44,16 +44,25 @@ export async function generateEmbeddings(
  * This combines relevant fields for semantic search
  */
 export function eventToSearchText(event: Event): string {
+  const isPlace = event.location["@type"] === "Place";
+  const venue = isPlace ? (event.location as { name: string }).name : "";
+  const city = isPlace
+    ? (event.location as { address: { addressLocality: string } }).address.addressLocality
+    : "";
+  const country = isPlace
+    ? (event.location as { address: { addressCountry: string } }).address.addressCountry
+    : "";
+
   const parts = [
-    event.title,
+    event.name,
     event.description,
     event.category,
-    ...event.tags,
-    event.location.venue,
-    event.location.city,
-    event.location.country,
-    event.host.name,
-    event.date.full,
+    ...event.keywords,
+    venue,
+    city,
+    country,
+    event.organizer.name,
+    event.dateDisplay.full,
   ];
 
   return parts.filter(Boolean).join(" | ");
@@ -70,15 +79,23 @@ export async function indexEvent(
   const searchText = eventToSearchText(event);
   const embedding = await generateEmbedding(ai, searchText);
 
+  const isPlace = event.location["@type"] === "Place";
+  const city = isPlace
+    ? (event.location as { address: { addressLocality: string } }).address.addressLocality
+    : "";
+  const country = isPlace
+    ? (event.location as { address: { addressCountry: string } }).address.addressCountry
+    : "";
+
   const vector: VectorizeVector = {
-    id: event.id,
+    id: event._id,
     values: embedding,
     metadata: {
-      title: event.title,
+      name: event.name,
       category: event.category,
-      city: event.location.city,
-      country: event.location.country,
-      date: event.date.iso,
+      city,
+      country,
+      date: event.startDate,
       shortCode: event.shortCode,
     },
   };
@@ -106,18 +123,28 @@ export async function indexEvents(
     try {
       const embeddings = await generateEmbeddings(ai, searchTexts);
 
-      const vectors: VectorizeVector[] = batch.map((event, idx) => ({
-        id: event.id,
-        values: embeddings[idx],
-        metadata: {
-          title: event.title,
-          category: event.category,
-          city: event.location.city,
-          country: event.location.country,
-          date: event.date.iso,
-          shortCode: event.shortCode,
-        },
-      }));
+      const vectors: VectorizeVector[] = batch.map((event, idx) => {
+        const isPlace = event.location["@type"] === "Place";
+        const city = isPlace
+          ? (event.location as { address: { addressLocality: string } }).address.addressLocality
+          : "";
+        const country = isPlace
+          ? (event.location as { address: { addressCountry: string } }).address.addressCountry
+          : "";
+
+        return {
+          id: event._id,
+          values: embeddings[idx],
+          metadata: {
+            name: event.name,
+            category: event.category,
+            city,
+            country,
+            date: event.startDate,
+            shortCode: event.shortCode,
+          },
+        };
+      });
 
       await vectorize.upsert(vectors);
       indexed += batch.length;

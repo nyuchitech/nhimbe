@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users,
@@ -33,7 +33,7 @@ interface DashboardStats {
 
 interface RecentEvent {
   id: string;
-  title: string;
+  name: string;
   date: string;
   attendeeCount: number;
   status: "upcoming" | "ongoing" | "past";
@@ -69,20 +69,15 @@ export default function AdminDashboard() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  async function fetchDashboardData() {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch admin stats from API
       const response = await fetch(`${API_URL}/api/admin/stats`, {
         credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
-        setStats(data.stats || stats);
+        setStats(prev => data.stats || prev);
         setRecentEvents(data.recentEvents || []);
         setRecentUsers(data.recentUsers || []);
         setTickets(data.tickets || []);
@@ -92,7 +87,11 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const statCards = [
     {
@@ -214,7 +213,7 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between p-3 rounded-lg bg-elevated"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{event.title}</div>
+                      <div className="font-medium truncate">{event.name}</div>
                       <div className="text-sm text-text-tertiary">
                         {event.date}
                       </div>

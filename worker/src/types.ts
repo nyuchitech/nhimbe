@@ -339,6 +339,13 @@ export interface Env {
   EMAIL_QUEUE: Queue<EmailQueueMessage>;
   // Rate Limiter
   RATE_LIMITER: RateLimiter;
+  // Container (Hono app for CRUD routes)
+  CONTAINER: Fetcher;
+}
+
+// Cloudflare Container/Service binding
+export interface Fetcher {
+  fetch(request: Request): Promise<Response>;
 }
 
 // Queue Message Types
@@ -357,61 +364,121 @@ export interface EmailQueueMessage {
   templateData: Record<string, unknown>;
 }
 
-// Event Types (matching frontend)
-export interface EventLocation {
-  venue: string;
-  address: string;
-  city: string;
-  country: string;
+// ── Schema.org Location Types ──────────────────────────────────────
+
+export interface SchemaPostalAddress {
+  "@type": "PostalAddress";
+  streetAddress: string;
+  addressLocality: string;
+  addressCountry: string;
 }
 
-export interface EventDate {
-  day: string;
-  month: string;
-  full: string;
-  time: string;
-  iso: string;
-}
-
-export interface EventHost {
+export interface SchemaPlace {
+  "@type": "Place";
   name: string;
-  handle: string;
-  initials: string;
-  eventCount: number;
+  address: SchemaPostalAddress;
 }
 
-export interface EventPrice {
-  amount: number;
-  currency: string;
-  label: string;
+export interface SchemaVirtualLocation {
+  "@type": "VirtualLocation";
+  url: string;
 }
+
+// ── Schema.org Organizer ──────────────────────────────────────────
+
+export interface SchemaOrganizer {
+  "@type": "Person";
+  name: string;
+  identifier?: string;
+  alternateName?: string;
+  initials?: string;
+  eventCount?: number;
+}
+
+// ── Schema.org Offer ──────────────────────────────────────────────
+
+export interface SchemaOffer {
+  "@type": "Offer";
+  price: number;
+  priceCurrency: string;
+  url?: string;
+  availability: string;
+}
+
+// ── Schema.org Rating ─────────────────────────────────────────────
+
+export interface SchemaRating {
+  "@type": "Rating";
+  ratingValue: number;
+  bestRating: number;
+  worstRating: number;
+}
+
+export interface SchemaAggregateRating {
+  "@type": "AggregateRating";
+  ratingValue: number;
+  reviewCount: number;
+  bestRating: number;
+  worstRating: number;
+}
+
+// ── Event Enums ───────────────────────────────────────────────────
+
+export type EventAttendanceMode =
+  | "OfflineEventAttendanceMode"
+  | "OnlineEventAttendanceMode"
+  | "MixedEventAttendanceMode";
+
+export type EventStatus =
+  | "EventScheduled"
+  | "EventCancelled"
+  | "EventPostponed"
+  | "EventMovedOnline";
+
+// ── Event (schema.org/Event) ──────────────────────────────────────
 
 export interface Event {
-  id: string;
+  _id: string;
+  "@type"?: "Event";
+
+  // schema.org core
+  name: string;
+  description: string;
+  startDate: string;
+  endDate?: string;
+  eventAttendanceMode: EventAttendanceMode;
+  eventStatus: EventStatus;
+  image?: string;
+  keywords: string[];
+  maximumAttendeeCapacity?: number;
+  location: SchemaPlace | SchemaVirtualLocation;
+  organizer: SchemaOrganizer;
+  offers?: SchemaOffer;
+  aggregateRating?: SchemaAggregateRating;
+
+  // nhimbe extensions
   shortCode: string;
   slug: string;
-  title: string;
-  description: string;
-  date: EventDate;
-  location: EventLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
-  coverGradient?: string;
   attendeeCount: number;
   friendsCount?: number;
-  capacity?: number;
-  isOnline?: boolean;
+  coverGradient?: string;
+  themeId?: string;
+  isPublished?: boolean;
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
-  createdAt?: string;
-  updatedAt?: string;
+
+  /** Convenience display fields derived from startDate */
+  dateDisplay: {
+    day: string;
+    month: string;
+    full: string;
+    time: string;
+  };
+
+  // schema.org timestamps
+  dateCreated: string;
+  dateModified: string;
 }
 
 // Search Types
@@ -461,22 +528,30 @@ export interface AssistantResponse {
 export type UserRole = 'user' | 'moderator' | 'admin' | 'super_admin';
 
 export interface User {
-  id: string;
+  _id: string;
+  "@type"?: "Person";
   email: string;
   name: string;
-  handle?: string;
-  avatarUrl?: string;
-  bio?: string;
-  city?: string;
-  country?: string;
+  alternateName?: string;
+  image?: string;
+  description?: string;
+  address?: {
+    "@type": "PostalAddress";
+    addressLocality?: string;
+    addressCountry?: string;
+  };
   interests?: string[];
   eventsAttended: number;
   eventsHosted: number;
   role: UserRole;
   onboardingCompleted: boolean;
   stytchUserId?: string;
-  createdAt: string;
-  updatedAt: string;
+  mukokoOrgMemberId?: string;
+  authProvider?: "email" | "mukoko_id";
+  emailVerified?: boolean;
+  lastLoginAt?: string;
+  dateCreated: string;
+  dateModified: string;
 }
 
 // Role permission helpers
@@ -493,10 +568,10 @@ export function hasPermission(userRole: UserRole, requiredRole: UserRole): boole
 
 // Support Ticket Types
 export interface SupportTicket {
-  id: string;
+  _id: string;
   userId?: string;
   user?: {
-    id: string;
+    _id: string;
     name: string;
     email: string;
   };
@@ -506,33 +581,35 @@ export interface SupportTicket {
   priority: 'low' | 'medium' | 'high';
   status: 'open' | 'pending' | 'resolved';
   messages: SupportMessage[];
-  createdAt: string;
-  updatedAt: string;
+  dateCreated: string;
+  dateModified: string;
 }
 
 export interface SupportMessage {
-  id: string;
+  _id: string;
   ticketId: string;
   senderType: 'user' | 'admin';
   senderId?: string;
-  senderName: string;
+  senderName?: string;
   content: string;
-  createdAt: string;
+  dateCreated: string;
 }
 
 // Open Data Types - Reviews, Referrals, Reputation
 
 export interface EventReview {
-  id: string;
-  eventId: string;
-  userId: string;
-  userName: string;
-  userInitials: string;
-  rating: number;
-  comment?: string;
+  _id: string;
+  "@type"?: "Review";
+  itemReviewed: string;
+  author: string;
+  authorName?: string;
+  authorInitials?: string;
+  reviewRating: SchemaRating;
+  reviewBody?: string;
   helpfulCount: number;
   isVerifiedAttendee: boolean;
-  createdAt: string;
+  datePublished: string;
+  dateModified?: string;
 }
 
 export interface ReviewStats {
@@ -548,13 +625,14 @@ export interface ReviewStats {
 }
 
 export interface Referral {
-  id: string;
-  eventId: string;
+  _id: string;
+  event?: string;
   referrerUserId: string;
   referredUserId?: string;
   referralCode: string;
-  status: "pending" | "converted" | "expired";
-  createdAt: string;
+  source?: "link" | "email" | "social";
+  status: "pending" | "registered" | "attended";
+  dateCreated: string;
   convertedAt?: string;
 }
 
@@ -570,16 +648,20 @@ export interface ReferralLeaderboardEntry {
 export interface HostStats {
   userId: string;
   name: string;
-  handle?: string;
-  initials: string;
+  alternateName?: string;
+  initials?: string;
   eventsHosted: number;
   totalAttendees: number;
-  avgAttendance: number;
-  rating: number;
-  reviewCount: number;
+  totalCapacity?: number;
+  avgAttendanceRate?: number;
+  avgRating?: number;
+  totalReviews?: number;
   badges: string[];
+  reputationScore?: number;
   responseRate?: number;
   responseTime?: string;
+  lastEventAt?: string;
+  dateModified?: string;
 }
 
 export interface EventStats {
@@ -591,6 +673,7 @@ export interface EventStats {
   referrals: number;
   trend?: number;
   isHot?: boolean;
+  isTrending?: boolean;
   peakViewTime?: string;
   topSources?: Array<{ source: string; count: number }>;
   topCities?: Array<{ city: string; count: number }>;
@@ -603,12 +686,22 @@ export interface CommunityStats {
   activeHosts: number;
   trendingCategories: Array<{
     category: string;
-    change: number;
-    events: number;
+    count: number;
   }>;
-  peakTime: string;
+  peakTime?: string;
   popularVenues: Array<{
     venue: string;
-    events: number;
+    count: number;
   }>;
+}
+
+// ── JSON-LD wrapper for schema.org output ────────────────────────
+// Used with ?format=jsonld query parameter. The Event type above
+// is already schema.org-shaped, so JSON-LD output just needs
+// the @context wrapper.
+
+export interface JsonLdEvent extends Event {
+  "@context": "https://schema.org";
+  "@type": "Event";
+  url: string;
 }

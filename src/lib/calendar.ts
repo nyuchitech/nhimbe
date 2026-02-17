@@ -4,7 +4,7 @@
  */
 
 export interface CalendarEvent {
-  title: string;
+  name: string;
   description: string;
   location: string;
   startDate: Date;
@@ -47,7 +47,7 @@ export function generateICS(event: CalendarEvent): string {
     `DTSTAMP:${formatDateForICS(new Date())}`,
     `DTSTART:${formatDateForICS(event.startDate)}`,
     `DTEND:${formatDateForICS(event.endDate)}`,
-    `SUMMARY:${escapeICS(event.title)}`,
+    `SUMMARY:${escapeICS(event.name)}`,
     `DESCRIPTION:${escapeICS(event.description)}${event.url ? `\\n\\nEvent page: ${event.url}` : ""}`,
     `LOCATION:${escapeICS(event.location)}`,
     event.url ? `URL:${event.url}` : "",
@@ -70,7 +70,7 @@ export function downloadICS(event: CalendarEvent, filename?: string): void {
 
   const link = document.createElement("a");
   link.href = url;
-  link.download = filename || `${event.title.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.ics`;
+  link.download = filename || `${event.name.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.ics`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -90,7 +90,7 @@ function formatDateForURL(date: Date): string {
 export function getGoogleCalendarUrl(event: CalendarEvent): string {
   const params = new URLSearchParams({
     action: "TEMPLATE",
-    text: event.title,
+    text: event.name,
     dates: `${formatDateForURL(event.startDate)}/${formatDateForURL(event.endDate)}`,
     details: event.description + (event.url ? `\n\nEvent page: ${event.url}` : ""),
     location: event.location,
@@ -110,7 +110,7 @@ export function getOutlookCalendarUrl(event: CalendarEvent): string {
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
     rru: "addevent",
-    subject: event.title,
+    subject: event.name,
     startdt: event.startDate.toISOString(),
     enddt: event.endDate.toISOString(),
     body: event.description + (event.url ? `\n\nEvent page: ${event.url}` : ""),
@@ -127,7 +127,7 @@ export function getOutlookLiveUrl(event: CalendarEvent): string {
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
     rru: "addevent",
-    subject: event.title,
+    subject: event.name,
     startdt: event.startDate.toISOString(),
     enddt: event.endDate.toISOString(),
     body: event.description + (event.url ? `\n\nEvent page: ${event.url}` : ""),
@@ -148,7 +148,7 @@ export function getYahooCalendarUrl(event: CalendarEvent): string {
 
   const params = new URLSearchParams({
     v: "60",
-    title: event.title,
+    title: event.name,
     st: formatYahooDate(event.startDate),
     et: formatYahooDate(event.endDate),
     desc: event.description + (event.url ? `\n\nEvent page: ${event.url}` : ""),

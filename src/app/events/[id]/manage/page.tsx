@@ -8,24 +8,19 @@ import {
   Users,
   Eye,
   Share2,
-  Settings,
   Check,
   X,
   Clock,
   Mail,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Copy,
   ExternalLink,
-  Calendar,
   MapPin,
   Loader2,
   MessageSquare,
-  BarChart3,
   QrCode,
   UserPlus,
-  Send,
   Bell,
   MessageCircle,
   ChevronRight,
@@ -44,13 +39,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   findEvent,
   deleteEvent,
   getEventRegistrations,
   updateRegistrationStatus,
+  getPlaceInfo,
+  isOnlineEvent,
   type Event,
   type Registration as APIRegistration,
 } from "@/lib/api";
@@ -102,34 +98,34 @@ function ManageEventContent() {
         if (eventData && user) {
           // Verify ownership - check if current user is the event host
           const userNameLower = user.name?.toLowerCase() || "";
-          const hostNameLower = eventData.host.name.toLowerCase();
+          const hostNameLower = eventData.organizer.name.toLowerCase();
           const ownerCheck =
             hostNameLower === userNameLower ||
-            eventData.host.handle === user.handle ||
-            eventData.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
+            eventData.organizer.alternateName === user.alternateName ||
+            eventData.organizer.alternateName === `@${userNameLower.replace(/\s+/g, '')}`;
 
           setIsOwner(ownerCheck);
 
           // Only fetch registrations if user is owner
           if (ownerCheck) {
-            const regs = await getEventRegistrations(eventData.id);
+            const regs = await getEventRegistrations(eventData._id);
             const formattedRegs: Registration[] = regs.map((r: APIRegistration) => ({
-              id: r.id,
-              name: r.user_name || "Unknown User",
-              email: r.user_email || r.user_id,
-              status: r.status,
-              date: new Date(r.registered_at).toLocaleDateString("en-US", {
+              id: r._id,
+              name: r.userName || "Unknown User",
+              email: r.userEmail || r.agent,
+              status: r.rsvpResponse,
+              date: new Date(r.dateCreated).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
               }),
-              avatar: (r.user_name || "U")
+              avatar: (r.userName || "U")
                 .split(" ")
                 .map((n: string) => n[0])
                 .join("")
                 .toUpperCase()
                 .slice(0, 2),
-              checkedIn: r.status === "attended",
+              checkedIn: r.rsvpResponse === "attended",
             }));
             setRegistrations(formattedRegs);
           }
@@ -175,7 +171,7 @@ function ManageEventContent() {
           Only the event host can access this page.
         </p>
         <div className="flex justify-center gap-4">
-          <Link href={`/events/${event.id}`}>
+          <Link href={`/events/${event._id}`}>
             <Button variant="secondary">View Event</Button>
           </Link>
           <Link href="/my-events">
@@ -231,7 +227,7 @@ function ManageEventContent() {
   };
 
   const handleCopyLink = async () => {
-    const url = `${window.location.origin}/events/${event.id}`;
+    const url = `${window.location.origin}/events/${event._id}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopySuccess(true);
@@ -242,12 +238,12 @@ function ManageEventContent() {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/events/${event.id}`;
+    const url = `${window.location.origin}/events/${event._id}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: event.title,
-          text: `Check out ${event.title} on nhimbe`,
+          title: event.name,
+          text: `Check out ${event.name} on nhimbe`,
           url,
         });
       } catch {
@@ -264,15 +260,15 @@ function ManageEventContent() {
       .filter((r) => r.status === "approved" || r.status === "registered")
       .map((r) => r.email)
       .join(",");
-    const subject = encodeURIComponent(`Update about ${event.title}`);
-    const body = encodeURIComponent(`Hi everyone,\n\nThis is an update about ${event.title} on ${event.date.full}.\n\nBest regards`);
+    const subject = encodeURIComponent(`Update about ${event.name}`);
+    const body = encodeURIComponent(`Hi everyone,\n\nThis is an update about ${event.name} on ${event.dateDisplay.full}.\n\nBest regards`);
     window.location.href = `mailto:${approvedEmails}?subject=${subject}&body=${body}`;
   };
 
   const handleDeleteEvent = async () => {
     setActionLoading(true);
     try {
-      await deleteEvent(event.id);
+      await deleteEvent(event._id);
       router.push("/my-events");
     } catch (err) {
       console.error("Failed to delete event:", err);
@@ -280,13 +276,8 @@ function ManageEventContent() {
     }
   };
 
-  const handleSendBlast = () => {
-    if (!blastMessage.trim()) return;
-    handleEmailGuests();
-    setBlastMessage("");
-  };
-
-  const capacity = event.capacity || 100;
+  const place = getPlaceInfo(event);
+  const capacity = event.maximumAttendeeCapacity || 100;
   const capacityUsed = stats.approved;
 
   return (
@@ -304,9 +295,9 @@ function ManageEventContent() {
             <span className="text-xs text-text-secondary">Personal</span>
             <ChevronRight className="w-3 h-3 text-text-tertiary" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold truncate">{event.title}</h1>
+          <h1 className="text-lg sm:text-xl font-bold truncate">{event.name}</h1>
         </div>
-        <Link href={`/events/${event.id}`} className="shrink-0">
+        <Link href={`/events/${event._id}`} className="shrink-0">
           <Button variant="secondary" className="gap-2 hidden sm:flex">
             <ExternalLink className="w-4 h-4" />
             View Event
@@ -359,28 +350,28 @@ function ManageEventContent() {
               <div
                 className="w-full md:w-64 h-48 md:h-auto shrink-0"
                 style={{
-                  background: event.coverImage
-                    ? `url(${event.coverImage}) center/cover`
+                  background: event.image
+                    ? `url(${event.image}) center/cover`
                     : event.coverGradient || "linear-gradient(135deg, #64FFDA 0%, #B388FF 100%)",
                 }}
               />
               {/* Event Info */}
               <div className="flex-1 p-6">
-                <h2 className="text-xl font-bold mb-3">{event.title}</h2>
+                <h2 className="text-xl font-bold mb-3">{event.name}</h2>
 
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center gap-1 px-2 py-1 bg-elevated rounded text-sm">
-                    <span className="font-semibold">{event.date.month.toUpperCase().slice(0, 3)}</span>
-                    <span className="font-bold text-lg">{event.date.day}</span>
+                    <span className="font-semibold">{event.dateDisplay.month.toUpperCase().slice(0, 3)}</span>
+                    <span className="font-bold text-lg">{event.dateDisplay.day}</span>
                   </div>
                   <div className="text-sm">
-                    <div className="font-medium">{event.date.full.split(",")[0]}</div>
-                    <div className="text-text-secondary">{event.date.time}</div>
+                    <div className="font-medium">{event.dateDisplay.full.split(",")[0]}</div>
+                    <div className="text-text-secondary">{event.dateDisplay.time}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-text-secondary mb-4">
-                  {event.isOnline ? (
+                  {isOnlineEvent(event) ? (
                     <>
                       <Video className="w-4 h-4" />
                       <span>{event.meetingPlatform === "google_meet" ? "Google Meet" : event.meetingPlatform === "zoom" ? "Zoom" : "Online"}</span>
@@ -388,7 +379,7 @@ function ManageEventContent() {
                   ) : (
                     <>
                       <MapPin className="w-4 h-4" />
-                      <span>{event.location.venue || event.location.city}</span>
+                      <span>{place.venue || place.city}</span>
                     </>
                   )}
                 </div>
@@ -398,9 +389,9 @@ function ManageEventContent() {
                   <div className="text-xs text-text-tertiary mb-1">Hosted By</div>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-xs font-bold text-background">
-                      {event.host.initials}
+                      {event.organizer.initials}
                     </div>
-                    <span className="font-medium">{event.host.name}</span>
+                    <span className="font-medium">{event.organizer.name}</span>
                   </div>
                 </div>
 
@@ -454,19 +445,19 @@ function ManageEventContent() {
               <div className="flex items-start gap-4">
                 <div className="flex items-center gap-1 px-3 py-2 bg-elevated rounded-lg text-center min-w-[60px]">
                   <div>
-                    <div className="text-xs text-text-secondary">{event.date.month.toUpperCase().slice(0, 3)}</div>
-                    <div className="text-2xl font-bold">{event.date.day}</div>
+                    <div className="text-xs text-text-secondary">{event.dateDisplay.month.toUpperCase().slice(0, 3)}</div>
+                    <div className="text-2xl font-bold">{event.dateDisplay.day}</div>
                   </div>
                 </div>
                 <div>
-                  <div className="font-medium">{event.date.full}</div>
-                  <div className="text-sm text-text-secondary">{event.date.time}</div>
+                  <div className="font-medium">{event.dateDisplay.full}</div>
+                  <div className="text-sm text-text-secondary">{event.dateDisplay.time}</div>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
                 <div className="w-[60px] h-[60px] bg-elevated rounded-lg flex items-center justify-center">
-                  {event.isOnline ? (
+                  {isOnlineEvent(event) ? (
                     <Video className="w-6 h-6 text-text-secondary" />
                   ) : (
                     <MapPin className="w-6 h-6 text-text-secondary" />
@@ -474,15 +465,15 @@ function ManageEventContent() {
                 </div>
                 <div>
                   <div className="font-medium">
-                    {event.isOnline
+                    {isOnlineEvent(event)
                       ? (event.meetingPlatform === "google_meet" ? "Google Meet" : event.meetingPlatform || "Online Event")
-                      : event.location.venue
+                      : place.venue
                     }
                   </div>
                   <div className="text-sm text-text-secondary">
-                    {event.isOnline
+                    {isOnlineEvent(event)
                       ? "Virtual event - link sent upon registration"
-                      : `${event.location.address || event.location.city}, ${event.location.country}`
+                      : `${place.streetAddress || place.city}, ${place.country}`
                     }
                   </div>
                 </div>
@@ -857,9 +848,9 @@ function ManageEventContent() {
               <CardTitle>Cities</CardTitle>
             </CardHeader>
             <CardContent>
-              {event.location.city ? (
+              {place.city ? (
                 <div className="flex items-center justify-between">
-                  <span>{event.location.city}, {event.location.country}</span>
+                  <span>{place.city}, {place.country}</span>
                   <span className="font-medium">100%</span>
                 </div>
               ) : (
@@ -973,7 +964,7 @@ function ManageEventContent() {
                     &lt;<span className="text-pink-400">a</span>
                   </div>
                   <div className="pl-4 text-green-400">
-                    href=&quot;{typeof window !== "undefined" ? window.location.origin : ""}/events/{event.id}&quot;
+                    href=&quot;{typeof window !== "undefined" ? window.location.origin : ""}/events/{event._id}&quot;
                   </div>
                   <div className="pl-4 text-green-400">
                     class=&quot;nhimbe-checkout-button&quot;
@@ -982,7 +973,7 @@ function ManageEventContent() {
                     data-nhimbe-action=&quot;checkout&quot;
                   </div>
                   <div className="pl-4 text-green-400">
-                    data-nhimbe-event-id=&quot;{event.id}&quot;
+                    data-nhimbe-event-id=&quot;{event._id}&quot;
                   </div>
                   <div className="text-blue-400">&gt;</div>
                   <div className="pl-4 text-white">Register for Event</div>
@@ -1074,7 +1065,7 @@ function ManageEventContent() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Link
-                href={`/events/${event.id}/edit`}
+                href={`/events/${event._id}/edit`}
                 className="flex items-center gap-3 p-4 rounded-xl bg-elevated hover:bg-surface transition-colors"
               >
                 <Pencil className="w-5 h-5 text-primary" />
@@ -1164,7 +1155,7 @@ function ManageEventContent() {
           <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-2">Delete Event?</h3>
             <p className="text-text-secondary mb-6">
-              This will permanently delete &quot;{event.title}&quot; and all associated data.
+              This will permanently delete &quot;{event.name}&quot; and all associated data.
               This action cannot be undone.
             </p>
             <div className="flex gap-3">
@@ -1192,7 +1183,7 @@ function ManageEventContent() {
           <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-2">Cancel Event?</h3>
             <p className="text-text-secondary mb-6">
-              This will cancel &quot;{event.title}&quot; and notify all registered attendees.
+              This will cancel &quot;{event.name}&quot; and notify all registered attendees.
               This action cannot be undone.
             </p>
             <div className="flex gap-3">

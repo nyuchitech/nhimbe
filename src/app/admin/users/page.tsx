@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,16 +22,18 @@ const API_URL =
   "https://mukoko-nhimbe-api.nyuchi.workers.dev";
 
 interface User {
-  id: string;
+  _id: string;
   email: string;
   name: string;
-  handle?: string;
-  avatar_url?: string;
-  city?: string;
-  country?: string;
-  events_attended: number;
-  events_hosted: number;
-  created_at: string;
+  alternateName?: string;
+  image?: string;
+  address?: {
+    addressLocality?: string;
+    addressCountry?: string;
+  };
+  eventsAttended: number;
+  eventsHosted: number;
+  dateCreated: string;
   status: "active" | "suspended" | "pending";
 }
 
@@ -46,11 +48,7 @@ export default function UsersPage() {
 
   const limit = 20;
 
-  useEffect(() => {
-    fetchUsers();
-  }, [page, search]);
-
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -75,7 +73,11 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, search]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   async function handleAction(userId: string, action: "suspend" | "activate") {
     try {
@@ -163,7 +165,7 @@ export default function UsersPage() {
                   </thead>
                   <tbody className="divide-y divide-elevated">
                     {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-elevated/50">
+                      <tr key={user._id} className="hover:bg-elevated/50">
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-sm font-bold text-background shrink-0">
@@ -180,11 +182,11 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4 hidden md:table-cell">
-                          {user.city || user.country ? (
+                          {user.address?.addressLocality || user.address?.addressCountry ? (
                             <div className="flex items-center gap-1 text-text-secondary">
                               <MapPin className="w-3 h-3" />
                               <span className="text-sm">
-                                {[user.city, user.country]
+                                {[user.address?.addressLocality, user.address?.addressCountry]
                                   .filter(Boolean)
                                   .join(", ")}
                               </span>
@@ -197,8 +199,8 @@ export default function UsersPage() {
                         </td>
                         <td className="py-3 pr-4 hidden lg:table-cell">
                           <div className="flex items-center gap-4 text-sm text-text-secondary">
-                            <span>{user.events_hosted} hosted</span>
-                            <span>{user.events_attended} attended</span>
+                            <span>{user.eventsHosted} hosted</span>
+                            <span>{user.eventsAttended} attended</span>
                           </div>
                         </td>
                         <td className="py-3 pr-4">
@@ -215,20 +217,20 @@ export default function UsersPage() {
                           </span>
                         </td>
                         <td className="py-3 pr-4 text-sm text-text-tertiary">
-                          {formatDate(user.created_at)}
+                          {formatDate(user.dateCreated)}
                         </td>
                         <td className="py-3 relative">
                           <button
                             onClick={() =>
                               setActionMenuOpen(
-                                actionMenuOpen === user.id ? null : user.id
+                                actionMenuOpen === user._id ? null : user._id
                               )
                             }
                             className="p-2 hover:bg-elevated rounded-lg"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
-                          {actionMenuOpen === user.id && (
+                          {actionMenuOpen === user._id && (
                             <>
                               <div
                                 className="fixed inset-0 z-10"
@@ -254,7 +256,7 @@ export default function UsersPage() {
                                 {user.status === "active" ? (
                                   <button
                                     onClick={() =>
-                                      handleAction(user.id, "suspend")
+                                      handleAction(user._id, "suspend")
                                     }
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated"
                                   >
@@ -264,7 +266,7 @@ export default function UsersPage() {
                                 ) : (
                                   <button
                                     onClick={() =>
-                                      handleAction(user.id, "activate")
+                                      handleAction(user._id, "activate")
                                     }
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:bg-elevated"
                                   >
@@ -328,8 +330,8 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">{selectedUser.name}</h2>
-                  {selectedUser.handle && (
-                    <p className="text-text-secondary">@{selectedUser.handle}</p>
+                  {selectedUser.alternateName && (
+                    <p className="text-text-secondary">@{selectedUser.alternateName}</p>
                   )}
                 </div>
               </div>
@@ -345,13 +347,13 @@ export default function UsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-elevated rounded-xl">
                   <div className="text-2xl font-bold">
-                    {selectedUser.events_hosted}
+                    {selectedUser.eventsHosted}
                   </div>
                   <div className="text-sm text-text-tertiary">Events Hosted</div>
                 </div>
                 <div className="p-4 bg-elevated rounded-xl">
                   <div className="text-2xl font-bold">
-                    {selectedUser.events_attended}
+                    {selectedUser.eventsAttended}
                   </div>
                   <div className="text-sm text-text-tertiary">
                     Events Attended
@@ -364,11 +366,11 @@ export default function UsersPage() {
                   <Mail className="w-4 h-4" />
                   <span>{selectedUser.email}</span>
                 </div>
-                {(selectedUser.city || selectedUser.country) && (
+                {(selectedUser.address?.addressLocality || selectedUser.address?.addressCountry) && (
                   <div className="flex items-center gap-3 text-text-secondary">
                     <MapPin className="w-4 h-4" />
                     <span>
-                      {[selectedUser.city, selectedUser.country]
+                      {[selectedUser.address?.addressLocality, selectedUser.address?.addressCountry]
                         .filter(Boolean)
                         .join(", ")}
                     </span>
@@ -376,7 +378,7 @@ export default function UsersPage() {
                 )}
                 <div className="flex items-center gap-3 text-text-secondary">
                   <Calendar className="w-4 h-4" />
-                  <span>Joined {formatDate(selectedUser.created_at)}</span>
+                  <span>Joined {formatDate(selectedUser.dateCreated)}</span>
                 </div>
               </div>
 
@@ -396,7 +398,7 @@ export default function UsersPage() {
                     variant="ghost"
                     className="text-red-400"
                     onClick={() => {
-                      handleAction(selectedUser.id, "suspend");
+                      handleAction(selectedUser._id, "suspend");
                       setSelectedUser(null);
                     }}
                   >
@@ -408,7 +410,7 @@ export default function UsersPage() {
                     variant="ghost"
                     className="text-green-400"
                     onClick={() => {
-                      handleAction(selectedUser.id, "activate");
+                      handleAction(selectedUser._id, "activate");
                       setSelectedUser(null);
                     }}
                   >

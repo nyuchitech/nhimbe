@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Search, MapPin, Clock, ArrowRight, Loader2, X } from "lucide-react";
-import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
+import { getEvents, getCategories, getPlaceInfo, type Event, type Category } from "@/lib/api";
 
 export default function SearchPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -54,12 +54,12 @@ export default function SearchPage() {
     const query = searchQuery.toLowerCase();
     return events.filter(
       (e) =>
-        e.title.toLowerCase().includes(query) ||
+        e.name.toLowerCase().includes(query) ||
         e.description.toLowerCase().includes(query) ||
         e.category.toLowerCase().includes(query) ||
-        e.location.city.toLowerCase().includes(query) ||
-        e.location.venue.toLowerCase().includes(query) ||
-        e.tags.some((tag) => tag.toLowerCase().includes(query))
+        getPlaceInfo(e).city.toLowerCase().includes(query) ||
+        getPlaceInfo(e).venue.toLowerCase().includes(query) ||
+        e.keywords.some((tag) => tag.toLowerCase().includes(query))
     );
   }, [events, searchQuery]);
 
@@ -107,8 +107,8 @@ export default function SearchPage() {
             <div className="space-y-3">
               {filteredEvents.map((event) => (
                 <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
+                  key={event._id}
+                  href={`/events/${event._id}`}
                   onClick={() => saveSearch(searchQuery)}
                   className="flex items-center gap-4 p-4 bg-surface rounded-xl hover:bg-elevated transition-colors"
                 >
@@ -116,22 +116,22 @@ export default function SearchPage() {
                   <div
                     className="w-16 h-16 rounded-lg shrink-0"
                     style={{
-                      background: event.coverImage
-                        ? `url(${event.coverImage}) center/cover`
+                      background: event.image
+                        ? `url(${event.image}) center/cover`
                         : event.coverGradient || "linear-gradient(135deg, #004D40, #64FFDA)",
                     }}
                   />
                   {/* Event Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{event.title}</h3>
+                    <h3 className="font-semibold text-foreground truncate">{event.name}</h3>
                     <div className="flex items-center gap-3 text-sm text-text-secondary mt-1">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
-                        {event.date.full}
+                        {event.dateDisplay.full}
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
-                        {event.location.city}
+                        {getPlaceInfo(event).city}
                       </span>
                     </div>
                   </div>
@@ -208,22 +208,22 @@ export default function SearchPage() {
             <div className="space-y-3">
               {events.slice(0, 3).map((event) => (
                 <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
+                  key={event._id}
+                  href={`/events/${event._id}`}
                   className="flex items-center gap-4 p-4 bg-surface rounded-xl hover:bg-elevated transition-colors"
                 >
                   <div
                     className="w-12 h-12 rounded-lg shrink-0"
                     style={{
-                      background: event.coverImage
-                        ? `url(${event.coverImage}) center/cover`
+                      background: event.image
+                        ? `url(${event.image}) center/cover`
                         : event.coverGradient || "linear-gradient(135deg, #004D40, #64FFDA)",
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{event.title}</h3>
+                    <h3 className="font-medium text-foreground truncate">{event.name}</h3>
                     <p className="text-sm text-text-secondary">
-                      {event.date.month} {event.date.day} · {event.location.city}
+                      {event.dateDisplay.month} {event.dateDisplay.day} · {getPlaceInfo(event).city}
                     </p>
                   </div>
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary/20 text-primary">

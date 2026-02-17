@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CalendarPlus, Ticket, Users, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/ui/event-card";
-import { getEvents, getUserRegistrations, type Event, type Registration } from "@/lib/api";
+import { getEvents, getUserRegistrations, getPlaceInfo, type Event, type Registration } from "@/lib/api";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/auth/auth-context";
 
@@ -21,7 +21,7 @@ function MyEventsContent() {
   // Fetch events and user registrations on mount
   useEffect(() => {
     async function fetchData() {
-      if (!user?.id) {
+      if (!user?._id) {
         setLoading(false);
         return;
       }
@@ -30,7 +30,7 @@ function MyEventsContent() {
         // Fetch all events and user's registrations in parallel
         const [eventsResponse, registrations] = await Promise.all([
           getEvents({ limit: 100 }),
-          getUserRegistrations(user.id).catch(() => []),
+          getUserRegistrations(user._id).catch(() => []),
         ]);
 
         setAllEvents(eventsResponse.events);
@@ -42,15 +42,15 @@ function MyEventsContent() {
       }
     }
     fetchData();
-  }, [user?.id]);
+  }, [user?._id]);
 
   const now = new Date();
 
   // Filter events the user is attending (has registration for)
   const registeredEventIds = new Set(
     userRegistrations
-      .filter((r) => r.status === "registered" || r.status === "approved" || r.status === "pending")
-      .map((r) => r.event_id)
+      .filter((r) => r.rsvpResponse === "registered" || r.rsvpResponse === "approved" || r.rsvpResponse === "pending")
+      .map((r) => r.event)
   );
 
   // Filter events the user is hosting (their name matches host name)
@@ -58,27 +58,27 @@ function MyEventsContent() {
   const hostingEventIds = new Set(
     allEvents
       .filter((e) => {
-        // Check if user's name or handle matches the host
+        // Check if user's name or alternateName matches the organizer
         const userNameLower = user?.name?.toLowerCase() || "";
-        const hostNameLower = e.host.name.toLowerCase();
+        const hostNameLower = e.organizer.name.toLowerCase();
         return hostNameLower === userNameLower ||
-               e.host.handle === user?.handle ||
-               e.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
+               e.organizer.alternateName === user?.alternateName ||
+               e.organizer.alternateName === `@${userNameLower.replace(/\s+/g, '')}`;
       })
-      .map((e) => e.id)
+      .map((e) => e._id)
   );
 
   // Categorize events
   const attendingEvents = allEvents.filter(
-    (e) => registeredEventIds.has(e.id) && new Date(e.date.iso) >= now && !hostingEventIds.has(e.id)
+    (e) => registeredEventIds.has(e._id) && new Date(e.startDate) >= now && !hostingEventIds.has(e._id)
   );
 
   const hostingEvents = allEvents.filter(
-    (e) => hostingEventIds.has(e.id) && new Date(e.date.iso) >= now
+    (e) => hostingEventIds.has(e._id) && new Date(e.startDate) >= now
   );
 
   const pastEvents = allEvents.filter(
-    (e) => (registeredEventIds.has(e.id) || hostingEventIds.has(e.id)) && new Date(e.date.iso) < now
+    (e) => (registeredEventIds.has(e._id) || hostingEventIds.has(e._id)) && new Date(e.startDate) < now
   );
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode; count: number }[] = [
@@ -145,17 +145,17 @@ function MyEventsContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentEvents.map((event) => (
             <EventCard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              date={event.date}
-              location={event.location}
+              key={event._id}
+              _id={event._id}
+              name={event.name}
+              dateDisplay={event.dateDisplay}
+              location={getPlaceInfo(event)}
               category={event.category}
-              coverImage={event.coverImage}
+              image={event.image}
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}
-              isHosting={activeTab === "hosting" || hostingEventIds.has(event.id)}
+              isHosting={activeTab === "hosting" || hostingEventIds.has(event._id)}
             />
           ))}
         </div>

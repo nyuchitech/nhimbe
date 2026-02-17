@@ -5,16 +5,13 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { registerForEvent, trackEventView } from "@/lib/api";
+import type { Offer } from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-context";
 import { LogIn } from "lucide-react";
 
 interface RSVPButtonProps {
   eventId: string;
-  price?: {
-    amount: number;
-    currency: string;
-    label: string;
-  };
+  price?: Offer;
 }
 
 export function RSVPButton({ eventId, price }: RSVPButtonProps) {
@@ -26,11 +23,11 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
 
   // Track view on mount
   useEffect(() => {
-    trackEventView(eventId, user?.id);
-  }, [eventId, user?.id]);
+    trackEventView(eventId, user?._id);
+  }, [eventId, user?._id]);
 
   const handleRSVP = async () => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?._id) {
       return;
     }
 
@@ -39,11 +36,11 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
 
     try {
       await registerForEvent({
-        event_id: eventId,
-        user_id: user.id,
-        ticket_type: price ? "paid" : "free",
-        ticket_price: price?.amount,
-        ticket_currency: price?.currency,
+        event: eventId,
+        agent: user._id,
+        ticketType: price ? "paid" : "free",
+        ticketPrice: price?.price,
+        ticketCurrency: price?.priceCurrency,
       });
       setRegistered(true);
     } catch (err) {

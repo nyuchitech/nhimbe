@@ -1,0 +1,8 @@
+# Separate backend projects
+worker/
+container/
+
+# Dev files
+*.md
+.dev.vars
+.wrangler/

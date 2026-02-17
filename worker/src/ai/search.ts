@@ -57,15 +57,15 @@ export async function searchEvents(
   const placeholders = eventIds.map(() => "?").join(",");
 
   const events = await db
-    .prepare(`SELECT * FROM events WHERE id IN (${placeholders})`)
+    .prepare(`SELECT * FROM events WHERE _id IN (${placeholders})`)
     .bind(...eventIds)
     .all<Event>();
 
   // Sort by relevance score
   const scoreMap = new Map(vectorResults.matches.map((m) => [m.id, m.score]));
   const sortedEvents = events.results.sort((a, b) => {
-    const scoreA = scoreMap.get(a.id) || 0;
-    const scoreB = scoreMap.get(b.id) || 0;
+    const scoreA = scoreMap.get(a._id) || 0;
+    const scoreB = scoreMap.get(b._id) || 0;
     return scoreB - scoreA;
   });
 
@@ -94,10 +94,14 @@ async function generateSearchSummary(
 
   const eventDescriptions = events
     .slice(0, 5)
-    .map(
-      (e) =>
-        `- "${e.title}" on ${e.date.full} at ${e.location.venue}, ${e.location.city} (${e.category})`
-    )
+    .map((e) => {
+      const isPlace = e.location["@type"] === "Place";
+      const venue = isPlace ? (e.location as { name: string }).name : "";
+      const city = isPlace
+        ? (e.location as { address: { addressLocality: string } }).address.addressLocality
+        : "";
+      return `- "${e.name}" on ${e.dateDisplay.full} at ${venue}, ${city} (${e.category})`;
+    })
     .join("\n");
 
   const prompt = `You are a helpful assistant for nhimbe, an African events platform.
@@ -161,7 +165,7 @@ export async function getRecommendations(
   const placeholders = eventIds.map(() => "?").join(",");
 
   const events = await db
-    .prepare(`SELECT * FROM events WHERE id IN (${placeholders})`)
+    .prepare(`SELECT * FROM events WHERE _id IN (${placeholders})`)
     .bind(...eventIds)
     .all<Event>();
 
@@ -202,7 +206,7 @@ export async function findSimilarEvents(
 
   const placeholders = similarIds.map(() => "?").join(",");
   const events = await db
-    .prepare(`SELECT * FROM events WHERE id IN (${placeholders})`)
+    .prepare(`SELECT * FROM events WHERE _id IN (${placeholders})`)
     .bind(...similarIds)
     .all<Event>();
 

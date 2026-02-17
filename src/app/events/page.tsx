@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Search, MapPin, ChevronDown, Loader2, SlidersHorizontal, X } from "lucide-react";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
-import { getEvents, getCategories, getCities, type Event, type Category } from "@/lib/api";
+import { getEvents, getCategories, getCities, getPlaceInfo, type Event, type Category } from "@/lib/api";
+import { eventsListToJsonLd } from "@/lib/schema";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -43,16 +44,17 @@ export default function EventsPage() {
 
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
+      const place = getPlaceInfo(e);
       // Match category by ID (new format) or name (legacy)
       const categoryMatch = activeCategory === "All" || e.category === activeCategory;
       const cityMatch =
         activeCity === "All Cities" ||
-        `${e.location.city}, ${e.location.country}` === activeCity;
+        `${place.city}, ${place.country}` === activeCity;
       const searchMatch =
         !searchQuery ||
-        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        e.keywords.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
       return categoryMatch && cityMatch && searchMatch;
     });
   }, [events, activeCategory, activeCity, searchQuery]);
@@ -70,6 +72,13 @@ export default function EventsPage() {
   };
 
   return (
+    <>
+    {filteredEvents.length > 0 && (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsListToJsonLd(filteredEvents.slice(0, 20), "Discover Events on nhimbe")) }}
+      />
+    )}
     <div className="max-w-300 mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -208,13 +217,13 @@ export default function EventsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredEvents.map((event) => (
             <EventCard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              date={event.date}
-              location={event.location}
+              key={event._id}
+              _id={event._id}
+              name={event.name}
+              dateDisplay={event.dateDisplay}
+              location={getPlaceInfo(event)}
               category={event.category}
-              coverImage={event.coverImage}
+              image={event.image}
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}
@@ -239,5 +248,6 @@ export default function EventsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

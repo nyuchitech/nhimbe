@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin, Loader2 } from "lucide-react";
-import { getEvents, type Event } from "@/lib/api";
+import { getEvents, getPlaceInfo, type Event } from "@/lib/api";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -57,7 +57,7 @@ export default function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const map: Record<number, Event[]> = {};
     events.forEach((event) => {
-      const eventDate = new Date(event.date.iso);
+      const eventDate = new Date(event.startDate);
       if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
         const day = eventDate.getDate();
         if (!map[day]) map[day] = [];
@@ -169,11 +169,11 @@ export default function CalendarPage() {
                       <div className="space-y-1">
                         {eventsByDay[day]?.slice(0, 2).map((event) => (
                           <Link
-                            key={event.id}
-                            href={`/events/${event.id}`}
+                            key={event._id}
+                            href={`/events/${event._id}`}
                             className="block px-2 py-1 text-xs rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors truncate"
                           >
-                            {event.title}
+                            {event.name}
                           </Link>
                         ))}
                         {eventsByDay[day]?.length > 2 && (
@@ -195,32 +195,34 @@ export default function CalendarPage() {
             <div className="space-y-4">
               {events
                 .filter((event) => {
-                  const eventDate = new Date(event.date.iso);
+                  const eventDate = new Date(event.startDate);
                   return eventDate.getFullYear() === year && eventDate.getMonth() === month;
                 })
-                .sort((a, b) => new Date(a.date.iso).getTime() - new Date(b.date.iso).getTime())
-                .map((event) => (
+                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                .map((event) => {
+                  const place = getPlaceInfo(event);
+                  return (
                   <Link
-                    key={event.id}
-                    href={`/events/${event.id}`}
+                    key={event._id}
+                    href={`/events/${event._id}`}
                     className="flex items-center gap-4 p-4 bg-surface rounded-xl border border-elevated hover:border-primary/50 transition-colors"
                   >
                     <div className="w-14 h-14 flex flex-col items-center justify-center bg-elevated rounded-lg">
                       <span className="text-xs text-text-tertiary uppercase">
-                        {event.date.month}
+                        {event.dateDisplay.month}
                       </span>
                       <span className="text-xl font-bold text-foreground">
-                        {event.date.day}
+                        {event.dateDisplay.day}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground truncate">
-                        {event.title}
+                        {event.name}
                       </h4>
                       <div className="flex items-center gap-1 text-sm text-text-secondary">
                         <MapPin className="w-3.5 h-3.5" />
                         <span className="truncate">
-                          {event.location.venue}, {event.location.city}
+                          {place.venue}, {place.city}
                         </span>
                       </div>
                     </div>
@@ -228,7 +230,8 @@ export default function CalendarPage() {
                       {event.category}
                     </span>
                   </Link>
-                ))}
+                  );
+                })}
             </div>
           </div>
         </>

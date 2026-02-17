@@ -64,7 +64,7 @@ function ProfileContent() {
     : "??";
 
   // Format join date
-  const joinedDate = user?.id
+  const joinedDate = user?._id
     ? new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Unknown";
 
@@ -132,10 +132,10 @@ function ProfileContent() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">{user?.name || "User"}</h1>
           <p className="text-text-secondary">{user?.email}</p>
-          {(user?.city || user?.country) && (
+          {(user?.address?.addressLocality || user?.address?.addressCountry) && (
             <div className="flex items-center gap-1 text-sm text-text-tertiary mt-1">
               <MapPin className="w-3.5 h-3.5" />
-              {[user?.city, user?.country].filter(Boolean).join(", ")}
+              {[user?.address?.addressLocality, user?.address?.addressCountry].filter(Boolean).join(", ")}
             </div>
           )}
         </div>

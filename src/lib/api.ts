@@ -1,66 +1,124 @@
 /**
  * nhimbe API Client
- * Handles all communication with the Cloudflare Workers backend
+ * Handles all communication with the Cloudflare Workers backend.
+ * Types use schema.org vocabulary matching the MongoDB data model.
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://events-api.mukoko.com";
 
-// Types matching backend
-export interface EventLocation {
-  venue: string;
-  address: string;
-  city: string;
-  country: string;
+// ── Schema.org Location Types ──────────────────────────────────────
+
+export interface PostalAddress {
+  "@type": "PostalAddress";
+  streetAddress: string;
+  addressLocality: string;
+  addressCountry: string;
 }
 
-export interface EventDate {
-  day: string;
-  month: string;
-  full: string;
-  time: string;
-  iso: string;
-}
-
-export interface EventHost {
+export interface Place {
+  "@type": "Place";
   name: string;
-  handle: string;
-  initials: string;
-  eventCount: number;
+  address: PostalAddress;
 }
 
-export interface EventPrice {
-  amount: number;
-  currency: string;
-  label: string;
+export interface VirtualLocation {
+  "@type": "VirtualLocation";
+  url: string;
 }
+
+// ── Schema.org Organizer ────────────────────────────────────────────
+
+export interface Organizer {
+  "@type": "Person";
+  name: string;
+  identifier?: string;
+  alternateName?: string;
+  initials?: string;
+  eventCount?: number;
+}
+
+// ── Schema.org Offer ────────────────────────────────────────────────
+
+export interface Offer {
+  "@type": "Offer";
+  price: number;
+  priceCurrency: string;
+  url?: string;
+  availability: string;
+}
+
+// ── Schema.org Rating ───────────────────────────────────────────────
+
+export interface Rating {
+  "@type": "Rating";
+  ratingValue: number;
+  bestRating: number;
+  worstRating: number;
+}
+
+export interface AggregateRating {
+  "@type": "AggregateRating";
+  ratingValue: number;
+  reviewCount: number;
+  bestRating: number;
+  worstRating: number;
+}
+
+// ── Event (schema.org/Event) ────────────────────────────────────────
+
+export type EventAttendanceMode =
+  | "OfflineEventAttendanceMode"
+  | "OnlineEventAttendanceMode"
+  | "MixedEventAttendanceMode";
+
+export type EventStatus =
+  | "EventScheduled"
+  | "EventCancelled"
+  | "EventPostponed"
+  | "EventMovedOnline";
 
 export interface Event {
-  id: string;
+  _id: string;
+  "@type": "Event";
+
+  // schema.org core
+  name: string;
+  description: string;
+  startDate: string;
+  endDate?: string;
+  eventAttendanceMode: EventAttendanceMode;
+  eventStatus: EventStatus;
+  image?: string;
+  keywords: string[];
+  maximumAttendeeCapacity?: number;
+  location: Place | VirtualLocation;
+  organizer: Organizer;
+  offers?: Offer;
+  aggregateRating?: AggregateRating;
+
+  // nhimbe extensions
   shortCode: string;
   slug: string;
-  title: string;
-  description: string;
-  date: EventDate;
-  location: EventLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
-  coverGradient?: string;
   attendeeCount: number;
   friendsCount?: number;
-  capacity?: number;
-  isOnline?: boolean;
+  friends?: Array<{ name: string; image?: string }>;
+  coverGradient?: string;
+  themeId?: string;
+  isPublished: boolean;
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
-  friends?: { name: string; gradient: string }[];
-  createdAt?: string;
-  updatedAt?: string;
+
+  /** Convenience display fields derived from startDate */
+  dateDisplay: {
+    day: string;
+    month: string;
+    full: string;
+    time: string;
+  };
+
+  dateCreated: string;
+  dateModified: string;
 }
 
 export interface EventsResponse {
@@ -87,7 +145,34 @@ export interface CitiesResponse {
   cities: { city: string; country: string }[];
 }
 
-// API fetch wrapper
+// ── Helper functions for schema.org location discriminated union ─────
+
+/** Type guard: true when event.location is a physical Place */
+export function isPlace(location: Place | VirtualLocation): location is Place {
+  return location["@type"] === "Place";
+}
+
+/** True when event is online-only */
+export function isOnlineEvent(event: Event): boolean {
+  return event.eventAttendanceMode === "OnlineEventAttendanceMode";
+}
+
+/** Safely extract Place fields (falls back for virtual events) */
+export function getPlaceInfo(event: Event) {
+  const loc = event.location;
+  if (isPlace(loc)) {
+    return {
+      venue: loc.name,
+      streetAddress: loc.address.streetAddress,
+      city: loc.address.addressLocality,
+      country: loc.address.addressCountry,
+    };
+  }
+  return { venue: "Online", streetAddress: "", city: "Online", country: "" };
+}
+
+// ── API fetch wrapper ───────────────────────────────────────────────
+
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -109,7 +194,8 @@ async function apiFetch<T>(
   return response.json();
 }
 
-// Events API
+// ── Events API ──────────────────────────────────────────────────────
+
 export async function getEvents(params?: {
   city?: string;
   category?: string;
@@ -142,6 +228,12 @@ export async function getEventByShortCode(shortCode: string): Promise<{ event: E
   }
 }
 
+// Helper to get event by ID, slug, or shortCode (tries all three)
+export async function findEvent(identifier: string): Promise<Event | null> {
+  const result = await getEventById(identifier);
+  return result?.event || null;
+}
+
 // Categories API
 export async function getCategories(): Promise<Category[]> {
   const response = await apiFetch<CategoriesResponse>("/api/categories");
@@ -154,35 +246,26 @@ export async function getCities(): Promise<{ city: string; country: string }[]> 
   return response.cities;
 }
 
-// Helper to get event by ID, slug, or shortCode (tries all three)
-export async function findEvent(identifier: string): Promise<Event | null> {
-  const result = await getEventById(identifier);
-  return result?.event || null;
-}
+// ── Create / Update / Delete Events ─────────────────────────────────
 
-// Create event input type
 export interface CreateEventInput {
-  title: string;
+  name: string;
   description: string;
-  date: EventDate;
-  location: EventLocation;
+  startDate: string;
+  endDate?: string;
+  location: Place | VirtualLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
+  keywords: string[];
+  image?: string;
   coverGradient?: string;
-  capacity?: number;
-  isOnline?: boolean;
+  maximumAttendeeCapacity?: number;
+  eventAttendanceMode?: EventAttendanceMode;
   meetingUrl?: string;
   meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
+  organizer: Organizer;
+  offers?: Offer;
 }
 
-// Create a new event
 export async function createEvent(event: CreateEventInput): Promise<{ event: Event; message: string }> {
   return apiFetch<{ event: Event; message: string }>("/api/events", {
     method: "POST",
@@ -190,7 +273,6 @@ export async function createEvent(event: CreateEventInput): Promise<{ event: Eve
   });
 }
 
-// Update an event
 export async function updateEvent(id: string, updates: Partial<CreateEventInput>): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/events/${id}`, {
     method: "PUT",
@@ -198,101 +280,111 @@ export async function updateEvent(id: string, updates: Partial<CreateEventInput>
   });
 }
 
-// Delete an event
 export async function deleteEvent(id: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/events/${id}`, {
     method: "DELETE",
   });
 }
 
-// ============================================
-// Registrations API
-// ============================================
+// ── Registrations API ───────────────────────────────────────────────
+
+export type RsvpResponse =
+  | "pending"
+  | "registered"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "attended";
 
 export interface Registration {
-  id: string;
-  event_id: string;
-  user_id: string;
-  status: "pending" | "registered" | "approved" | "rejected" | "cancelled" | "attended";
-  ticket_type?: string;
-  ticket_price?: number;
-  ticket_currency?: string;
-  registered_at: string;
-  cancelled_at?: string;
-  // Joined user data (when available)
-  user_name?: string;
-  user_email?: string;
-  user_avatar?: string;
+  _id: string;
+  event: string;
+  agent: string;
+  rsvpResponse: RsvpResponse;
+  ticketType?: string;
+  ticketPrice?: number;
+  ticketCurrency?: string;
+  dateCreated: string;
+  dateCancelled?: string;
+  // Enriched user data (when available)
+  userName?: string;
+  userEmail?: string;
+  userImage?: string;
 }
 
 export interface RegistrationsResponse {
   registrations: Registration[];
 }
 
-// Get registrations for an event
 export async function getEventRegistrations(eventId: string): Promise<Registration[]> {
-  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?event_id=${eventId}`);
+  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?event=${eventId}`);
   return response.registrations;
 }
 
-// Get registrations for a user
 export async function getUserRegistrations(userId: string): Promise<Registration[]> {
-  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?user_id=${userId}`);
+  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?agent=${userId}`);
   return response.registrations;
 }
 
-// Register for an event (RSVP)
 export async function registerForEvent(data: {
-  event_id: string;
-  user_id: string;
-  ticket_type?: string;
-  ticket_price?: number;
-  ticket_currency?: string;
-}): Promise<{ id: string; message: string }> {
-  return apiFetch<{ id: string; message: string }>("/api/registrations", {
+  event: string;
+  agent: string;
+  ticketType?: string;
+  ticketPrice?: number;
+  ticketCurrency?: string;
+}): Promise<{ registration: Registration }> {
+  return apiFetch<{ registration: Registration }>("/api/registrations", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// Update registration status (approve/reject)
 export async function updateRegistrationStatus(
   registrationId: string,
-  status: "approved" | "rejected" | "pending" | "registered"
+  rsvpResponse: RsvpResponse
 ): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/registrations/${registrationId}`, {
     method: "PUT",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ rsvpResponse }),
   });
 }
 
-// Cancel a registration
 export async function cancelRegistration(registrationId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/registrations/${registrationId}`, {
     method: "DELETE",
   });
 }
 
-// ============================================
-// Users API
-// ============================================
+// ── Users API ───────────────────────────────────────────────────────
+
+export type UserRole = "user" | "moderator" | "admin" | "super_admin";
 
 export interface User {
-  id: string;
+  _id: string;
+  "@type": "Person";
   email: string;
   name: string;
-  handle?: string;
-  avatar_url?: string;
-  bio?: string;
-  city?: string;
-  country?: string;
+  alternateName?: string;
+  image?: string;
+  description?: string;
+  address?: {
+    "@type": "PostalAddress";
+    addressLocality?: string;
+    addressCountry?: string;
+  };
   interests?: string[];
-  events_attended: number;
-  events_hosted: number;
-  created_at: string;
+  eventsAttended: number;
+  eventsHosted: number;
+  role: UserRole;
+  stytchUserId?: string;
+  mukokoOrgMemberId?: string;
+  authProvider?: "email" | "mukoko_id";
+  emailVerified: boolean;
+  onboardingCompleted: boolean;
+  dateCreated: string;
+  dateModified: string;
 }
 
-// Get user by ID or handle
 export async function getUser(idOrHandle: string): Promise<User | null> {
   try {
     const response = await apiFetch<{ user: User }>(`/api/users/${idOrHandle}`);
@@ -302,39 +394,35 @@ export async function getUser(idOrHandle: string): Promise<User | null> {
   }
 }
 
-// Create a new user
 export async function createUser(data: {
   email: string;
   name: string;
-  handle?: string;
   city?: string;
   country?: string;
   interests?: string[];
-}): Promise<{ id: string; message: string }> {
-  return apiFetch<{ id: string; message: string }>("/api/users", {
+  stytchUserId?: string;
+  mukokoOrgMemberId?: string;
+}): Promise<{ user: User }> {
+  return apiFetch<{ user: User }>("/api/users", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// ============================================
-// Event Views Tracking
-// ============================================
+// ── Event Views Tracking ────────────────────────────────────────────
 
 export async function trackEventView(eventId: string, userId?: string): Promise<void> {
   try {
     await apiFetch("/api/events/" + eventId + "/view", {
       method: "POST",
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ userId }),
     });
   } catch {
     // Silently fail - analytics shouldn't break the UI
   }
 }
 
-// ============================================
-// Media Upload (R2)
-// ============================================
+// ── Media Upload (R2) ───────────────────────────────────────────────
 
 export interface UploadMediaResponse {
   key: string;
@@ -342,11 +430,6 @@ export interface UploadMediaResponse {
   message: string;
 }
 
-/**
- * Upload an image to R2 storage
- * @param file - The file to upload (must be an image)
- * @returns The storage key and URL of the uploaded file
- */
 export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
   const url = `${API_URL}/api/media/upload`;
 
@@ -366,11 +449,6 @@ export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
   return response.json();
 }
 
-/**
- * Get the full URL for a media file
- * @param key - The storage key returned from uploadMedia
- * @param options - Optional image transformation options
- */
 export function getMediaUrl(key: string, options?: { width?: number; height?: number; format?: "webp" | "avif" | "jpeg" | "png" }): string {
   let url = `${API_URL}/api/media/${key}`;
 
@@ -386,9 +464,7 @@ export function getMediaUrl(key: string, options?: { width?: number; height?: nu
   return url;
 }
 
-// ============================================
-// AI Description Generator
-// ============================================
+// ── AI Description Generator ────────────────────────────────────────
 
 export interface DescriptionWizardStep {
   question: string;
@@ -411,9 +487,6 @@ export interface GeneratedDescription {
   suggestions?: string[];
 }
 
-/**
- * Get wizard steps for the description generator
- */
 export async function getDescriptionWizardSteps(category?: string): Promise<{ steps: DescriptionWizardStep[] }> {
   const url = `${API_URL}/api/ai/description/wizard-steps`;
 
@@ -431,9 +504,6 @@ export async function getDescriptionWizardSteps(category?: string): Promise<{ st
   return response.json();
 }
 
-/**
- * Generate an event description using AI
- */
 export async function generateEventDescription(context: DescriptionContext): Promise<GeneratedDescription> {
   return apiFetch<GeneratedDescription>(`${API_URL}/api/ai/description/generate`, {
     method: "POST",
@@ -441,9 +511,6 @@ export async function generateEventDescription(context: DescriptionContext): Pro
   });
 }
 
-/**
- * Regenerate description with feedback
- */
 export async function regenerateEventDescription(
   context: DescriptionContext,
   feedback: string
@@ -454,22 +521,21 @@ export async function regenerateEventDescription(
   });
 }
 
-// ============================================
-// Open Data APIs - Reviews, Referrals, Stats
-// ============================================
+// ── Reviews ─────────────────────────────────────────────────────────
 
-// Event Review Types
 export interface EventReview {
-  id: string;
-  eventId: string;
-  userId: string;
-  userName: string;
-  userInitials: string;
-  rating: number;
-  comment?: string;
+  _id: string;
+  "@type": "Review";
+  itemReviewed: string;
+  author: string;
+  reviewRating: Rating;
+  reviewBody?: string;
+  datePublished: string;
   helpfulCount: number;
   isVerifiedAttendee: boolean;
-  createdAt: string;
+  // Enriched fields
+  authorName?: string;
+  authorInitials?: string;
 }
 
 export interface ReviewStats {
@@ -489,55 +555,46 @@ export interface EventReviewsResponse {
   stats: ReviewStats;
 }
 
-// Get reviews for an event (PUBLIC)
 export async function getEventReviews(eventId: string): Promise<EventReviewsResponse> {
   return apiFetch<EventReviewsResponse>(`/api/events/${eventId}/reviews`);
 }
 
-// Submit a review for an event
 export async function submitEventReview(
   eventId: string,
-  data: { userId: string; rating: number; comment?: string }
-): Promise<{ id: string; message: string }> {
-  return apiFetch<{ id: string; message: string }>(`/api/events/${eventId}/reviews`, {
+  data: { ratingValue: number; reviewBody?: string }
+): Promise<{ review: EventReview }> {
+  return apiFetch<{ review: EventReview }>(`/api/events/${eventId}/reviews`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// Mark a review as helpful
-export async function markReviewHelpful(
-  reviewId: string,
-  userId: string
-): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(`/api/reviews/${reviewId}/helpful`, {
+export async function markReviewHelpful(reviewId: string): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>(`/api/reviews/${reviewId}/helpful`, {
     method: "POST",
-    body: JSON.stringify({ userId }),
   });
 }
 
-// Event Stats Types
+// ── Event Stats ─────────────────────────────────────────────────────
+
 export interface EventStats {
-  eventId: string;
   views: number;
-  uniqueViews: number;
   rsvps: number;
   checkins: number;
-  referrals: number;
-  trend?: number;
-  isHot?: boolean;
-  peakViewTime?: string;
+  referralClicks: number;
   topSources?: Array<{ source: string; count: number }>;
   topCities?: Array<{ city: string; count: number }>;
+  isHot?: boolean;
+  isTrending?: boolean;
+  trend?: number;
 }
 
-// Get stats for an event (PUBLIC - Open Data)
 export async function getEventStats(eventId: string): Promise<EventStats> {
-  const response = await apiFetch<{ stats: EventStats }>(`/api/events/${eventId}/stats`);
-  return response.stats;
+  return apiFetch<EventStats>(`/api/events/${eventId}/stats`);
 }
 
-// Referral Types
+// ── Referrals ───────────────────────────────────────────────────────
+
 export interface ReferralLeaderboardEntry {
   rank: number;
   userId: string;
@@ -547,32 +604,30 @@ export interface ReferralLeaderboardEntry {
   conversionCount: number;
 }
 
-// Get referral leaderboard for an event (PUBLIC)
 export async function getEventReferralLeaderboard(eventId: string): Promise<ReferralLeaderboardEntry[]> {
   const response = await apiFetch<{ leaderboard: ReferralLeaderboardEntry[] }>(`/api/events/${eventId}/referrals`);
   return response.leaderboard;
 }
 
-// Track a referral
 export async function trackReferral(data: {
-  eventId: string;
   referralCode: string;
+  eventId?: string;
   referredUserId?: string;
-}): Promise<{ id: string; message: string }> {
-  return apiFetch<{ id: string; message: string }>("/api/referrals/track", {
+}): Promise<{ referral: { _id: string } }> {
+  return apiFetch<{ referral: { _id: string } }>("/api/referrals/track", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// User Referral Code
 export interface UserReferralCode {
-  code: string;
+  userId: string;
+  referralCode: string;
   totalReferrals: number;
-  totalConversions: number;
+  successfulReferrals: number;
+  dateCreated: string;
 }
 
-// Get user's referral code
 export async function getUserReferralCode(userId: string): Promise<UserReferralCode | null> {
   try {
     return await apiFetch<UserReferralCode>(`/api/users/${userId}/referral-code`);
@@ -581,18 +636,18 @@ export async function getUserReferralCode(userId: string): Promise<UserReferralC
   }
 }
 
-// Generate a referral code for user
-export async function generateUserReferralCode(userId: string): Promise<{ code: string }> {
-  return apiFetch<{ code: string }>(`/api/users/${userId}/referral-code`, {
+export async function generateUserReferralCode(userId: string): Promise<UserReferralCode> {
+  return apiFetch<UserReferralCode>(`/api/users/${userId}/referral-code`, {
     method: "POST",
   });
 }
 
-// Host Reputation Types
-export interface HostStats {
+// ── Host Reputation ─────────────────────────────────────────────────
+
+export interface HostReputation {
   userId: string;
   name: string;
-  handle?: string;
+  alternateName?: string;
   initials: string;
   eventsHosted: number;
   totalAttendees: number;
@@ -600,53 +655,47 @@ export interface HostStats {
   rating: number;
   reviewCount: number;
   badges: string[];
-  responseRate?: number;
-  responseTime?: string;
 }
 
-// Get host reputation (PUBLIC)
-export async function getHostReputation(userId: string): Promise<HostStats | null> {
+export async function getHostReputation(userId: string): Promise<HostReputation | null> {
   try {
-    const response = await apiFetch<{ host: HostStats }>(`/api/users/${userId}/reputation`);
-    return response.host;
+    return await apiFetch<HostReputation>(`/api/users/${userId}/reputation`);
   } catch {
     return null;
   }
 }
 
-// Community Stats Types
+// ── Community Stats ─────────────────────────────────────────────────
+
 export interface CommunityStats {
-  city?: string;
   totalEvents: number;
   totalAttendees: number;
   activeHosts: number;
   trendingCategories: Array<{
     category: string;
-    change: number;
-    events: number;
+    count: number;
+    attendees: number;
   }>;
-  peakTime: string;
   popularVenues: Array<{
     venue: string;
-    events: number;
+    count: number;
   }>;
+  peakTime?: string;
 }
 
-// Get community stats (PUBLIC)
 export async function getCommunityStats(city?: string): Promise<CommunityStats> {
   const params = city ? `?city=${encodeURIComponent(city)}` : "";
-  const response = await apiFetch<{ stats: CommunityStats }>(`/api/community/stats${params}`);
-  return response.stats;
+  return apiFetch<CommunityStats>(`/api/community/stats${params}`);
 }
 
-// Trending Events (includes views and trend data)
+// ── Trending Events ─────────────────────────────────────────────────
+
 export interface TrendingEvent extends Event {
   views: number;
   trend: number;
   isHot: boolean;
 }
 
-// Get trending events
 export async function getTrendingEvents(params?: {
   city?: string;
   limit?: number;

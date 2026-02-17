@@ -5,7 +5,8 @@ import Link from "next/link";
 import { MapPin, ChevronDown, Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun, TrendingUp, Flame, Clock, Users } from "lucide-react";
 import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
 import { CommunityInsightsCompact } from "@/components/ui/community-insights";
-import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
+import { getEvents, getCategories, getPlaceInfo, type Event, type Category } from "@/lib/api";
+import { websiteJsonLd, eventsListToJsonLd } from "@/lib/schema";
 import { getUserTimezone, getCurrentTimeWithTimezone, getWeather, type WeatherData } from "@/lib/timezone";
 
 // Weather icon component
@@ -23,7 +24,7 @@ function WeatherIcon({ icon }: { icon: string }) {
 }
 
 // Community Stats Bar Component
-function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: number }) {
+function CommunityStatsBar({ eventCount }: { eventCount: number }) {
   return (
     <div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-surface rounded-xl mb-6">
       <div className="flex items-center gap-2">
@@ -114,7 +115,7 @@ export default function DiscoverPage() {
 
         // Set initial city filter based on detected location or first available city
         if (!activeCity && eventsResponse.events.length > 0) {
-          const cities = new Set(eventsResponse.events.map((e) => e.location.city));
+          const cities = new Set(eventsResponse.events.map((e) => getPlaceInfo(e).city));
           if (detectedCity && cities.has(detectedCity)) {
             setActiveCity(detectedCity);
           }
@@ -130,7 +131,7 @@ export default function DiscoverPage() {
 
   // Get unique cities from events
   const availableCities = useMemo(() => {
-    const citySet = new Set(events.map((e) => e.location.city));
+    const citySet = new Set(events.map((e) => getPlaceInfo(e).city));
     return Array.from(citySet).sort();
   }, [events]);
 
@@ -149,7 +150,7 @@ export default function DiscoverPage() {
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       const categoryMatch = activeCategory === "All" || e.category === activeCategory;
-      const cityMatch = !activeCity || e.location.city === activeCity;
+      const cityMatch = !activeCity || getPlaceInfo(e).city === activeCity;
       return categoryMatch && cityMatch;
     });
   }, [events, activeCategory, activeCity]);
@@ -159,6 +160,17 @@ export default function DiscoverPage() {
   const rightColumnEvents = filteredEvents.filter((_, i) => i % 2 === 1).slice(0, 3);
 
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }}
+      />
+      {filteredEvents.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(eventsListToJsonLd(filteredEvents.slice(0, 20))) }}
+        />
+      )}
     <div className="min-h-screen">
       {/* Timezone & Weather Bar */}
       {currentTime && (
@@ -206,7 +218,7 @@ export default function DiscoverPage() {
       <section className="pb-16">
         <div className="max-w-300 mx-auto px-6">
           {/* Community Stats Bar - Open Data */}
-          <CommunityStatsBar city={activeCity || undefined} eventCount={filteredEvents.length} />
+          <CommunityStatsBar eventCount={filteredEvents.length} />
 
           {/* Section Header with City Selector */}
           <div className="flex items-start justify-between mb-8">
@@ -300,12 +312,12 @@ export default function DiscoverPage() {
                 <div className="space-y-2">
                   {leftColumnEvents.map((event) => (
                     <EventCardHorizontal
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      date={event.date}
-                      location={event.location}
-                      coverImage={event.coverImage}
+                      key={event._id}
+                      _id={event._id}
+                      name={event.name}
+                      dateDisplay={event.dateDisplay}
+                      location={getPlaceInfo(event)}
+                      image={event.image}
                       coverGradient={event.coverGradient}
                     />
                   ))}
@@ -315,12 +327,12 @@ export default function DiscoverPage() {
                 <div className="space-y-2">
                   {rightColumnEvents.map((event) => (
                     <EventCardHorizontal
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      date={event.date}
-                      location={event.location}
-                      coverImage={event.coverImage}
+                      key={event._id}
+                      _id={event._id}
+                      name={event.name}
+                      dateDisplay={event.dateDisplay}
+                      location={getPlaceInfo(event)}
+                      image={event.image}
                       coverGradient={event.coverGradient}
                     />
                   ))}
@@ -396,5 +408,6 @@ export default function DiscoverPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

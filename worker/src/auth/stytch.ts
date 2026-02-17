@@ -1,19 +1,32 @@
 /**
+<<<<<<< Updated upstream
  * Stytch Session JWT Local Validation for nhimbe Worker
  *
  * Authentication is handled entirely by the Stytch frontend SDK.
  * The backend only validates session JWTs locally using Stytch's
  * public JWKS — no Stytch API calls or secrets required.
+=======
+ * Stytch Authentication Helper for nhimbe Worker
+ * Handles magic link session validation and user lookup
+>>>>>>> Stashed changes
  */
 
 interface StytchEnv {
   STYTCH_PROJECT_ID: string;
+<<<<<<< Updated upstream
 }
 
 export interface AuthenticatedUser {
+=======
+  STYTCH_SECRET: string;
+}
+
+export interface StytchUser {
+>>>>>>> Stashed changes
   userId: string;
 }
 
+<<<<<<< Updated upstream
 // ============================================
 // JWKS Cache & Fetching
 // ============================================
@@ -195,12 +208,146 @@ async function verifyJWT(
   } catch (error) {
     console.error("JWT verification error:", error);
     return { payload: null, failureReason: "verification_error", detail: String(error) };
+=======
+interface StytchSessionUser {
+  user_id: string;
+  emails: Array<{ email: string; verified: boolean }>;
+  name?: {
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
+interface SessionAuthenticateResponse {
+  session: {
+    session_id: string;
+    user_id: string;
+    expires_at: string;
+  };
+  user: StytchSessionUser;
+}
+
+const STYTCH_API_URL = 'https://api.stytch.com/v1';
+
+function stytchAuthHeader(env: StytchEnv): string {
+  return `Basic ${btoa(`${env.STYTCH_PROJECT_ID}:${env.STYTCH_SECRET}`)}`;
+}
+
+/**
+ * Validate a Stytch session token by calling the sessions/authenticate endpoint
+ */
+export async function validateSession(
+  sessionToken: string,
+  env: StytchEnv
+): Promise<StytchUser | null> {
+  try {
+    const response = await fetch(`${STYTCH_API_URL}/sessions/authenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: stytchAuthHeader(env),
+      },
+      body: JSON.stringify({
+        session_token: sessionToken,
+        session_duration_minutes: 60 * 24 * 30, // Extend session on validate
+      }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as SessionAuthenticateResponse;
+    const stytchUserData = data.user;
+
+    return {
+      userId: stytchUserData.user_id,
+      email: stytchUserData.emails?.[0]?.email || '',
+      name: {
+        firstName: stytchUserData.name?.first_name,
+        lastName: stytchUserData.name?.last_name,
+      },
+    };
+  } catch (error) {
+    console.error('Session validation error:', error);
+    return null;
+>>>>>>> Stashed changes
   }
 }
 
 // ============================================
 // Public API
 // ============================================
+
+/**
+ * Validate a Stytch session JWT locally or via API
+ * For now, we validate via the sessions/authenticate endpoint using the session_token
+ * In the future, consider local JWT validation using JWKS for better performance
+ */
+export async function validateSessionJwt(
+  sessionJwt: string,
+  env: StytchEnv
+): Promise<StytchUser | null> {
+  // JWT validation: call Stytch to validate the session JWT
+  try {
+    const response = await fetch(`${STYTCH_API_URL}/sessions/authenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: stytchAuthHeader(env),
+      },
+      body: JSON.stringify({
+        session_jwt: sessionJwt,
+        session_duration_minutes: 60 * 24 * 30,
+      }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as SessionAuthenticateResponse;
+    const stytchUserData = data.user;
+
+    return {
+      userId: stytchUserData.user_id,
+      email: stytchUserData.emails?.[0]?.email || '',
+      name: {
+        firstName: stytchUserData.name?.first_name,
+        lastName: stytchUserData.name?.last_name,
+      },
+    };
+  } catch (error) {
+    console.error('Session JWT validation error:', error);
+    return null;
+  }
+}
+
+/**
+ * Revoke a Stytch session
+ */
+export async function revokeSession(
+  sessionToken: string,
+  env: StytchEnv
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${STYTCH_API_URL}/sessions/revoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: stytchAuthHeader(env),
+      },
+      body: JSON.stringify({
+        session_token: sessionToken,
+      }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Session revoke error:', error);
+    return false;
+  }
+}
 
 /**
  * Extract bearer token from Authorization header
@@ -220,12 +367,43 @@ export interface AuthResult {
 }
 
 /**
+<<<<<<< Updated upstream
  * Validate the Stytch session JWT locally and return the authenticated user.
  * No Stytch API calls are made — verification uses the public JWKS.
+=======
+ * Extract session JWT from cookies or Authorization header
+ */
+export function extractSessionToken(request: Request): { sessionJwt: string | null; sessionToken: string | null } {
+  // Try Authorization header first (Bearer token = session JWT)
+  const bearerToken = extractBearerToken(request);
+  if (bearerToken) {
+    return { sessionJwt: bearerToken, sessionToken: null };
+  }
+
+  // Try cookies
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = Object.fromEntries(
+    cookieHeader.split(";").map(c => {
+      const [key, ...val] = c.trim().split("=");
+      return [key, val.join("=")];
+    })
+  );
+
+  return {
+    sessionJwt: cookies["nhimbe_session"] || null,
+    sessionToken: cookies["nhimbe_session_token"] || null,
+  };
+}
+
+/**
+ * Middleware helper to get authenticated user from request
+ * Supports both session JWT (cookie/bearer) and session token (cookie)
+>>>>>>> Stashed changes
  */
 export async function getAuthenticatedUser(
   request: Request,
   env: StytchEnv
+<<<<<<< Updated upstream
 ): Promise<AuthResult> {
   const token = extractBearerToken(request);
   if (!token) return { user: null, failureReason: "no_token" };
@@ -236,4 +414,21 @@ export async function getAuthenticatedUser(
   }
 
   return { user: { userId: result.payload.sub } };
+=======
+): Promise<StytchUser | null> {
+  const { sessionJwt, sessionToken } = extractSessionToken(request);
+
+  // Try session JWT first (from cookie or bearer token)
+  if (sessionJwt) {
+    const user = await validateSessionJwt(sessionJwt, env);
+    if (user) return user;
+  }
+
+  // Fall back to session token
+  if (sessionToken) {
+    return validateSession(sessionToken, env);
+  }
+
+  return null;
+>>>>>>> Stashed changes
 }

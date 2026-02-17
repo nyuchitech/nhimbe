@@ -39,8 +39,12 @@ export default function OnboardingForm() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
+<<<<<<< Updated upstream
   const stytch = useStytch();
   const { user, isAuthenticated, isLoading: authLoading, refreshUser, signOut } = useAuth();
+=======
+  const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
+>>>>>>> Stashed changes
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -55,8 +59,8 @@ export default function OnboardingForm() {
       setData((prev) => ({
         ...prev,
         name: prev.name || user.name || "",
-        city: prev.city || user.city || "",
-        country: prev.country || user.country || "",
+        city: prev.city || user.address?.addressLocality || "",
+        country: prev.country || user.address?.addressCountry || "",
         interests: prev.interests.length > 0 ? prev.interests : (user.interests || []),
       }));
     }

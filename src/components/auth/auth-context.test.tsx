@@ -78,6 +78,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('authenticated').textContent).toBe('no');
   });
 
+<<<<<<< Updated upstream
   it('shows loading when SDK is not initialized', async () => {
     mockUserInitialized = false;
     mockSessionInitialized = false;
@@ -108,6 +109,50 @@ describe('AuthContext', () => {
     };
     mockStytchSession = { session_id: 'session-abc' };
 
+=======
+  it('loads user from cookie', async () => {
+    const mockUser: NhimbeUser = {
+      _id: 'user-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      onboardingCompleted: true,
+      stytchUserId: 'stytch-123',
+      role: 'user',
+    };
+
+    // Set cookie with user data
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(mockUser))}`,
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('not-loading');
+    });
+
+    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(screen.getByTestId('user-name').textContent).toBe('Test User');
+    expect(screen.getByTestId('needs-onboarding').textContent).toBe('no');
+  });
+
+  it('validates session via /api/auth/me when no user cookie', async () => {
+    const mockUser: NhimbeUser = {
+      _id: 'user-456',
+      email: 'backend@example.com',
+      name: 'Backend User',
+      onboardingCompleted: false,
+      stytchUserId: 'stytch-456',
+      role: 'user',
+    };
+
+    // No nhimbe_user cookie — auth context should call /api/auth/me
+>>>>>>> Stashed changes
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ user: backendUser }),
@@ -124,14 +169,59 @@ describe('AuthContext', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
+<<<<<<< Updated upstream
       expect.stringContaining('/api/auth/sync'),
       expect.objectContaining({ method: 'POST' })
+=======
+      expect.stringContaining('/api/auth/me'),
+      expect.objectContaining({
+        credentials: 'include',
+      })
+    );
+    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(screen.getByTestId('user-name').textContent).toBe('Backend User');
+    expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
+  });
+
+  it('validates session with backend using credentials include', async () => {
+    const mockUser: NhimbeUser = {
+      _id: 'user-789',
+      email: 'backend@example.com',
+      name: 'Backend User',
+      onboardingCompleted: true,
+      stytchUserId: 'stytch-789',
+      role: 'user',
+    };
+
+    // Mock successful backend response (session validated via httpOnly cookie)
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: mockUser }),
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading').textContent).toBe('not-loading');
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/auth/me'),
+      expect.objectContaining({
+        credentials: 'include',
+      })
+>>>>>>> Stashed changes
     );
 
     expect(screen.getByTestId('authenticated').textContent).toBe('yes');
     expect(screen.getByTestId('user-name').textContent).toBe('Backend User');
   });
 
+<<<<<<< Updated upstream
   it('falls back to Stytch data when backend sync fails', async () => {
     mockStytchUser = {
       user_id: 'stytch-456',
@@ -140,6 +230,10 @@ describe('AuthContext', () => {
     };
     mockStytchSession = { session_id: 'session-xyz' };
 
+=======
+  it('clears auth when backend session validation fails', async () => {
+    // Mock failed backend response (session cookie invalid/expired)
+>>>>>>> Stashed changes
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -160,6 +254,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
   });
 
+<<<<<<< Updated upstream
   it('computes needsOnboarding when onboarding not completed', async () => {
     const backendUser: NhimbeUser = {
       id: 'usr-new',
@@ -167,6 +262,43 @@ describe('AuthContext', () => {
       name: 'New User',
       onboardingCompleted: false,
       stytchUserId: 'stytch-789',
+=======
+  it('computes isAuthenticated correctly', async () => {
+    // User with _id should be authenticated
+    const authenticatedUser: NhimbeUser = {
+      _id: 'user-123',
+      email: 'test@example.com',
+      name: 'Test',
+      onboardingCompleted: true,
+      stytchUserId: 'stytch-123',
+      role: 'user',
+    };
+
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: `nhimbe_user=${encodeURIComponent(JSON.stringify(authenticatedUser))}`,
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    });
+  });
+
+  it('computes needsOnboarding correctly', async () => {
+    // User who hasn't completed onboarding
+    const newUser: NhimbeUser = {
+      _id: 'user-123',
+      email: 'new@example.com',
+      name: 'New User',
+      onboardingCompleted: false,
+      stytchUserId: 'stytch-123',
+>>>>>>> Stashed changes
       role: 'user',
     };
 
@@ -193,7 +325,11 @@ describe('AuthContext', () => {
     });
   });
 
+<<<<<<< Updated upstream
   it('signIn redirects to /auth/signin and stores return URL', async () => {
+=======
+  it('signIn navigates to signin page with redirect param', async () => {
+>>>>>>> Stashed changes
     render(
       <AuthProvider>
         <TestConsumer />
@@ -209,6 +345,7 @@ describe('AuthContext', () => {
       signInButton.click();
     });
 
+<<<<<<< Updated upstream
     expect(localStorage.setItem).toHaveBeenCalledWith('auth_redirect', '/dashboard');
     expect(mockPush).toHaveBeenCalledWith('/auth/signin');
   });
@@ -216,6 +353,19 @@ describe('AuthContext', () => {
   it('signOut revokes Stytch session and redirects home', async () => {
     const backendUser: NhimbeUser = {
       id: 'usr-123',
+=======
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/signin')
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining('redirect=%2Fdashboard')
+    );
+  });
+
+  it('signOut clears auth and redirects to home', async () => {
+    const mockUser: NhimbeUser = {
+      _id: 'user-123',
+>>>>>>> Stashed changes
       email: 'test@example.com',
       name: 'Test',
       onboardingCompleted: true,

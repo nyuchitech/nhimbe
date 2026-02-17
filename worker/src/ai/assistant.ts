@@ -93,10 +93,14 @@ export async function chat(
     // Add event context to the conversation
     if (suggestedEvents.length > 0) {
       const eventContext = suggestedEvents
-        .map(
-          (e) =>
-            `- "${e.title}" on ${e.date.full} at ${e.location.venue}, ${e.location.city}`
-        )
+        .map((e) => {
+          const isPlace = e.location["@type"] === "Place";
+          const venue = isPlace ? (e.location as { name: string }).name : "";
+          const city = isPlace
+            ? (e.location as { address: { addressLocality: string } }).address.addressLocality
+            : "";
+          return `- "${e.name}" on ${e.dateDisplay.full} at ${venue}, ${city}`;
+        })
         .join("\n");
 
       messages.push({
