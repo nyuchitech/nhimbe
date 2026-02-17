@@ -113,6 +113,9 @@ simple = { limit = 100, period = 60 }  # 100 requests per minute
 
 # ============================================
 # PRODUCTION ENVIRONMENT
+# Secrets needed (set via `wrangler secret put --env production`):
+#   - API_KEY
+#   - MONGODB_URI
 # ============================================
 [env.production]
 name = "mukoko-nhimbe-api"
@@ -166,8 +169,18 @@ queue = "nhimbe-email-queue"
 max_batch_size = 10
 max_batch_timeout = 60
 
+# Rate limiting
+[[env.production.unsafe.bindings]]
+type = "ratelimit"
+name = "RATE_LIMITER"
+namespace_id = "1"
+simple = { limit = 100, period = 60 }
+
 # ============================================
 # STAGING ENVIRONMENT
+# Secrets needed (set via `wrangler secret put --env staging`):
+#   - API_KEY
+#   - MONGODB_URI
 # ============================================
 [env.staging]
 name = "mukoko-nhimbe-api-staging"
@@ -199,3 +212,28 @@ binding = "IMAGES"
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"
 dataset = "nhimbe_events_staging"
+
+[[env.staging.queues.producers]]
+binding = "ANALYTICS_QUEUE"
+queue = "nhimbe-analytics-queue"
+
+[[env.staging.queues.producers]]
+binding = "EMAIL_QUEUE"
+queue = "nhimbe-email-queue"
+
+[[env.staging.queues.consumers]]
+queue = "nhimbe-analytics-queue"
+max_batch_size = 100
+max_batch_timeout = 30
+
+[[env.staging.queues.consumers]]
+queue = "nhimbe-email-queue"
+max_batch_size = 10
+max_batch_timeout = 60
+
+# Rate limiting
+[[env.staging.unsafe.bindings]]
+type = "ratelimit"
+name = "RATE_LIMITER"
+namespace_id = "1"
+simple = { limit = 100, period = 60 }
