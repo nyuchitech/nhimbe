@@ -5,7 +5,7 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # Environment variables
-# Secrets (set via `wrangler secret put`): API_KEY
+# Secrets (set via `wrangler secret put`): API_KEY, MONGODB_URI
 [vars]
 ENVIRONMENT = "development"
 ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"

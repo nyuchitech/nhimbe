@@ -31,10 +31,10 @@ cd worker && wrangler d1 execute mukoko-nhimbe-db --file=./src/db/migrations/you
 
 ## CI Pipeline
 
-GitHub Actions (`.github/workflows/ci.yml`) runs 5 parallel jobs on every push:
-1. **Lint & Build** — `npm run lint` + `npm run build`
-2. **Frontend Tests** — `npm run test:run` (162 tests)
-3. **Worker Tests** — `cd worker && npx vitest run` (171 tests)
+GitHub Actions (`.github/workflows/ci.yml`) runs 5 parallel jobs on every push to any branch:
+1. **Lint & Build** — `npm run lint` + `npm run build` (placeholder env vars)
+2. **Frontend Tests** — `npm run test:run`
+3. **Worker Tests** — `cd worker && npx vitest run`
 4. **Worker Type Check** — `cd worker && npx tsc --noEmit`
 5. **Validate Migrations** — checks migration SQL files exist and are non-empty
 
@@ -48,7 +48,7 @@ All frontend API calls go through `src/lib/api.ts` (centralized client) → Clou
 
 ### Backend Routing
 
-`worker/src/index.ts` is a single large file (~2800 lines) with URL-based routing in the main `fetch` handler. Pattern:
+`worker/src/index.ts` is a single large file (~3400 lines) with URL-based routing in the main `fetch` handler. Pattern:
 ```
 if (url.pathname === "/api/events" && request.method === "GET") {
   return handleGetEvents(request, env);
@@ -58,17 +58,21 @@ Handler functions are defined in the same file.
 
 ### Authentication Flow
 
-1. Frontend uses **Stytch Consumer SDK** (magic links + OTP) — session managed client-side
+1. Frontend uses **Stytch Consumer SDK** (magic links + OTP) — session managed client-side via `StytchProvider` (`src/components/auth/stytch-provider.tsx`)
 2. On login, `AuthProvider` (`src/components/auth/auth-context.tsx`) calls `/api/auth/sync` with the Stytch session JWT
 3. Backend validates JWT locally using Stytch's JWKS endpoint (`worker/src/auth/stytch.ts`) — no Stytch API secret needed
-4. `getAuthenticatedUser()` returns `AuthResult` with structured failure reasons (e.g., `token_expired`, `issuer_mismatch`)
-5. If `/api/auth/sync` fails, `AuthProvider` has a fallback that creates a temporary user object — this can mask JWT validation failures
+4. `getAuthenticatedUser()` returns `AuthResult` with structured `failureReason` (e.g., `token_expired`, `issuer_mismatch`, `jwks_fetch_failed`, `invalid_signature`)
+5. If `/api/auth/sync` fails, `AuthProvider` has a fallback that creates a temporary user object with `onboardingCompleted: false` — this can mask JWT validation failures
+
+Authentication page: `src/app/authenticate/page.tsx`. Stytch theme overrides: `src/app/stytch-overrides.css`.
 
 ### Write Operation Authorization
 
 Protected endpoints use either:
 - **JWT auth** via `getAuthenticatedUser()` for user-specific operations (onboarding, profile)
 - **Origin check** via `isAllowedOrigin()` OR **API key** via `X-API-Key` header for write operations (create/update events, registrations)
+
+Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe.com` and all subdomains are always allowed.
 
 ### AI Features
 
@@ -78,35 +82,46 @@ Protected endpoints use either:
 
 ## Testing
 
-### Backend Test Mocks (`worker/src/__tests__/mocks.ts`)
+### Frontend Tests
 
-4-layer mock architecture:
-- **L1: Primitives** — `createMockD1()`, `createMockKV()`, `createMockR2()`, `createMockAI()`
+Tests colocate with modules (e.g., `src/lib/api.test.ts`) or live in `src/__tests__/`. Config: `vitest.config.ts` with jsdom and React plugin.
+
+### Backend Tests
+
+All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config.ts` with `globals: true`.
+
+**Mock architecture** (`worker/src/__tests__/mocks.ts`) — 4 layers:
+- **L1: Primitives** — `createMockD1()`, `createMockKV()`, `createMockR2()`, `createMockVectorize()`, `createMockAI()`
 - **L2: Env Factory** — `createMockEnv()` combines all bindings
-- **L3: Request Builders** — `createRequest()`, `createAuthenticatedRequest()`
-- **L4: Domain Fixtures** — `createEventFixture()`, `createUserFixture()`
+- **L3: Request Builders** — `createRequest()`, `createAuthenticatedRequest()`, `createApiKeyRequest()`
+- **L4: Domain Fixtures** — `createEventFixture()`, `createEventDbRow()`
 
-All backend tests use these shared mocks. Frontend tests live alongside modules (e.g., `src/lib/api.test.ts`) or in `src/__tests__/`.
-
-**Note:** Worker test files (`__tests__/**`, `*.test.ts`, `*.spec.ts`) are excluded from `worker/tsconfig.json` so `tsc --noEmit` only checks production code. Test types are provided by vitest's `globals: true` setting in `worker/vitest.config.ts`.
+**Note:** Worker test files (`__tests__/**`, `*.test.ts`, `*.spec.ts`) are excluded from `worker/tsconfig.json` so `tsc --noEmit` only checks production code.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `worker/src/index.ts` | All backend API routes and handlers |
-| `worker/src/auth/stytch.ts` | JWT validation with JWKS, `AuthResult` type |
+| `worker/src/index.ts` | All backend API routes and handlers (~3400 lines) |
+| `worker/src/auth/stytch.ts` | JWT validation with JWKS, `AuthResult` type, failure reasons |
 | `worker/src/types.ts` | Backend TypeScript type definitions |
 | `worker/src/db/schema.sql` | D1 database schema |
+| `worker/src/db/migrations/` | SQL migration files |
 | `src/lib/api.ts` | All frontend API client functions |
 | `src/lib/themes.ts` | Mineral theme definitions (`brandColors`, `mineralThemes`) |
 | `src/components/auth/auth-context.tsx` | Auth state management, Stytch sync |
+| `src/components/auth/stytch-provider.tsx` | Stytch SDK initialization |
 | `src/app/globals.css` | CSS variables, theme system |
+| `src/app/stytch-overrides.css` | Stytch component theme overrides |
 | `worker/wrangler.toml` | Cloudflare bindings and env config |
 
 ## Database
 
-Cloudflare D1 (SQLite). Core tables: `events`, `users`, `registrations`, `follows`, `themes`. Analytics: `event_views`, `search_queries`, `ai_conversations`. Schema in `worker/src/db/schema.sql`, migrations in `worker/src/db/migrations/`.
+**Primary: Cloudflare D1 (SQLite).** Schema: `worker/src/db/schema.sql`. Migrations: `worker/src/db/migrations/`.
+
+Core tables: `events`, `users`, `registrations`, `follows`, `themes`. Analytics: `event_views`, `search_queries`, `ai_conversations`.
+
+**Secondary: MongoDB Atlas.** Connected via `MONGODB_URI` secret. Used for document storage alongside D1. Connection string set via `wrangler secret put MONGODB_URI`.
 
 ## Code Conventions
 
@@ -122,6 +137,8 @@ Cloudflare D1 (SQLite). Core tables: `events`, `users`, `registrations`, `follow
 
 Frontend (`.env.local`): `NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-Backend (`worker/.dev.vars`): `API_KEY`, `STYTCH_PROJECT_ID` (also set in `wrangler.toml` vars)
+Backend (`worker/.dev.vars`): `API_KEY`, `MONGODB_URI`
 
-Cloudflare bindings: `AI` (Workers AI), `VECTORIZE`, `DB` (D1), `CACHE` (KV), `MEDIA` (R2), `IMAGES`, `ANALYTICS`
+Backend (`worker/wrangler.toml` vars): `ENVIRONMENT`, `ALLOWED_ORIGINS`, `STYTCH_PROJECT_ID` (public value for JWKS validation — different per environment)
+
+Cloudflare bindings: `AI` (Workers AI), `VECTORIZE`, `DB` (D1), `CACHE` (KV), `MEDIA` (R2), `IMAGES`, `ANALYTICS`, `ANALYTICS_QUEUE`, `EMAIL_QUEUE`, `RATE_LIMITER`
