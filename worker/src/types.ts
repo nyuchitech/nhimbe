@@ -325,12 +325,12 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   // Stytch (frontend SDK handles auth; backend only needs project ID for local JWT validation)
   STYTCH_PROJECT_ID: string;
-  // MongoDB Atlas (set via `wrangler secret put MONGODB_URI`)
+  // MongoDB Atlas — primary database (set via `wrangler secret put MONGODB_URI`)
   MONGODB_URI?: string;
   // Cloudflare bindings
   AI: Ai;
   VECTORIZE: VectorizeIndex;
-  DB: D1Database;
+  DB: D1Database; // Edge processing — fast reads, caching
   CACHE: KVNamespace;
   MEDIA: R2Bucket;
   IMAGES: ImagesBinding;

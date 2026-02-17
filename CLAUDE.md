@@ -117,11 +117,11 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 
 ## Database
 
-**Primary: Cloudflare D1 (SQLite).** Schema: `worker/src/db/schema.sql`. Migrations: `worker/src/db/migrations/`.
+**Primary: MongoDB Atlas.** Connected via `MONGODB_URI` secret (set via `wrangler secret put MONGODB_URI`). Source of truth for all persistent data — events, users, registrations, reviews, referrals, analytics.
 
-Core tables: `events`, `users`, `registrations`, `follows`, `themes`. Analytics: `event_views`, `search_queries`, `ai_conversations`.
+**Edge: Cloudflare D1 (SQLite).** Schema: `worker/src/db/schema.sql`. Migrations: `worker/src/db/migrations/`. Used for edge processing — fast reads, caching, and data that benefits from being co-located with the Worker.
 
-**Secondary: MongoDB Atlas.** Connected via `MONGODB_URI` secret. Used for document storage alongside D1. Connection string set via `wrangler secret put MONGODB_URI`.
+Core tables (D1): `events`, `users`, `registrations`, `follows`, `themes`. Analytics: `event_views`, `search_queries`, `ai_conversations`.
 
 ## Code Conventions
 

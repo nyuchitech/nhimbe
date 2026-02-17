@@ -15,13 +15,13 @@ Create a database migration for: $ARGUMENTS
 ## Determine Database Target
 
 nhimbe uses **two databases**:
-- **D1 (SQLite)** — primary relational store (events, users, registrations, etc.)
-- **MongoDB Atlas** — document store (via `MONGODB_URI` secret)
+- **MongoDB Atlas** — primary database, source of truth (via `MONGODB_URI` secret)
+- **D1 (SQLite)** — edge processing, fast reads, caching
 
 Infer the target from $ARGUMENTS:
-- If the migration involves relational tables (events, users, registrations, follows, themes) → **D1**
-- If the migration involves document collections, embedded docs, or flexible schemas → **MongoDB**
-- If unclear, **default to D1** and ask for clarification
+- If the migration involves core data (events, users, registrations, reviews, referrals, analytics) → **MongoDB**
+- If the migration involves edge caching, denormalized read views, or Worker-local data → **D1**
+- If unclear, **default to MongoDB** and ask for clarification
 
 ## Steps — D1 (SQLite) Migration
 
