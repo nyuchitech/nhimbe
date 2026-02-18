@@ -6,6 +6,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, AnalyticsQueueMessage, EmailQueueMessage } from "./types";
+import { processAnalyticsMessage, processEmailMessage } from "./queues/handlers";
 
 // Route modules
 import { health } from "./routes/health";
@@ -20,6 +21,8 @@ import { media } from "./routes/media";
 import { referrals } from "./routes/referrals";
 import { reviews } from "./routes/reviews";
 import { stats } from "./routes/stats";
+import { admin } from "./routes/admin";
+import { seed } from "./routes/seed";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -43,6 +46,8 @@ app.route("/api/media", media);
 app.route("/api/referrals", referrals);
 app.route("/api/reviews", reviews);
 app.route("/api/community", stats);
+app.route("/api/admin", admin);
+app.route("/api", seed);
 
 // Global error handler
 app.onError((err, c) => {
@@ -76,37 +81,6 @@ async function handleQueue(batch: MessageBatch, env: Env): Promise<void> {
       message.retry();
     }
   }
-}
-
-async function processAnalyticsMessage(message: AnalyticsQueueMessage, env: Env): Promise<void> {
-  console.log(`Processing analytics message: ${message.type} for event ${message.eventId}`);
-
-  if (env.ANALYTICS) {
-    env.ANALYTICS.writeDataPoint({
-      blobs: [message.type, message.eventId, message.userId || "anonymous"],
-      doubles: [Date.now()],
-      indexes: [message.type],
-    });
-  }
-
-  switch (message.type) {
-    case "view":
-      await env.DB.prepare(
-        `UPDATE events SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?`
-      ).bind(message.eventId).run();
-      break;
-    case "rsvp":
-      break;
-    case "referral":
-      break;
-    case "review":
-      break;
-  }
-}
-
-async function processEmailMessage(message: EmailQueueMessage, env: Env): Promise<void> {
-  console.log(`Processing email message: ${message.type} to ${message.to}`);
-  // TODO: Integrate with email service (e.g., Resend, SendGrid, Mailgun)
 }
 
 export default {
