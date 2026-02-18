@@ -5,6 +5,7 @@
  */
 
 import type { Ai } from "../types";
+import { withTimeout } from "../utils/timeout";
 
 const LLM_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8";
 
@@ -114,17 +115,21 @@ Special Highlights: ${context.highlights || "None specified"}
 Write a compelling description that would make someone want to attend this event. Only output the description text, nothing else.`;
 
   try {
-    const response = await ai.run(LLM_MODEL, {
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 400,
-      temperature: 0.7,
-    });
+    const response = await withTimeout(
+      ai.run(LLM_MODEL, {
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
+      15_000,
+      null
+    );
 
-    const result = response as { response?: string };
-    const description = result.response?.trim() || generateFallbackDescription(context);
+    const result = response as { response?: string } | null;
+    const description = result?.response?.trim() || generateFallbackDescription(context);
 
     // Generate improvement suggestions
     const suggestions = await generateSuggestions(ai, description);
@@ -146,23 +151,27 @@ Write a compelling description that would make someone want to attend this event
  */
 async function generateSuggestions(ai: Ai, description: string): Promise<string[]> {
   try {
-    const response = await ai.run(LLM_MODEL, {
-      messages: [
-        {
-          role: "system",
-          content: "You are an event marketing expert. Analyze descriptions and suggest specific improvements. Return only a JSON array of 2-3 short suggestions.",
-        },
-        {
-          role: "user",
-          content: `Analyze this event description and provide 2-3 brief suggestions for improvement:\n\n"${description}"\n\nRespond with JSON array only, like: ["suggestion 1", "suggestion 2"]`,
-        },
-      ],
-      max_tokens: 150,
-      temperature: 0.5,
-    });
+    const response = await withTimeout(
+      ai.run(LLM_MODEL, {
+        messages: [
+          {
+            role: "system",
+            content: "You are an event marketing expert. Analyze descriptions and suggest specific improvements. Return only a JSON array of 2-3 short suggestions.",
+          },
+          {
+            role: "user",
+            content: `Analyze this event description and provide 2-3 brief suggestions for improvement:\n\n"${description}"\n\nRespond with JSON array only, like: ["suggestion 1", "suggestion 2"]`,
+          },
+        ],
+        max_tokens: 150,
+        temperature: 0.5,
+      }),
+      10_000,
+      null
+    );
 
-    const result = response as { response?: string };
-    if (result.response) {
+    const result = response as { response?: string } | null;
+    if (result?.response) {
       const match = result.response.match(/\[[\s\S]*\]/);
       if (match) {
         return JSON.parse(match[0]);
@@ -203,18 +212,22 @@ User feedback: ${feedback}
 Write an improved description that addresses this feedback. Only output the description text.`;
 
   try {
-    const response = await ai.run(LLM_MODEL, {
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 400,
-      temperature: 0.7,
-    });
+    const response = await withTimeout(
+      ai.run(LLM_MODEL, {
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
+      15_000,
+      null
+    );
 
-    const result = response as { response?: string };
+    const result = response as { response?: string } | null;
     return {
-      description: result.response?.trim() || generateFallbackDescription(context),
+      description: result?.response?.trim() || generateFallbackDescription(context),
     };
   } catch {
     return {
