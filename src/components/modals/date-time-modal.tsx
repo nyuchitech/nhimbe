@@ -1,0 +1,67 @@
+"use client";
+
+import { BottomSheetModal } from "./bottom-sheet-modal";
+
+interface DateTimeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  eventDate: string;
+  setEventDate: (value: string) => void;
+  startTime: string;
+  setStartTime: (value: string) => void;
+  endTime: string;
+  setEndTime: (value: string) => void;
+}
+
+export function DateTimeModal({
+  isOpen,
+  onClose,
+  eventDate,
+  setEventDate,
+  startTime,
+  setStartTime,
+  endTime,
+  setEndTime,
+}: DateTimeModalProps) {
+  return (
+    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Date & Time">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm text-text-secondary mb-2">Date</label>
+          <input
+            type="date"
+            value={eventDate}
+            onChange={(e) => setEventDate(e.target.value)}
+            className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-text-secondary mb-2">Start Time</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-text-secondary mb-2">End Time</label>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+            />
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
+        >
+          Done
+        </button>
+      </div>
+    </BottomSheetModal>
+  );
+}
