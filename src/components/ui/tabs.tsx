@@ -40,12 +40,27 @@ export function Tabs({
   );
 }
 
+function handleTabListKeyDown(e: React.KeyboardEvent) {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  const tabs = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('[role="tab"]');
+  const current = Array.from(tabs).findIndex((t) => t === document.activeElement);
+  if (current === -1) return;
+
+  e.preventDefault();
+  const next = e.key === "ArrowRight"
+    ? (current + 1) % tabs.length
+    : (current - 1 + tabs.length) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
+}
+
 export const TabsList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className = "", children, ...props }, ref) => (
     <div
       ref={ref}
       className={`flex gap-1 p-1 bg-surface rounded-xl overflow-x-auto ${className}`}
       role="tablist"
+      onKeyDown={handleTabListKeyDown}
       {...props}
     >
       {children}
@@ -71,7 +86,9 @@ export const TabsTrigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(
       <button
         ref={ref}
         role="tab"
+        id={`tab-${value}`}
         aria-selected={isActive}
+        aria-controls={`tabpanel-${value}`}
         onClick={() => context.onValueChange(value)}
         className={`
           flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
@@ -108,6 +125,8 @@ export const TabsContent = forwardRef<HTMLDivElement, TabsContentProps>(
       <div
         ref={ref}
         role="tabpanel"
+        id={`tabpanel-${value}`}
+        aria-labelledby={`tab-${value}`}
         className={className}
         {...props}
       >
