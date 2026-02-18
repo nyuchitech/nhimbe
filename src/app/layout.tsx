@@ -7,6 +7,9 @@ import { AnimatedBackground } from "@/components/ui/animated-background";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth/auth-context";
 import { StytchProvider } from "@/components/auth/stytch-provider";
+import { ErrorBoundary } from "@/components/error/error-boundary";
+import { WidgetErrorBoundary } from "@/components/error/widget-error-boundary";
+import { LiveRegionProvider } from "@/components/ui/live-region";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -110,6 +113,36 @@ const themeScript = `
   })();
 `;
 
+// Error boundary fallbacks intentionally use plain <a> tags instead of <Link>
+// because Next.js router may have crashed — these must work without React Router.
+/* eslint-disable @next/next/no-html-link-for-pages */
+function DegradedShell() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <h1 className="text-2xl font-bold mb-4">nhimbe</h1>
+      <p className="text-text-secondary mb-6">Something went wrong loading the app. Please refresh the page.</p>
+      <a href="/" className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold">
+        Refresh
+      </a>
+    </div>
+  );
+}
+
+function MinimalNav() {
+  return (
+    <header className="sticky top-0 z-50 bg-background/70 backdrop-blur-xl border-b border-elevated/50">
+      <div className="max-w-300 mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" className="text-xl font-bold text-primary">nhimbe</a>
+        <nav className="flex items-center gap-4 text-sm text-text-secondary">
+          <a href="/events">Events</a>
+          <a href="/search">Search</a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+/* eslint-enable @next/next/no-html-link-for-pages */
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -125,16 +158,30 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
-        <StytchProvider>
-          <AuthProvider>
-            <ThemeProvider defaultTheme="system">
-              <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
-              <Header />
-              <main className="flex-1 relative z-10">{children}</main>
-              <Footer />
-            </ThemeProvider>
-          </AuthProvider>
-        </StytchProvider>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:font-semibold"
+        >
+          Skip to main content
+        </a>
+        <ErrorBoundary fallback={<DegradedShell />}>
+          <StytchProvider>
+            <AuthProvider>
+              <ThemeProvider defaultTheme="system">
+                <LiveRegionProvider>
+                  <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
+                  <WidgetErrorBoundary fallback={<MinimalNav />} name="Header">
+                    <Header />
+                  </WidgetErrorBoundary>
+                  <main id="main-content" className="flex-1 relative z-10">{children}</main>
+                  <WidgetErrorBoundary fallback={null} name="Footer">
+                    <Footer />
+                  </WidgetErrorBoundary>
+                </LiveRegionProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </StytchProvider>
+        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

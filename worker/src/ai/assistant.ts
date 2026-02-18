@@ -13,6 +13,7 @@ import type {
   VectorizeIndex,
 } from "../types";
 import { searchEvents } from "./search";
+import { withTimeout } from "../utils/timeout";
 
 const LLM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
@@ -107,13 +108,17 @@ export async function chat(
   }
 
   // Generate response
-  const response = await ai.run(LLM_MODEL, {
-    messages,
-    max_tokens: 500,
-    temperature: 0.7,
-  });
+  const response = await withTimeout(
+    ai.run(LLM_MODEL, {
+      messages,
+      max_tokens: 500,
+      temperature: 0.7,
+    }),
+    10_000,
+    null
+  );
 
-  const result = response as { response?: string };
+  const result = (response as { response?: string }) || {};
   const messageText =
     result.response ||
     "I'd be happy to help you find events! What are you looking for?";
@@ -153,24 +158,30 @@ Intent types:
 - general: General conversation or question`;
 
   try {
-    const response = await ai.run(LLM_MODEL, {
-      messages: [
-        {
-          role: "system",
-          content: "You are a JSON parser. Only output valid JSON, nothing else.",
-        },
-        { role: "user", content: intentPrompt },
-      ],
-      max_tokens: 150,
-      temperature: 0.1,
-    });
+    const response = await withTimeout(
+      ai.run(LLM_MODEL, {
+        messages: [
+          {
+            role: "system",
+            content: "You are a JSON parser. Only output valid JSON, nothing else.",
+          },
+          { role: "user", content: intentPrompt },
+        ],
+        max_tokens: 150,
+        temperature: 0.1,
+      }),
+      5_000,
+      null
+    );
 
-    const result = response as { response?: string };
-    if (result.response) {
-      // Extract JSON from response
-      const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+    if (response) {
+      const result = response as { response?: string };
+      if (result.response) {
+        // Extract JSON from response
+        const jsonMatch = result.response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
       }
     }
   } catch {

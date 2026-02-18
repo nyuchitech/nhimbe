@@ -57,8 +57,9 @@ export function EventCard({
   const isAlmostFull = spotsLeft !== undefined && capacity !== undefined && spotsLeft < capacity * 0.2;
 
   return (
-    <Link href={`/events/${id}`} className="block">
-      <div className="rounded-(--radius-card) overflow-hidden bg-surface cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
+    <article className="rounded-(--radius-card) overflow-hidden bg-surface transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
+    <Link href={`/events/${id}`} className="block cursor-pointer">
+      <div>
         {/* Cover */}
         <div className="h-50 relative" style={coverStyle}>
           {/* Date Badge - theme-aware */}
@@ -162,5 +163,6 @@ export function EventCard({
         </div>
       </div>
     </Link>
+    </article>
   );
 }
