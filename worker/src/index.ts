@@ -83,7 +83,9 @@ async function handleQueue(batch: MessageBatch, env: Env): Promise<void> {
   }
 }
 
-export default {
+const worker = {
   fetch: app.fetch,
   queue: handleQueue,
 };
+
+export default worker;

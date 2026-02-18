@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
-import { safeParseJSON, getInitials } from "../utils/validation";
+import { getInitials } from "../utils/validation";
 import { generateId, generateReferralCode } from "../utils/ids";
 
 export const users = new Hono<{ Bindings: Env }>();
