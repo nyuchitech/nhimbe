@@ -13,6 +13,13 @@ import { categories } from "./routes/categories";
 import { events } from "./routes/events";
 import { search } from "./routes/search";
 import { ai } from "./routes/ai";
+import { auth } from "./routes/auth";
+import { users } from "./routes/users";
+import { registrations } from "./routes/registrations";
+import { media } from "./routes/media";
+import { referrals } from "./routes/referrals";
+import { reviews } from "./routes/reviews";
+import { stats } from "./routes/stats";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -29,6 +36,13 @@ app.route("/api", categories);
 app.route("/api/events", events);
 app.route("/api", search);
 app.route("/api", ai);
+app.route("/api/auth", auth);
+app.route("/api/users", users);
+app.route("/api/registrations", registrations);
+app.route("/api/media", media);
+app.route("/api/referrals", referrals);
+app.route("/api/reviews", reviews);
+app.route("/api/community", stats);
 
 // Global error handler
 app.onError((err, c) => {
