@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { ArrowLeft, CalendarDays, MapPin, Users, QrCode, Video, Eye, TrendingUp, Flame, Star, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EventQRCode } from "./event-qr-code";
 import { AddToCalendarButton, GetDirectionsButton, ShareButton } from "./event-actions";
 import { RSVPButton } from "./rsvp-button";
@@ -12,11 +14,25 @@ import { EventThemeWrapper } from "./event-theme-wrapper";
 import { EventMap } from "./event-map";
 import { EventWeather } from "./event-weather";
 import { HostReputation } from "@/components/ui/host-reputation";
-import { EventRatings } from "@/components/ui/event-ratings";
-import { ReferralLeaderboard } from "@/components/ui/referral-leaderboard";
 import { useAuth } from "@/components/auth/auth-context";
 import { getUserReferralCode, generateUserReferralCode, getEventStats, getEventReviews, type UserReferralCode, type EventStats, type ReviewStats } from "@/lib/api";
 import type { Event } from "@/lib/api";
+
+const EventRatings = dynamic(
+  () => import("@/components/ui/event-ratings").then(m => ({ default: m.EventRatings })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-48 w-full rounded-2xl" />,
+  }
+);
+
+const ReferralLeaderboard = dynamic(
+  () => import("@/components/ui/referral-leaderboard").then(m => ({ default: m.ReferralLeaderboard })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-64 w-full rounded-2xl" />,
+  }
+);
 
 interface EventDetailContentProps {
   event: Event;
