@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/auth/auth-context";
 import { StytchProvider } from "@/components/auth/stytch-provider";
 import { ErrorBoundary } from "@/components/error/error-boundary";
 import { WidgetErrorBoundary } from "@/components/error/widget-error-boundary";
+import { LiveRegionProvider } from "@/components/ui/live-region";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -157,18 +158,26 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:font-semibold"
+        >
+          Skip to main content
+        </a>
         <ErrorBoundary fallback={<DegradedShell />}>
           <StytchProvider>
             <AuthProvider>
               <ThemeProvider defaultTheme="system">
-                <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
-                <WidgetErrorBoundary fallback={<MinimalNav />} name="Header">
-                  <Header />
-                </WidgetErrorBoundary>
-                <main id="main-content" className="flex-1 relative z-10">{children}</main>
-                <WidgetErrorBoundary fallback={null} name="Footer">
-                  <Footer />
-                </WidgetErrorBoundary>
+                <LiveRegionProvider>
+                  <AnimatedBackground enableAnimation={true} intensity={0.2} speed={0.3} />
+                  <WidgetErrorBoundary fallback={<MinimalNav />} name="Header">
+                    <Header />
+                  </WidgetErrorBoundary>
+                  <main id="main-content" className="flex-1 relative z-10">{children}</main>
+                  <WidgetErrorBoundary fallback={null} name="Footer">
+                    <Footer />
+                  </WidgetErrorBoundary>
+                </LiveRegionProvider>
               </ThemeProvider>
             </AuthProvider>
           </StytchProvider>
