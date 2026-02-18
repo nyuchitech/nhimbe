@@ -318,6 +318,11 @@ export interface RateLimitOutcome {
   success: boolean;
 }
 
+// Hono app variables (set by middleware, available to all handlers)
+export interface AppVariables {
+  requestId: string;
+}
+
 // Environment Bindings
 export interface Env {
   ENVIRONMENT: string;

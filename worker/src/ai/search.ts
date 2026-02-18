@@ -12,6 +12,7 @@ import type {
   VectorizeIndex,
 } from "../types";
 import { generateEmbedding } from "./embeddings";
+import { withTimeout } from "../utils/timeout";
 
 // LLM model for generating summaries
 const LLM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
@@ -108,18 +109,23 @@ ${eventDescriptions}
 Be friendly, concise, and highlight what makes these events relevant to the search. Use the nhimbe tagline spirit: "Together we gather, together we grow".`;
 
   try {
-    const response = await ai.run(LLM_MODEL, {
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful events assistant. Keep responses brief and friendly.",
-        },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 150,
-      temperature: 0.7,
-    });
+    const response = await withTimeout(
+      ai.run(LLM_MODEL, {
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful events assistant. Keep responses brief and friendly.",
+          },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 150,
+        temperature: 0.7,
+      }),
+      10_000,
+      null
+    );
+
+    if (!response) return `Found ${events.length} events matching your search.`;
 
     const result = response as { response?: string };
     return result.response || "Found some great events for you!";

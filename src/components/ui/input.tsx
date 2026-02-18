@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, InputHTMLAttributes } from "react";
+import { forwardRef, InputHTMLAttributes, useId } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
@@ -9,6 +9,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ icon, error, className = "", ...props }, ref) => {
+    const generatedId = useId();
+    const errorId = `${generatedId}-error`;
+
     return (
       <div className="relative">
         {icon && (
@@ -18,6 +21,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           ref={ref}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           className={`
             w-full px-4 py-3 rounded-[var(--radius-input)]
             bg-elevated border border-transparent
@@ -31,7 +36,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1 text-xs text-red-400">{error}</p>
+          <p id={errorId} className="mt-1 text-xs text-red-400">{error}</p>
         )}
       </div>
     );

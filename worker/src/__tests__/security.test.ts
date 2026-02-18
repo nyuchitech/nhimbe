@@ -11,12 +11,16 @@
 
 import { describe, it, expect } from 'vitest';
 import { hasPermission, ROLE_HIERARCHY, type UserRole } from '../types';
+import { safeParseJSON } from '../utils/validation';
 
 // ============================================
 // CORS: isAllowedOrigin
 // ============================================
 
-// Trusted domains — always allow these and all their subdomains
+// TODO: Module version (middleware/auth.ts) takes (Request, Env) — these test-local
+// versions use simpler signatures (origin, allowedOrigins) to avoid constructing
+// full Request/Env objects. Logic is identical to the module.
+
 const TRUSTED_DOMAINS = ['nyuchi.com', 'mukoko.com', 'nhimbe.com'];
 
 function isAllowedOrigin(origin: string, allowedOrigins: string = ''): boolean {
@@ -325,12 +329,4 @@ describe('Circuit Breaker Pattern', () => {
   });
 });
 
-// Re-implement for test isolation
-function safeParseJSON(value: string | null, defaultValue: unknown = []): unknown {
-  if (!value) return defaultValue;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return defaultValue;
-  }
-}
+// safeParseJSON imported from ../utils/validation

@@ -154,11 +154,12 @@ export function Header() {
         </Link>
 
         {/* Nav Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
               className={`text-sm font-medium transition-colors ${
                 pathname === link.href
                   ? "text-primary"
