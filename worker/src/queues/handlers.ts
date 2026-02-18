@@ -26,7 +26,8 @@ export async function processAnalyticsMessage(message: AnalyticsQueueMessage, en
   }
 }
 
-export async function processEmailMessage(message: EmailQueueMessage, _env: Env): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function processEmailMessage(message: EmailQueueMessage, env: Env): Promise<void> {
   console.log(`Processing email message: ${message.type} to ${message.to}`);
   // TODO: Integrate with email service (e.g., Resend, SendGrid, Mailgun)
 }
