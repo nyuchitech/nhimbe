@@ -5,7 +5,8 @@
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { Env, AnalyticsQueueMessage, EmailQueueMessage } from "./types";
+import type { Env, AnalyticsQueueMessage, EmailQueueMessage, AppVariables } from "./types";
+import { requestId as requestIdMiddleware, requestLogger } from "./middleware/observability";
 import { processAnalyticsMessage, processEmailMessage } from "./queues/handlers";
 
 // Route modules
@@ -24,7 +25,7 @@ import { stats } from "./routes/stats";
 import { admin } from "./routes/admin";
 import { seed } from "./routes/seed";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 // Global CORS middleware
 app.use("*", cors({
@@ -32,6 +33,10 @@ app.use("*", cors({
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
 }));
+
+// Observability
+app.use("*", requestIdMiddleware);
+app.use("*", requestLogger);
 
 // Mount route modules
 app.route("/", health);
@@ -51,11 +56,18 @@ app.route("/api", seed);
 
 // Global error handler
 app.onError((err, c) => {
-  console.error("API Error:", err);
+  const reqId = c.get("requestId");
+  console.error(JSON.stringify({
+    level: "error",
+    requestId: reqId,
+    error: err instanceof Error ? err.message : "Unknown error",
+    stack: err instanceof Error ? err.stack : undefined,
+  }));
   return c.json(
     {
       error: "Internal Server Error",
       message: err instanceof Error ? err.message : "Unknown error",
+      requestId: reqId,
     },
     500
   );
