@@ -21,16 +21,37 @@ health.get("/", (c) => {
 });
 
 // Health check
-health.get("/api/health", (c) => {
+health.get("/api/health", async (c) => {
+  const probes: Record<string, { ok: boolean; latencyMs: number }> = {};
+
+  // Probe D1
+  const dbStart = Date.now();
+  try {
+    await c.env.DB.prepare("SELECT 1").first();
+    probes.database = { ok: true, latencyMs: Date.now() - dbStart };
+  } catch {
+    probes.database = { ok: false, latencyMs: Date.now() - dbStart };
+  }
+
+  // Probe KV
+  const kvStart = Date.now();
+  try {
+    await c.env.CACHE.get("__health_check__");
+    probes.cache = { ok: true, latencyMs: Date.now() - kvStart };
+  } catch {
+    probes.cache = { ok: false, latencyMs: Date.now() - kvStart };
+  }
+
+  // Binding presence checks (can't probe without actual work)
+  probes.ai = { ok: !!c.env.AI, latencyMs: 0 };
+  probes.vectorize = { ok: !!c.env.VECTORIZE, latencyMs: 0 };
+
+  const allOk = Object.values(probes).every((p) => p.ok);
+
   return c.json({
-    status: "ok",
+    status: allOk ? "ok" : "degraded",
     timestamp: new Date().toISOString(),
-    services: {
-      ai: !!c.env.AI,
-      vectorize: !!c.env.VECTORIZE,
-      database: !!c.env.DB,
-      cache: !!c.env.CACHE,
-    },
+    services: probes,
   });
 });
 
