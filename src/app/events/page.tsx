@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Search, MapPin, ChevronDown, Loader2, SlidersHorizontal, X } from "lucide-react";
+import { Search, Loader2, SlidersHorizontal, X } from "lucide-react";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
+import { CityDropdown } from "@/components/ui/city-dropdown";
 import { getEvents, getCategories, getCities, type Event, type Category } from "@/lib/api";
 
 export default function EventsPage() {
@@ -17,7 +18,6 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeCity, setActiveCity] = useState("All Cities");
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Fetch data on mount
@@ -110,45 +110,16 @@ export default function EventsPage() {
       {/* Filters Row */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         {/* City Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowCityDropdown(!showCityDropdown)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-surface rounded-xl text-sm font-medium hover:bg-elevated transition-colors"
-          >
-            <MapPin className="w-4 h-4 text-text-secondary" />
-            <span>{activeCity}</span>
-            <ChevronDown className="w-4 h-4 text-text-tertiary" />
-          </button>
-          {showCityDropdown && (
-            <div className="absolute top-full left-0 mt-2 w-56 bg-elevated rounded-xl shadow-lg border border-surface z-10 py-2 max-h-64 overflow-y-auto">
-              <button
-                onClick={() => {
-                  setActiveCity("All Cities");
-                  setShowCityDropdown(false);
-                }}
-                className={`w-full px-4 py-2.5 text-left text-sm hover:bg-surface transition-colors ${
-                  activeCity === "All Cities" ? "text-primary font-medium" : ""
-                }`}
-              >
-                All Cities
-              </button>
-              {cities.map((c) => (
-                <button
-                  key={`${c.city}-${c.country}`}
-                  onClick={() => {
-                    setActiveCity(`${c.city}, ${c.country}`);
-                    setShowCityDropdown(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-surface transition-colors ${
-                    activeCity === `${c.city}, ${c.country}` ? "text-primary font-medium" : ""
-                  }`}
-                >
-                  {c.city}, {c.country}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <CityDropdown
+          value={activeCity}
+          onChange={setActiveCity}
+          cities={cities.map((c) => ({
+            value: `${c.city}, ${c.country}`,
+            label: `${c.city}, ${c.country}`,
+          }))}
+          allOption={{ value: "All Cities", label: "All Cities" }}
+          variant="filled"
+        />
 
         {/* Filter Toggle (Mobile) */}
         <button

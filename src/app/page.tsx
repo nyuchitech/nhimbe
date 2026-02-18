@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { MapPin, ChevronDown, Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun, TrendingUp, Flame, Clock, Users } from "lucide-react";
+import { Loader2, ArrowRight, Globe, Sun, Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, CloudSun, TrendingUp, Flame, Clock, Users } from "lucide-react";
 import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
 import { CommunityInsightsCompact } from "@/components/ui/community-insights";
+import { CityDropdown } from "@/components/ui/city-dropdown";
 import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 import { getUserTimezone, getCurrentTimeWithTimezone, getWeather, type WeatherData } from "@/lib/timezone";
 
@@ -81,7 +82,6 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeCity, setActiveCity] = useState<string | null>(null);
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [detectedCity, setDetectedCity] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -214,41 +214,13 @@ export default function DiscoverPage() {
               <h2 className="text-2xl font-bold text-foreground mb-1">Popular Events</h2>
 
               {/* City Dropdown */}
-              <div className="relative inline-block">
-                <button
-                  onClick={() => setShowCityDropdown(!showCityDropdown)}
-                  className="flex items-center gap-1.5 text-text-secondary hover:text-foreground transition-colors"
-                >
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span className="font-medium">{activeCity || "All Cities"}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${
-                      showCityDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showCityDropdown && (
-                  <div className="absolute top-full left-0 mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-50 z-50">
-                    {availableCities.map((city) => (
-                      <button
-                        key={city}
-                        onClick={() => {
-                          setActiveCity(city);
-                          setShowCityDropdown(false);
-                        }}
-                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors ${
-                          activeCity === city
-                            ? "text-primary font-semibold"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {city}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <CityDropdown
+                value={activeCity || ""}
+                onChange={setActiveCity}
+                cities={availableCities.map((city) => ({ value: city, label: city }))}
+                displayLabel={activeCity || "All Cities"}
+                variant="subtle"
+              />
             </div>
 
             <Link
