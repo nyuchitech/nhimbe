@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Env, Event } from "../types";
-import { safeParseInt } from "../utils/validation";
-import { slugify } from "../utils/validation";
+import { safeParseInt, slugify, getInitials } from "../utils/validation";
 import { generateId, generateShortCode } from "../utils/ids";
 import { dbRowToEvent } from "../utils/db";
 import { writeAuth } from "../middleware/auth";
@@ -266,7 +265,6 @@ events.get("/:id/reviews", async (c) => {
     LIMIT 50
   `).bind(eventId).all();
 
-  const { getInitials } = await import("../utils/validation");
 
   const reviews = (reviewsResult.results as ReviewRow[]).map((row) => ({
     id: row.id,
@@ -456,7 +454,6 @@ events.get("/:id/stats", async (c) => {
 // GET /api/events/:id/referrals
 events.get("/:id/referrals", async (c) => {
   const eventId = c.req.param("id");
-  const { getInitials } = await import("../utils/validation");
 
   interface LeaderboardRow {
     user_id: string;
