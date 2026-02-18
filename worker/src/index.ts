@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, AnalyticsQueueMessage, EmailQueueMessage, AppVariables } from "./types";
 import { requestId as requestIdMiddleware, requestLogger } from "./middleware/observability";
+import { rateLimit } from "./middleware/rate-limit";
 import { processAnalyticsMessage, processEmailMessage } from "./queues/handlers";
 
 // Route modules
@@ -37,6 +38,12 @@ app.use("*", cors({
 // Observability
 app.use("*", requestIdMiddleware);
 app.use("*", requestLogger);
+
+// Rate limit AI and auth endpoints
+app.use("/api/assistant/*", rateLimit);
+app.use("/api/ai/*", rateLimit);
+app.use("/api/auth/*", rateLimit);
+app.use("/api/search", rateLimit);
 
 // Mount route modules
 app.route("/", health);
