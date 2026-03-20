@@ -317,6 +317,28 @@ export async function createUser(data: {
   });
 }
 
+// Update authenticated user's profile
+export async function updateProfile(
+  sessionJwt: string,
+  fields: Partial<{ name: string; city: string; country: string; interests: string[] }>
+): Promise<{ user: User }> {
+  const response = await fetch(`${API_URL}/api/auth/profile`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${sessionJwt}`,
+    },
+    body: JSON.stringify(fields),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to update profile");
+  }
+
+  return response.json();
+}
+
 // ============================================
 // Event Views Tracking
 // ============================================
