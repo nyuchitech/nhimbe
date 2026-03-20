@@ -105,7 +105,6 @@ function ManageEventContent() {
           const hostNameLower = eventData.host.name.toLowerCase();
           const ownerCheck =
             hostNameLower === userNameLower ||
-            eventData.host.handle === user.handle ||
             eventData.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
 
           setIsOwner(ownerCheck);

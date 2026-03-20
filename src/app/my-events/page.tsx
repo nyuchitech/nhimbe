@@ -62,7 +62,6 @@ function MyEventsContent() {
         const userNameLower = user?.name?.toLowerCase() || "";
         const hostNameLower = e.host.name.toLowerCase();
         return hostNameLower === userNameLower ||
-               e.host.handle === user?.handle ||
                e.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
       })
       .map((e) => e.id)

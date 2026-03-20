@@ -44,7 +44,7 @@ type MenuSection = {
 function ProfileContent() {
   const router = useRouter();
   const { theme, cycleTheme, resolvedTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, profileCompleteness } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
@@ -159,6 +159,32 @@ function ProfileContent() {
           </div>
         </div>
       )}
+
+      {/* Completeness Nudge */}
+      {!profileCompleteness.complete && (() => {
+        const missing: string[] = [];
+        if (!profileCompleteness.name) missing.push("your name");
+        if (!profileCompleteness.city) missing.push("your location");
+        if (!profileCompleteness.interests) missing.push("your interests");
+        const completionPercent = [profileCompleteness.name, profileCompleteness.city, profileCompleteness.interests].filter(Boolean).length / 3 * 100;
+        const nudgeText = `Add ${missing.join(" and ")} for a better experience`;
+
+        return (
+          <Link href="/profile/edit" className="block mb-6">
+            <div className="bg-surface border border-elevated rounded-xl p-4 flex items-center gap-4">
+              <svg className="w-12 h-12 shrink-0" viewBox="0 0 36 36">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="3" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={`${completionPercent}, 100`} className="text-primary" />
+              </svg>
+              <div>
+                <p className="font-medium">Complete your profile</p>
+                <p className="text-sm text-text-secondary">{nudgeText}</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-text-tertiary shrink-0" />
+            </div>
+          </Link>
+        );
+      })()}
 
       {/* Menu Sections */}
       <div className="space-y-6">

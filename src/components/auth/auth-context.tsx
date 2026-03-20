@@ -17,14 +17,19 @@ export interface NhimbeUser {
   id: string;
   email: string;
   name: string;
-  handle?: string;
   avatarUrl?: string;
   city?: string;
   country?: string;
   interests?: string[];
-  onboardingCompleted: boolean;
   stytchUserId: string;
   role: UserRole;
+}
+
+export interface ProfileCompleteness {
+  name: boolean;
+  city: boolean;
+  interests: boolean;
+  complete: boolean;
 }
 
 // Role permission helpers
@@ -43,7 +48,7 @@ interface AuthContextType {
   user: NhimbeUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  needsOnboarding: boolean;
+  profileCompleteness: ProfileCompleteness;
   signIn: (returnUrl?: string) => void;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -104,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: stytchUser.user_id,
           email,
           name: name || "User",
-          onboardingCompleted: false,
           stytchUserId: stytchUser.user_id,
           role: "user",
         });
@@ -118,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: stytchUser.user_id,
         email,
         name: name || "User",
-        onboardingCompleted: false,
         stytchUserId: stytchUser.user_id,
         role: "user",
       });
@@ -169,7 +172,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isLoading = !isSDKReady || syncing;
   const isAuthenticated = !!stytchUser && !!session && !!nhimbeUser;
-  const needsOnboarding = !!nhimbeUser && !nhimbeUser.onboardingCompleted;
+
+  const hasName = !!nhimbeUser?.name && nhimbeUser.name !== "" && nhimbeUser.name !== "User";
+  const hasCity = !!nhimbeUser?.city;
+  const hasInterests = !!nhimbeUser?.interests && nhimbeUser.interests.length > 0;
+
+  const profileCompleteness: ProfileCompleteness = {
+    name: hasName,
+    city: hasCity,
+    interests: hasInterests,
+    complete: hasName && hasCity && hasInterests,
+  };
 
   return (
     <AuthContext.Provider
@@ -177,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: nhimbeUser,
         isAuthenticated,
         isLoading,
-        needsOnboarding,
+        profileCompleteness,
         signIn,
         signOut,
         refreshUser,

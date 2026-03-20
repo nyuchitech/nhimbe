@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { registerForEvent, trackEventView } from "@/lib/api";
 import { useAuth } from "@/components/auth/auth-context";
+import { NamePrompt } from "@/components/prompts/name-prompt";
 import { LogIn } from "lucide-react";
 
 interface RSVPButtonProps {
@@ -21,6 +22,7 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading } = useAuth();
 
@@ -72,6 +74,26 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
           Sign in to RSVP
         </Button>
       </Link>
+    );
+  }
+
+  // Show name prompt for authenticated users without a name
+  if (isAuthenticated && (!user?.name || user.name === "User")) {
+    if (showNamePrompt) {
+      return (
+        <div className="space-y-2">
+          <NamePrompt onComplete={handleRSVP} />
+        </div>
+      );
+    }
+    return (
+      <Button
+        variant="primary"
+        className="w-full py-4 text-base"
+        onClick={() => setShowNamePrompt(true)}
+      >
+        {price ? "Get Tickets" : "RSVP Now"}
+      </Button>
     );
   }
 
