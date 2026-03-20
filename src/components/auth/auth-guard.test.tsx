@@ -17,7 +17,6 @@ vi.mock('next/navigation', () => ({
 let mockAuthState = {
   isAuthenticated: false,
   isLoading: true,
-  needsOnboarding: false,
 };
 
 vi.mock('./auth-context', () => ({
@@ -30,7 +29,6 @@ describe('AuthGuard', () => {
     mockAuthState = {
       isAuthenticated: false,
       isLoading: true,
-      needsOnboarding: false,
     };
   });
 
@@ -38,7 +36,6 @@ describe('AuthGuard', () => {
     mockAuthState = {
       isAuthenticated: false,
       isLoading: true,
-      needsOnboarding: false,
     };
 
     render(
@@ -58,7 +55,6 @@ describe('AuthGuard', () => {
     mockAuthState = {
       isAuthenticated: false,
       isLoading: false,
-      needsOnboarding: false,
     };
 
     render(
@@ -73,49 +69,10 @@ describe('AuthGuard', () => {
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 
-  it('redirects users who need onboarding to onboarding page when requireOnboarding=true', async () => {
+  it('shows protected content for authenticated users', () => {
     mockAuthState = {
       isAuthenticated: true,
       isLoading: false,
-      needsOnboarding: true,
-    };
-
-    render(
-      <AuthGuard requireOnboarding={true}>
-        <div>Protected Content</div>
-      </AuthGuard>
-    );
-
-    // Should redirect to onboarding
-    expect(mockPush).toHaveBeenCalledWith('/onboarding');
-    // Should not show content
-    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
-  });
-
-  it('allows users who need onboarding when requireOnboarding=false', () => {
-    mockAuthState = {
-      isAuthenticated: true,
-      isLoading: false,
-      needsOnboarding: true,
-    };
-
-    render(
-      <AuthGuard requireOnboarding={false}>
-        <div>Protected Content</div>
-      </AuthGuard>
-    );
-
-    // Should NOT redirect
-    expect(mockPush).not.toHaveBeenCalled();
-    // Should show content
-    expect(screen.getByText('Protected Content')).toBeInTheDocument();
-  });
-
-  it('shows protected content for fully authenticated users', () => {
-    mockAuthState = {
-      isAuthenticated: true,
-      isLoading: false,
-      needsOnboarding: false,
     };
 
     render(
@@ -130,29 +87,10 @@ describe('AuthGuard', () => {
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
 
-  it('defaults requireOnboarding to true', async () => {
-    mockAuthState = {
-      isAuthenticated: true,
-      isLoading: false,
-      needsOnboarding: true,
-    };
-
-    render(
-      <AuthGuard>
-        <div>Protected Content</div>
-      </AuthGuard>
-    );
-
-    // Should redirect to onboarding (default requireOnboarding=true)
-    expect(mockPush).toHaveBeenCalledWith('/onboarding');
-  });
-
-  // Edge case: unauthenticated users always go to sign-in, never onboarding
-  it('should redirect unauthenticated users to sign in even if needsOnboarding is true', async () => {
+  it('does not render children when not authenticated', () => {
     mockAuthState = {
       isAuthenticated: false,
       isLoading: false,
-      needsOnboarding: true,
     };
 
     render(
@@ -161,8 +99,6 @@ describe('AuthGuard', () => {
       </AuthGuard>
     );
 
-    // The fixed auth-guard checks !isAuthenticated first, so this redirects to signin
-    expect(mockPush).toHaveBeenCalledWith('/auth/signin');
-    expect(mockPush).not.toHaveBeenCalledWith('/onboarding');
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 });
