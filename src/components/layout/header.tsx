@@ -27,7 +27,6 @@ const pageTitles: Record<string, string> = {
   "/search": "Search",
   "/profile": "Profile",
   "/auth/signin": "Sign In",
-  "/onboarding": "Welcome",
 };
 
 // Create a subscription for H1 element changes

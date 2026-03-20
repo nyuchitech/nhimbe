@@ -274,7 +274,7 @@ export default function CreateEventForm() {
         meetingPlatform: isOnline ? meetingPlatform : undefined,
         host: {
           name: user?.name || "Event Host",
-          handle: user?.handle || `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
+          handle: `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
           initials: user?.name
             ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
             : "EH",

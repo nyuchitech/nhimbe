@@ -17,7 +17,6 @@ export interface NhimbeUser {
   id: string;
   email: string;
   name: string;
-  handle?: string;
   avatarUrl?: string;
   city?: string;
   country?: string;
