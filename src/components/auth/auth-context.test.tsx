@@ -29,12 +29,15 @@ vi.mock('@stytch/nextjs', () => ({
 
 // Test component that uses the auth context
 function TestConsumer() {
-  const { user, isAuthenticated, isLoading, needsOnboarding, signIn, signOut } = useAuth();
+  const { user, isAuthenticated, isLoading, profileCompleteness, signIn, signOut } = useAuth();
   return (
     <div>
       <div data-testid="loading">{isLoading ? 'loading' : 'not-loading'}</div>
       <div data-testid="authenticated">{isAuthenticated ? 'yes' : 'no'}</div>
-      <div data-testid="needs-onboarding">{needsOnboarding ? 'yes' : 'no'}</div>
+      <div data-testid="profile-complete">{profileCompleteness.complete ? 'yes' : 'no'}</div>
+      <div data-testid="profile-name">{profileCompleteness.name ? 'yes' : 'no'}</div>
+      <div data-testid="profile-city">{profileCompleteness.city ? 'yes' : 'no'}</div>
+      <div data-testid="profile-interests">{profileCompleteness.interests ? 'yes' : 'no'}</div>
       <div data-testid="user-name">{user?.name || 'no-user'}</div>
       <button onClick={() => signIn('/dashboard')}>Sign In</button>
       <button onClick={() => signOut()}>Sign Out</button>
@@ -96,7 +99,8 @@ describe('AuthContext', () => {
       id: 'usr-backend-1',
       email: 'test@example.com',
       name: 'Backend User',
-      onboardingCompleted: true,
+      city: 'Harare',
+      interests: ['music', 'tech'],
       stytchUserId: 'stytch-123',
       role: 'user',
     };
@@ -157,23 +161,23 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('authenticated').textContent).toBe('yes');
     expect(screen.getByTestId('user-name').textContent).toBe('Fallback User');
-    expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
   });
 
-  it('computes needsOnboarding when onboarding not completed', async () => {
+  it('computes profileCompleteness based on user fields', async () => {
     const backendUser: NhimbeUser = {
-      id: 'usr-new',
-      email: 'new@example.com',
-      name: 'New User',
-      onboardingCompleted: false,
+      id: 'usr-complete',
+      email: 'complete@example.com',
+      name: 'Complete User',
+      city: 'Harare',
+      interests: ['music'],
       stytchUserId: 'stytch-789',
       role: 'user',
     };
 
     mockStytchUser = {
       user_id: 'stytch-789',
-      emails: [{ email: 'new@example.com' }],
-      name: { first_name: 'New', last_name: 'User' },
+      emails: [{ email: 'complete@example.com' }],
+      name: { first_name: 'Complete', last_name: 'User' },
     };
     mockStytchSession = { session_id: 'session-new' };
 
@@ -189,8 +193,46 @@ describe('AuthContext', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('needs-onboarding').textContent).toBe('yes');
+      expect(screen.getByTestId('profile-complete').textContent).toBe('yes');
     });
+    expect(screen.getByTestId('profile-name').textContent).toBe('yes');
+    expect(screen.getByTestId('profile-city').textContent).toBe('yes');
+    expect(screen.getByTestId('profile-interests').textContent).toBe('yes');
+  });
+
+  it('marks profileCompleteness as incomplete when fields are missing', async () => {
+    const backendUser: NhimbeUser = {
+      id: 'usr-incomplete',
+      email: 'incomplete@example.com',
+      name: 'User',
+      stytchUserId: 'stytch-incomplete',
+      role: 'user',
+    };
+
+    mockStytchUser = {
+      user_id: 'stytch-incomplete',
+      emails: [{ email: 'incomplete@example.com' }],
+      name: { first_name: '', last_name: '' },
+    };
+    mockStytchSession = { session_id: 'session-incomplete' };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: backendUser }),
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-complete').textContent).toBe('no');
+    });
+    expect(screen.getByTestId('profile-name').textContent).toBe('no');
+    expect(screen.getByTestId('profile-city').textContent).toBe('no');
+    expect(screen.getByTestId('profile-interests').textContent).toBe('no');
   });
 
   it('signIn redirects to /auth/signin and stores return URL', async () => {
@@ -218,7 +260,8 @@ describe('AuthContext', () => {
       id: 'usr-123',
       email: 'test@example.com',
       name: 'Test',
-      onboardingCompleted: true,
+      city: 'Harare',
+      interests: ['music', 'tech'],
       stytchUserId: 'stytch-123',
       role: 'user',
     };
