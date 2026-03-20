@@ -7,6 +7,8 @@ import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
 import { CityDropdown } from "@/components/ui/city-dropdown";
 import { getEvents, getCategories, getCities, type Event, type Category } from "@/lib/api";
+import { LocationPrompt } from "@/components/prompts/location-prompt";
+import { InterestsPrompt } from "@/components/prompts/interests-prompt";
 
 interface EventsClientProps {
   initialEvents: Event[];
@@ -116,6 +118,9 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
         )}
       </div>
 
+      {/* Location Prompt */}
+      <LocationPrompt />
+
       {/* Filters Row */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         {/* City Dropdown */}
@@ -171,6 +176,9 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
           />
         ))}
       </div>
+
+      {/* Interests Prompt */}
+      <InterestsPrompt />
 
       {/* Results Count */}
       <div className="flex items-center justify-between mb-6">
