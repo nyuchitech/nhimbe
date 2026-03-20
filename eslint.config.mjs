@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Wrangler generated files:
     "worker/.wrangler/**",
+    // MongoDB playground files (not React code):
+    "*.mongodb.js",
   ]),
 ]);
 

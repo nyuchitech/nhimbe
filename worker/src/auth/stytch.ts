@@ -35,15 +35,33 @@ let jwksCache: { keys: JWKS; fetchedAt: number } | null = null;
 const JWKS_CACHE_TTL = 3600_000; // 1 hour
 
 function getJwksUrl(projectId: string): string {
-  return `https://stytch.com/v1/sessions/jwks/${projectId}`;
+  const baseUrl = projectId.startsWith("project-test-")
+    ? "https://test.stytch.com"
+    : "https://api.stytch.com";
+  return `${baseUrl}/v1/sessions/jwks/${projectId}`;
 }
 
 async function fetchJWKS(projectId: string): Promise<JWKS> {
-  const response = await fetch(getJwksUrl(projectId));
-  if (!response.ok) {
-    throw new Error(`Failed to fetch JWKS: ${response.status}`);
+  const url = getJwksUrl(projectId);
+  const maxRetries = 2;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, attempt * 500));
+      }
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch JWKS: ${response.status}`);
+      }
+      return response.json() as Promise<JWKS>;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+    }
   }
-  return response.json() as Promise<JWKS>;
+
+  throw lastError!;
 }
 
 async function getJWKS(projectId: string, forceRefresh = false): Promise<JWKS> {
