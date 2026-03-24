@@ -63,12 +63,17 @@ auth.post("/sync", async (c) => {
     return c.json({ user });
   }
 
-  // New user — return stub, actual record created during onboarding
+  // New user — create record immediately so profile updates can find them
+  const newId = generateId();
+  await c.env.DB.prepare(`
+    INSERT INTO users (_id, email, name, stytch_user_id, last_login_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+  `).bind(newId, body.email, body.name || "", stytchUser.userId).run();
+
   const user = {
-    id: null,
+    id: newId,
     email: body.email,
     name: body.name || "",
-    handle: null,
     avatarUrl: null,
     city: null,
     country: null,
@@ -165,40 +170,23 @@ auth.patch("/profile", async (c) => {
     "SELECT * FROM users WHERE stytch_user_id = ?"
   ).bind(stytchUser.userId).first() as DbUser | null;
 
-  let userId: string;
-
-  if (existingUser) {
-    userId = existingUser._id;
-    const setClauses: string[] = [];
-    const values: (string | number)[] = [];
-
-    if (body.name !== undefined) { setClauses.push("name = ?"); values.push(body.name); }
-    if (body.city !== undefined) { setClauses.push("address_locality = ?"); values.push(body.city); }
-    if (body.country !== undefined) { setClauses.push("address_country = ?"); values.push(body.country); }
-    if (body.interests !== undefined) { setClauses.push("interests = ?"); values.push(JSON.stringify(body.interests)); }
-    setClauses.push("date_modified = datetime('now')");
-
-    await c.env.DB.prepare(
-      `UPDATE users SET ${setClauses.join(", ")} WHERE _id = ?`
-    ).bind(...values, userId).run();
-  } else {
-    userId = generateId();
-    await c.env.DB.prepare(`
-      INSERT INTO users (
-        _id, email, name, stytch_user_id,
-        address_locality, address_country, interests,
-        email_verified, onboarding_completed, last_login_at, date_modified
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, datetime('now'), datetime('now'))
-    `).bind(
-      userId,
-      body.email || "",
-      body.name || "",
-      stytchUser.userId,
-      body.city || null,
-      body.country || null,
-      JSON.stringify(body.interests || [])
-    ).run();
+  if (!existingUser) {
+    return c.json({ error: "User not found. Please sign out and sign in again." }, 404);
   }
+
+  const userId = existingUser._id;
+  const setClauses: string[] = [];
+  const values: (string | number)[] = [];
+
+  if (body.name !== undefined) { setClauses.push("name = ?"); values.push(body.name); }
+  if (body.city !== undefined) { setClauses.push("address_locality = ?"); values.push(body.city); }
+  if (body.country !== undefined) { setClauses.push("address_country = ?"); values.push(body.country); }
+  if (body.interests !== undefined) { setClauses.push("interests = ?"); values.push(JSON.stringify(body.interests)); }
+  setClauses.push("date_modified = datetime('now')");
+
+  await c.env.DB.prepare(
+    `UPDATE users SET ${setClauses.join(", ")} WHERE _id = ?`
+  ).bind(...values, userId).run();
 
   const result = await c.env.DB.prepare(
     "SELECT * FROM users WHERE _id = ?"
