@@ -30,26 +30,26 @@ export async function generateMetadata({ params }: ShortCodePageProps): Promise<
   }
 
   const eventUrl = `https://nhimbe.com/events/${event.id}`;
-  const description = `${event.title} on ${event.date.full} at ${event.location.venue}, ${event.location.city}`;
+  const description = `${event.name} on ${event.date.full} at ${event.location.name}, ${event.location.addressLocality}`;
 
   return {
-    title: `${event.title} - nhimbe`,
+    title: `${event.name} - nhimbe`,
     description,
     openGraph: {
-      title: event.title,
+      title: event.name,
       description,
       type: "website",
       url: eventUrl,
       siteName: "nhimbe",
-      images: event.coverImage
-        ? [{ url: event.coverImage, width: 1200, height: 630, alt: event.title }]
+      images: event.image
+        ? [{ url: event.image, width: 1200, height: 630, alt: event.name }]
         : undefined,
     },
     twitter: {
       card: "summary_large_image",
-      title: event.title,
+      title: event.name,
       description,
-      images: event.coverImage ? [event.coverImage] : undefined,
+      images: event.image ? [event.image] : undefined,
     },
   };
 }

@@ -53,31 +53,31 @@ function MyEventsContent() {
       .map((r) => r.event_id)
   );
 
-  // Filter events the user is hosting (their name matches host name)
+  // Filter events the user is hosting (their name matches organizer name)
   // In production, this should be based on a host_id field in the event
   const hostingEventIds = new Set(
     allEvents
       .filter((e) => {
-        // Check if user's name or handle matches the host
+        // Check if user's name or handle matches the organizer
         const userNameLower = user?.name?.toLowerCase() || "";
-        const hostNameLower = e.host.name.toLowerCase();
-        return hostNameLower === userNameLower ||
-               e.host.handle === `@${userNameLower.replace(/\s+/g, '')}`;
+        const organizerNameLower = e.organizer.name.toLowerCase();
+        return organizerNameLower === userNameLower ||
+               e.organizer.identifier === `@${userNameLower.replace(/\s+/g, '')}`;
       })
       .map((e) => e.id)
   );
 
   // Categorize events
   const attendingEvents = allEvents.filter(
-    (e) => registeredEventIds.has(e.id) && new Date(e.date.iso) >= now && !hostingEventIds.has(e.id)
+    (e) => registeredEventIds.has(e.id) && new Date(e.startDate) >= now && !hostingEventIds.has(e.id)
   );
 
   const hostingEvents = allEvents.filter(
-    (e) => hostingEventIds.has(e.id) && new Date(e.date.iso) >= now
+    (e) => hostingEventIds.has(e.id) && new Date(e.startDate) >= now
   );
 
   const pastEvents = allEvents.filter(
-    (e) => (registeredEventIds.has(e.id) || hostingEventIds.has(e.id)) && new Date(e.date.iso) < now
+    (e) => (registeredEventIds.has(e.id) || hostingEventIds.has(e.id)) && new Date(e.startDate) < now
   );
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode; count: number }[] = [
@@ -146,11 +146,11 @@ function MyEventsContent() {
             <EventCard
               key={event.id}
               id={event.id}
-              title={event.title}
+              title={event.name}
               date={event.date}
               location={event.location}
               category={event.category}
-              coverImage={event.coverImage}
+              coverImage={event.image}
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}

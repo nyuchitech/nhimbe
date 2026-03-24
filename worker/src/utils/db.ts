@@ -1,53 +1,57 @@
 import type { Event } from "../types";
 import { safeParseJSON } from "./validation";
 
-// Convert database row to Event object
+// Convert production D1 row (schema.org-aligned columns) to Event object
 export function dbRowToEvent(row: Record<string, unknown>): Event {
   return {
-    id: row.id as string,
+    id: row._id as string,
     shortCode: row.short_code as string,
     slug: row.slug as string,
-    title: row.title as string,
+    name: row.name as string,
     description: row.description as string,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string | undefined,
     date: {
-      day: row.date_day as string,
-      month: row.date_month as string,
-      full: row.date_full as string,
-      time: row.date_time as string,
-      iso: row.date_iso as string,
+      day: row.date_display_day as string,
+      month: row.date_display_month as string,
+      full: row.date_display_full as string,
+      time: row.date_display_time as string,
     },
     location: {
-      venue: row.location_venue as string,
-      address: row.location_address as string,
-      city: row.location_city as string,
-      country: row.location_country as string,
+      type: row.location_type as string | undefined,
+      name: (row.location_name as string) || "",
+      streetAddress: row.location_street_address as string | undefined,
+      addressLocality: (row.location_locality as string) || "",
+      addressCountry: (row.location_country as string) || "",
+      url: row.location_url as string | undefined,
     },
     category: row.category as string,
-    tags: safeParseJSON((row.tags as string), []) as string[],
-    coverImage: row.cover_image as string | undefined,
+    keywords: safeParseJSON(row.keywords as string, []) as string[],
+    image: row.image as string | undefined,
     coverGradient: row.cover_gradient as string | undefined,
-    attendeeCount: row.attendee_count as number,
+    themeId: row.theme_id as string | undefined,
+    attendeeCount: (row.attendee_count as number) || 0,
     friendsCount: row.friends_count as number | undefined,
-    capacity: row.capacity as number | undefined,
-    isOnline: row.is_online as boolean | undefined,
+    maximumAttendeeCapacity: row.maximum_attendee_capacity as number | undefined,
+    eventAttendanceMode: row.event_attendance_mode as string | undefined,
+    eventStatus: row.event_status as string | undefined,
+    isPublished: !!(row.is_published),
     meetingUrl: row.meeting_url as string | undefined,
-    meetingPlatform: row.meeting_platform as "zoom" | "google_meet" | "teams" | "other" | undefined,
-    host: {
-      name: row.host_name as string,
-      handle: row.host_handle as string,
-      initials: row.host_initials as string,
-      eventCount: row.host_event_count as number,
+    meetingPlatform: row.meeting_platform as string | undefined,
+    organizer: {
+      name: (row.organizer_name as string) || "",
+      alternateName: row.organizer_alternate_name as string | undefined,
+      initials: (row.organizer_initials as string) || "",
+      identifier: row.organizer_identifier as string | undefined,
+      eventCount: (row.organizer_event_count as number) || 0,
     },
-    isFree: row.is_free !== false && row.is_free !== 0,
-    ticketUrl: row.ticket_url as string | undefined,
-    price: row.price_amount
-      ? {
-          amount: row.price_amount as number,
-          currency: row.price_currency as string,
-          label: row.price_label as string,
-        }
-      : undefined,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    offers: (row.offer_price != null || row.offer_url) ? {
+      price: row.offer_price as number | undefined,
+      priceCurrency: row.offer_price_currency as string | undefined,
+      url: row.offer_url as string | undefined,
+      availability: row.offer_availability as string | undefined,
+    } : undefined,
+    dateCreated: row.date_created as string,
+    dateModified: row.date_modified as string,
   };
 }

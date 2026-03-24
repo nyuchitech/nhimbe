@@ -241,9 +241,11 @@ export default function CreateEventForm() {
       const dateObj = new Date(eventDate);
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+      const isoStart = new Date(`${eventDate}T${startTime}:00+02:00`).toISOString();
       const eventData: CreateEventInput = {
-        title: eventName.trim(),
+        name: eventName.trim(),
         description: description.trim() || "No description provided.",
+        startDate: isoStart,
         date: {
           day: dateObj.getDate().toString(),
           month: months[dateObj.getMonth()],
@@ -254,34 +256,34 @@ export default function CreateEventForm() {
             year: "numeric",
           }),
           time: `${startTime} — ${endTime} GMT+2`,
-          iso: new Date(`${eventDate}T${startTime}:00+02:00`).toISOString(),
         },
         location: isOnline
-          ? { venue: "Online Event", address: "", city: "Online", country: "" }
+          ? { name: "Online Event", streetAddress: "", addressLocality: "Online", addressCountry: "" }
           : {
-              venue: venue.trim(),
-              address: address.trim(),
-              city: selectedCity?.city || "",
-              country: selectedCity?.country || "",
+              name: venue.trim(),
+              streetAddress: address.trim(),
+              addressLocality: selectedCity?.city || "",
+              addressCountry: selectedCity?.country || "",
             },
         category,
-        tags,
-        coverImage: uploadedCoverImageUrl,
+        keywords: tags,
+        image: uploadedCoverImageUrl,
         coverGradient: uploadedCoverImageUrl ? undefined : mineralThemeList[selectedTheme].gradient,
-        capacity: capacity || undefined,
-        isOnline,
+        maximumAttendeeCapacity: capacity || undefined,
+        eventAttendanceMode: isOnline ? 'OnlineEventAttendanceMode' : 'OfflineEventAttendanceMode',
         meetingUrl: isOnline ? meetingUrl.trim() : undefined,
         meetingPlatform: isOnline ? meetingPlatform : undefined,
-        host: {
+        organizer: {
           name: user?.name || "Event Host",
-          handle: `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
+          identifier: `@${user?.name?.toLowerCase().replace(/\s+/g, '') || 'host'}`,
           initials: user?.name
             ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
             : "EH",
           eventCount: 1,
         },
-        isFree,
-        ticketUrl: !isFree && ticketUrl.trim() ? ticketUrl.trim() : undefined,
+        offers: !isFree && ticketUrl.trim()
+          ? { url: ticketUrl.trim() }
+          : undefined,
       };
 
       const result = await createEvent(eventData);

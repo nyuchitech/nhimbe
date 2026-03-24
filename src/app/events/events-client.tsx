@@ -58,12 +58,12 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
       const categoryMatch = activeCategory === "All" || e.category === activeCategory;
       const cityMatch =
         activeCity === "All Cities" ||
-        `${e.location.city}, ${e.location.country}` === activeCity;
+        `${e.location.addressLocality}, ${e.location.addressCountry}` === activeCity;
       const searchMatch =
         !searchQuery ||
-        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        (e.keywords || []).some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
       return categoryMatch && cityMatch && searchMatch;
     });
   }, [events, activeCategory, activeCity, searchQuery]);
@@ -198,11 +198,11 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
             <EventCard
               key={event.id}
               id={event.id}
-              title={event.title}
+              title={event.name}
               date={event.date}
               location={event.location}
               category={event.category}
-              coverImage={event.coverImage}
+              coverImage={event.image}
               coverGradient={event.coverGradient}
               attendeeCount={event.attendeeCount}
               friendsCount={event.friendsCount}

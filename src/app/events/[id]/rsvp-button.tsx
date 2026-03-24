@@ -12,9 +12,10 @@ import { LogIn } from "lucide-react";
 interface RSVPButtonProps {
   eventId: string;
   price?: {
-    amount: number;
-    currency: string;
-    label: string;
+    price?: number;
+    priceCurrency?: string;
+    url?: string;
+    availability?: string;
   };
 }
 
@@ -43,9 +44,9 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
       await registerForEvent({
         event_id: eventId,
         user_id: user.id,
-        ticket_type: price ? "paid" : "free",
-        ticket_price: price?.amount,
-        ticket_currency: price?.currency,
+        ticket_type: price?.price ? "paid" : "free",
+        ticket_price: price?.price,
+        ticket_currency: price?.priceCurrency,
       });
       setRegistered(true);
     } catch (err) {

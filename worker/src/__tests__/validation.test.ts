@@ -274,41 +274,43 @@ describe('generateReferralCode', () => {
 describe('dbRowToEvent', () => {
   it('transforms complete database row to Event', () => {
     const row = {
-      id: 'evt-1',
+      _id: 'evt-1',
       short_code: 'abc123',
       slug: 'test-event',
-      title: 'Test Event',
+      name: 'Test Event',
       description: 'A test',
-      date_day: '15',
-      date_month: 'Mar',
-      date_full: 'Sat, Mar 15',
-      date_time: '2:00 PM',
-      date_iso: '2026-03-15T14:00:00Z',
-      location_venue: 'Venue',
-      location_address: '123 St',
-      location_city: 'Harare',
+      start_date: '2026-03-15T14:00:00Z',
+      date_display_day: '15',
+      date_display_month: 'Mar',
+      date_display_full: 'Sat, Mar 15',
+      date_display_time: '2:00 PM',
+      location_name: 'Venue',
+      location_street_address: '123 St',
+      location_locality: 'Harare',
       location_country: 'Zimbabwe',
       category: 'Tech',
-      tags: '["a","b"]',
-      cover_image: 'img.jpg',
+      keywords: '["a","b"]',
+      image: 'img.jpg',
       cover_gradient: 'gradient-1',
       attendee_count: 42,
       friends_count: 5,
-      capacity: 100,
-      is_online: false,
+      maximum_attendee_capacity: 100,
+      event_attendance_mode: 'OfflineEventAttendanceMode',
+      event_status: 'EventScheduled',
+      is_published: 1,
       meeting_url: null,
       meeting_platform: null,
-      host_name: 'Host',
-      host_handle: 'host',
-      host_initials: 'H',
-      host_event_count: 3,
-      is_free: true,
-      ticket_url: null,
-      price_amount: null,
-      price_currency: null,
-      price_label: null,
-      created_at: '2026-01-01',
-      updated_at: '2026-01-02',
+      organizer_name: 'Host',
+      organizer_identifier: 'host',
+      organizer_initials: 'H',
+      organizer_alternate_name: null,
+      organizer_event_count: 3,
+      offer_price: null,
+      offer_price_currency: null,
+      offer_url: null,
+      offer_availability: null,
+      date_created: '2026-01-01',
+      date_modified: '2026-01-02',
     };
 
     const event = dbRowToEvent(row);
@@ -316,77 +318,70 @@ describe('dbRowToEvent', () => {
     expect(event.id).toBe('evt-1');
     expect(event.shortCode).toBe('abc123');
     expect(event.slug).toBe('test-event');
-    expect(event.title).toBe('Test Event');
+    expect(event.name).toBe('Test Event');
+    expect(event.startDate).toBe('2026-03-15T14:00:00Z');
     expect(event.date.day).toBe('15');
     expect(event.date.month).toBe('Mar');
-    expect(event.location.city).toBe('Harare');
+    expect(event.location.addressLocality).toBe('Harare');
     expect(event.category).toBe('Tech');
-    expect(event.tags).toEqual(['a', 'b']);
+    expect(event.keywords).toEqual(['a', 'b']);
     expect(event.attendeeCount).toBe(42);
-    expect(event.capacity).toBe(100);
-    expect(event.host.name).toBe('Host');
-    expect(event.isFree).toBe(true);
-    expect(event.price).toBeUndefined();
+    expect(event.maximumAttendeeCapacity).toBe(100);
+    expect(event.organizer.name).toBe('Host');
+    expect(event.offers).toBeUndefined();
   });
 
-  it('parses tags from JSON string', () => {
-    const row = { tags: '["music","tech"]' } as Record<string, unknown>;
+  it('parses keywords from JSON string', () => {
+    const row = { keywords: '["music","tech"]' } as Record<string, unknown>;
     const event = dbRowToEvent({ ...createMinimalRow(), ...row });
-    expect(event.tags).toEqual(['music', 'tech']);
+    expect(event.keywords).toEqual(['music', 'tech']);
   });
 
-  it('handles malformed tags JSON gracefully', () => {
-    const event = dbRowToEvent({ ...createMinimalRow(), tags: 'not-json' });
-    expect(event.tags).toEqual([]);
+  it('handles malformed keywords JSON gracefully', () => {
+    const event = dbRowToEvent({ ...createMinimalRow(), keywords: 'not-json' });
+    expect(event.keywords).toEqual([]);
   });
 
-  it('handles null tags', () => {
-    const event = dbRowToEvent({ ...createMinimalRow(), tags: null });
-    expect(event.tags).toEqual([]);
+  it('handles null keywords', () => {
+    const event = dbRowToEvent({ ...createMinimalRow(), keywords: null });
+    expect(event.keywords).toEqual([]);
   });
 
-  it('correctly handles isFree boolean coercion', () => {
-    // is_free = true → isFree = true
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: true }).isFree).toBe(true);
-    // is_free = 1 → isFree = true
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: 1 }).isFree).toBe(true);
-    // is_free = false → isFree = false
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: false }).isFree).toBe(false);
-    // is_free = 0 → isFree = false
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: 0 }).isFree).toBe(false);
-    // is_free = null → isFree = true (default)
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: null }).isFree).toBe(true);
-    // is_free = undefined → isFree = true (default)
-    expect(dbRowToEvent({ ...createMinimalRow(), is_free: undefined }).isFree).toBe(true);
+  it('correctly handles isPublished boolean coercion', () => {
+    expect(dbRowToEvent({ ...createMinimalRow(), is_published: 1 }).isPublished).toBe(true);
+    expect(dbRowToEvent({ ...createMinimalRow(), is_published: 0 }).isPublished).toBe(false);
+    expect(dbRowToEvent({ ...createMinimalRow(), is_published: null }).isPublished).toBe(false);
   });
 
-  it('includes price when price_amount exists', () => {
+  it('includes offers when offer_price exists', () => {
     const event = dbRowToEvent({
       ...createMinimalRow(),
-      price_amount: 25,
-      price_currency: 'USD',
-      price_label: '$25',
+      offer_price: 25,
+      offer_price_currency: 'USD',
+      offer_availability: 'InStock',
     });
-    expect(event.price).toEqual({ amount: 25, currency: 'USD', label: '$25' });
+    expect(event.offers).toMatchObject({ price: 25, priceCurrency: 'USD', availability: 'InStock' });
   });
 
-  it('omits price when price_amount is null', () => {
-    const event = dbRowToEvent({ ...createMinimalRow(), price_amount: null });
-    expect(event.price).toBeUndefined();
+  it('omits offers when offer_price is null and offer_url is absent', () => {
+    const event = dbRowToEvent({ ...createMinimalRow(), offer_price: null, offer_url: null });
+    expect(event.offers).toBeUndefined();
   });
 });
 
 // Helper to create a minimal valid row
 function createMinimalRow(): Record<string, unknown> {
   return {
-    id: 'evt-1', short_code: 'x', slug: 'x', title: 'x', description: 'x',
-    date_day: '1', date_month: 'Jan', date_full: 'x', date_time: 'x', date_iso: 'x',
-    location_venue: 'x', location_address: 'x', location_city: 'x', location_country: 'x',
-    category: 'x', tags: '[]', cover_image: null, cover_gradient: null,
-    attendee_count: 0, friends_count: null, capacity: null,
-    is_online: false, meeting_url: null, meeting_platform: null,
-    host_name: 'x', host_handle: 'x', host_initials: 'X', host_event_count: 0,
-    is_free: true, ticket_url: null, price_amount: null, price_currency: null, price_label: null,
-    created_at: '2026-01-01', updated_at: '2026-01-01',
+    _id: 'evt-1', short_code: 'x', slug: 'x', name: 'x', description: 'x',
+    start_date: '2026-01-01T00:00:00Z',
+    date_display_day: '1', date_display_month: 'Jan', date_display_full: 'x', date_display_time: 'x',
+    location_name: 'x', location_street_address: 'x', location_locality: 'x', location_country: 'x',
+    category: 'x', keywords: '[]', image: null, cover_gradient: null,
+    attendee_count: 0, friends_count: null, maximum_attendee_capacity: null,
+    event_attendance_mode: 'OfflineEventAttendanceMode', event_status: 'EventScheduled', is_published: 1,
+    meeting_url: null, meeting_platform: null,
+    organizer_name: 'x', organizer_identifier: 'x', organizer_initials: 'X', organizer_alternate_name: null, organizer_event_count: 0,
+    offer_price: null, offer_price_currency: null, offer_url: null, offer_availability: null,
+    date_created: '2026-01-01', date_modified: '2026-01-01',
   };
 }

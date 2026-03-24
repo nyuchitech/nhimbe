@@ -96,7 +96,7 @@ export async function chat(
       const eventContext = suggestedEvents
         .map(
           (e) =>
-            `- "${e.title}" on ${e.date.full} at ${e.location.venue}, ${e.location.city}`
+            `- "${e.name}" on ${e.date.full} at ${e.location.name}, ${e.location.addressLocality}`
         )
         .join("\n");
 

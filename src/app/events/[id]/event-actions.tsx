@@ -13,20 +13,20 @@ import {
 
 interface EventActionsProps {
   event: {
-    title: string;
+    name: string;
     shortCode: string;
+    startDate: string;
     date: {
       day: string;
       month: string;
       full: string;
       time: string;
-      iso: string;
     };
     location: {
-      venue: string;
-      address: string;
-      city: string;
-      country: string;
+      name: string;
+      streetAddress?: string;
+      addressLocality: string;
+      addressCountry: string;
     };
     description: string;
   };
@@ -34,13 +34,13 @@ interface EventActionsProps {
 
 // Helper to create CalendarEvent from event data
 function createCalendarEvent(event: EventActionsProps["event"]): CalendarEvent {
-  const startDate = new Date(event.date.iso);
+  const startDate = new Date(event.startDate);
   const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
 
   return {
-    title: event.title,
+    title: event.name,
     description: event.description,
-    location: `${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}`,
+    location: `${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}`,
     startDate,
     endDate,
     url: typeof window !== "undefined" ? `${window.location.origin}/e/${event.shortCode}` : undefined,
@@ -52,7 +52,7 @@ export function EventActions({ event }: EventActionsProps) {
 
   const handleAddToCalendar = () => {
     // Generate ICS file content
-    const startDate = new Date(event.date.iso);
+    const startDate = new Date(event.startDate);
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
 
     const formatDateForICS = (date: Date) => {
@@ -65,9 +65,9 @@ PRODID:-//nhimbe//Event//EN
 BEGIN:VEVENT
 DTSTART:${formatDateForICS(startDate)}
 DTEND:${formatDateForICS(endDate)}
-SUMMARY:${event.title}
+SUMMARY:${event.name}
 DESCRIPTION:${event.description.slice(0, 200).replace(/\n/g, "\\n")}
-LOCATION:${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}
+LOCATION:${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}
 END:VEVENT
 END:VCALENDAR`;
 
@@ -76,7 +76,7 @@ END:VCALENDAR`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${event.title.toLowerCase().replace(/\s+/g, "-")}.ics`;
+    link.download = `${event.name.toLowerCase().replace(/\s+/g, "-")}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -85,7 +85,7 @@ END:VCALENDAR`;
 
   const handleGetDirections = () => {
     const address = encodeURIComponent(
-      `${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}`
+      `${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}`
     );
     // Open in Google Maps (works on all platforms)
     window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
@@ -96,8 +96,8 @@ END:VCALENDAR`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: event.title,
-          text: `Check out ${event.title} on nhimbe`,
+          title: event.name,
+          text: `Check out ${event.name} on nhimbe`,
           url,
         });
       } catch {
@@ -253,7 +253,7 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
 export function GetDirectionsButton({ event }: EventActionsProps) {
   const handleGetDirections = () => {
     const address = encodeURIComponent(
-      `${event.location.venue}, ${event.location.address}, ${event.location.city}, ${event.location.country}`
+      `${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}`
     );
     window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
   };
@@ -276,8 +276,8 @@ export function ShareButton({ event }: EventActionsProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: event.title,
-          text: `Check out ${event.title} on nhimbe`,
+          title: event.name,
+          text: `Check out ${event.name} on nhimbe`,
           url,
         });
       } catch {

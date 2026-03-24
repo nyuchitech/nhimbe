@@ -57,7 +57,7 @@ export default function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const map: Record<number, Event[]> = {};
     events.forEach((event) => {
-      const eventDate = new Date(event.date.iso);
+      const eventDate = new Date(event.startDate);
       if (eventDate.getFullYear() === year && eventDate.getMonth() === month) {
         const day = eventDate.getDate();
         if (!map[day]) map[day] = [];
@@ -173,7 +173,7 @@ export default function CalendarPage() {
                             href={`/events/${event.id}`}
                             className="block px-2 py-1 text-xs rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors truncate"
                           >
-                            {event.title}
+                            {event.name}
                           </Link>
                         ))}
                         {eventsByDay[day]?.length > 2 && (
@@ -195,10 +195,10 @@ export default function CalendarPage() {
             <div className="space-y-4">
               {events
                 .filter((event) => {
-                  const eventDate = new Date(event.date.iso);
+                  const eventDate = new Date(event.startDate);
                   return eventDate.getFullYear() === year && eventDate.getMonth() === month;
                 })
-                .sort((a, b) => new Date(a.date.iso).getTime() - new Date(b.date.iso).getTime())
+                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
                 .map((event) => (
                   <Link
                     key={event.id}
@@ -215,12 +215,12 @@ export default function CalendarPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-foreground truncate">
-                        {event.title}
+                        {event.name}
                       </h4>
                       <div className="flex items-center gap-1 text-sm text-text-secondary">
                         <MapPin className="w-3.5 h-3.5" />
                         <span className="truncate">
-                          {event.location.venue}, {event.location.city}
+                          {event.location.name}, {event.location.addressLocality}
                         </span>
                       </div>
                     </div>

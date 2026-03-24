@@ -22,7 +22,7 @@ admin.get("/stats", async (c) => {
   ]);
 
   const activeEventsResult = await c.env.DB.prepare(
-    "SELECT COUNT(*) as count FROM events WHERE date_iso >= datetime('now')"
+    "SELECT COUNT(*) as count FROM events WHERE start_date >= datetime('now')"
   ).first() as { count: number } | null;
 
   const viewsResult = await c.env.DB.prepare(
@@ -30,47 +30,47 @@ admin.get("/stats", async (c) => {
   ).first() as { count: number } | null;
 
   interface EventRow {
-    id: string;
-    title: string;
-    date_full: string;
+    _id: string;
+    name: string;
+    date_display_full: string;
     attendee_count: number;
-    date_iso: string;
+    start_date: string;
   }
   const recentEventsResult = await c.env.DB.prepare(
-    "SELECT id, title, date_full, attendee_count, date_iso FROM events ORDER BY created_at DESC LIMIT 5"
+    "SELECT _id, name, date_display_full, attendee_count, start_date FROM events ORDER BY date_created DESC LIMIT 5"
   ).all() as { results: EventRow[] };
 
   const now = new Date();
   const recentEvents = recentEventsResult.results.map(e => {
-    const eventDate = new Date(e.date_iso);
+    const eventDate = new Date(e.start_date);
     let status: 'upcoming' | 'ongoing' | 'past' = 'upcoming';
     if (eventDate < now) status = 'past';
     else if (eventDate.toDateString() === now.toDateString()) status = 'ongoing';
 
     return {
-      id: e.id,
-      title: e.title,
-      date: e.date_full,
+      id: e._id,
+      title: e.name,
+      date: e.date_display_full,
       attendeeCount: e.attendee_count,
       status,
     };
   });
 
   interface UserRow {
-    id: string;
+    _id: string;
     name: string;
     email: string;
-    created_at: string;
+    date_created: string;
   }
   const recentUsersResult = await c.env.DB.prepare(
-    "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 5"
+    "SELECT _id, name, email, date_created FROM users ORDER BY date_created DESC LIMIT 5"
   ).all() as { results: UserRow[] };
 
   const recentUsers = recentUsersResult.results.map(u => ({
-    id: u.id,
+    id: u._id,
     name: u.name,
     email: u.email,
-    createdAt: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    createdAt: new Date(u.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   }));
 
   let tickets: Array<{ id: string; subject: string; status: string; createdAt: string }> = [];
@@ -83,13 +83,13 @@ admin.get("/stats", async (c) => {
     }
     const ticketsResult = await c.env.DB.prepare(
       "SELECT id, subject, status, created_at FROM support_tickets ORDER BY created_at DESC LIMIT 5"
-    ).all() as { results: TicketRow[] };
+    ).all() as { results: (TicketRow & { created_at?: string })[] };
 
     tickets = ticketsResult.results.map(t => ({
       id: t.id,
       subject: t.subject,
       status: t.status,
-      createdAt: new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      createdAt: new Date(t.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     }));
   } catch {
     // Table doesn't exist yet
@@ -133,20 +133,20 @@ admin.get("/users", async (c) => {
     params.push(`%${search}%`, `%${search}%`);
   }
 
-  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+  query += " ORDER BY date_created DESC LIMIT ? OFFSET ?";
 
   interface UserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
-    handle: string | null;
-    avatar_url: string | null;
-    city: string | null;
-    country: string | null;
+    alternate_name: string | null;
+    image: string | null;
+    address_locality: string | null;
+    address_country: string | null;
     events_attended: number;
     events_hosted: number;
     role: string | null;
-    created_at: string;
+    date_created: string;
   }
 
   const [usersResult, countResult] = await Promise.all([
@@ -155,18 +155,18 @@ admin.get("/users", async (c) => {
   ]);
 
   const users = usersResult.results.map(u => ({
-    id: u.id,
+    id: u._id,
     email: u.email,
     name: u.name,
-    handle: u.handle,
-    avatar_url: u.avatar_url,
-    city: u.city,
-    country: u.country,
+    handle: u.alternate_name,
+    avatar_url: u.image,
+    city: u.address_locality,
+    country: u.address_country,
     events_attended: u.events_attended || 0,
     events_hosted: u.events_hosted || 0,
     role: u.role || 'user',
     status: 'active' as const,
-    created_at: u.created_at,
+    date_created: u.date_created,
   }));
 
   return c.json({
@@ -225,7 +225,7 @@ async function handleAdminUserAction(
       }
 
       await c.env.DB.prepare(
-        "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?"
+        "UPDATE users SET role = ?, date_modified = datetime('now') WHERE _id = ?"
       ).bind(newRole, userId).run();
 
       return c.json({ message: `User role updated to ${newRole}` });
@@ -253,26 +253,26 @@ admin.get("/events", async (c) => {
   const params: (string | number)[] = [];
 
   if (search) {
-    query += " AND (title LIKE ? OR description LIKE ?)";
-    countQuery += " AND (title LIKE ? OR description LIKE ?)";
+    query += " AND (name LIKE ? OR description LIKE ?)";
+    countQuery += " AND (name LIKE ? OR description LIKE ?)";
     params.push(`%${search}%`, `%${search}%`);
   }
 
   const now = new Date().toISOString();
   if (status === 'upcoming') {
-    query += " AND date_iso >= ?";
-    countQuery += " AND date_iso >= ?";
+    query += " AND start_date >= ?";
+    countQuery += " AND start_date >= ?";
     params.push(now);
   } else if (status === 'past') {
-    query += " AND date_iso < ?";
-    countQuery += " AND date_iso < ?";
+    query += " AND start_date < ?";
+    countQuery += " AND start_date < ?";
     params.push(now);
   } else if (status === 'cancelled') {
-    query += " AND is_cancelled = 1";
-    countQuery += " AND is_cancelled = 1";
+    query += " AND event_status = 'EventCancelled'";
+    countQuery += " AND event_status = 'EventCancelled'";
   }
 
-  query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+  query += " ORDER BY date_created DESC LIMIT ? OFFSET ?";
 
   const [eventsResult, countResult] = await Promise.all([
     c.env.DB.prepare(query).bind(...params, limit, offset).all() as Promise<{ results: Record<string, unknown>[] }>,
@@ -282,25 +282,25 @@ admin.get("/events", async (c) => {
   const nowDate = new Date();
   const events = eventsResult.results.map((row) => {
     const event = dbRowToEvent(row);
-    const eventDate = new Date(event.date.iso);
+    const eventDate = new Date(event.startDate);
     let eventStatus: 'upcoming' | 'ongoing' | 'past' | 'cancelled' = 'upcoming';
 
-    if (row.is_cancelled) eventStatus = 'cancelled';
+    if (event.eventStatus === 'EventCancelled') eventStatus = 'cancelled';
     else if (eventDate < nowDate) eventStatus = 'past';
     else if (eventDate.toDateString() === nowDate.toDateString()) eventStatus = 'ongoing';
 
     return {
       id: event.id,
-      title: event.title,
+      title: event.name,
       description: event.description,
       date: event.date,
       location: event.location,
       category: event.category,
       attendeeCount: event.attendeeCount,
-      capacity: event.capacity,
-      host: event.host,
+      capacity: event.maximumAttendeeCapacity,
+      organizer: event.organizer,
       status: eventStatus,
-      createdAt: event.createdAt,
+      dateCreated: event.dateCreated,
     };
   });
 
@@ -318,12 +318,12 @@ admin.delete("/events/:id", async (c) => {
     return c.json({ error: "Unauthorized - moderator access required" }, 401);
   }
 
-  const event = await c.env.DB.prepare("SELECT id, title FROM events WHERE id = ?").bind(eventId).first();
+  const event = await c.env.DB.prepare("SELECT _id, name FROM events WHERE _id = ?").bind(eventId).first();
   if (!event) {
     return c.json({ error: "Event not found" }, 404);
   }
 
-  await c.env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId).run();
+  await c.env.DB.prepare("DELETE FROM events WHERE _id = ?").bind(eventId).run();
 
   try {
     await removeEventFromIndex(c.env.VECTORIZE, eventId);

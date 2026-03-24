@@ -45,14 +45,14 @@ export async function generateEmbeddings(
  */
 export function eventToSearchText(event: Event): string {
   const parts = [
-    event.title,
+    event.name,
     event.description,
     event.category,
-    ...event.tags,
-    event.location.venue,
-    event.location.city,
-    event.location.country,
-    event.host.name,
+    ...(event.keywords || []),
+    event.location.name,
+    event.location.addressLocality,
+    event.location.addressCountry,
+    event.organizer.name,
     event.date.full,
   ];
 
@@ -74,11 +74,11 @@ export async function indexEvent(
     id: event.id,
     values: embedding,
     metadata: {
-      title: event.title,
+      name: event.name,
       category: event.category,
-      city: event.location.city,
-      country: event.location.country,
-      date: event.date.iso,
+      city: event.location.addressLocality,
+      country: event.location.addressCountry,
+      date: event.startDate,
       shortCode: event.shortCode,
     },
   };
@@ -110,11 +110,11 @@ export async function indexEvents(
         id: event.id,
         values: embeddings[idx],
         metadata: {
-          title: event.title,
+          name: event.name,
           category: event.category,
-          city: event.location.city,
-          country: event.location.country,
-          date: event.date.iso,
+          city: event.location.addressLocality,
+          country: event.location.addressCountry,
+          date: event.startDate,
           shortCode: event.shortCode,
         },
       }));

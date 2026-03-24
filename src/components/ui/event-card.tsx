@@ -5,7 +5,7 @@ interface EventCardProps {
   id: string;
   title: string;
   date: { day: string; month: string };
-  location: { venue: string; city: string; country: string };
+  location: { name?: string; venue?: string; addressLocality?: string; city?: string; addressCountry?: string; country?: string };
   category: string;
   coverImage?: string;
   coverGradient?: string;
@@ -127,7 +127,7 @@ export function EventCard({
 
           <div className="flex items-center gap-2 text-sm text-foreground/60 mb-4">
             <MapPin className="w-4 h-4" />
-            <span>{location.city}, {location.country}</span>
+            <span>{location.addressLocality ?? location.city}, {location.addressCountry ?? location.country}</span>
           </div>
 
           <div className="flex items-center justify-between">

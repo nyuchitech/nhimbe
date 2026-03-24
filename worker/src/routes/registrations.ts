@@ -44,18 +44,18 @@ registrations.post("/", async (c) => {
   }
 
   const event = await c.env.DB.prepare(
-    "SELECT id, capacity, attendee_count, is_published, is_cancelled FROM events WHERE id = ?"
-  ).bind(body.event_id).first() as { id: string; capacity: number | null; attendee_count: number; is_published: boolean; is_cancelled: boolean } | null;
+    "SELECT _id, maximum_attendee_capacity, attendee_count, is_published, event_status FROM events WHERE _id = ?"
+  ).bind(body.event_id).first() as { _id: string; maximum_attendee_capacity: number | null; attendee_count: number; is_published: boolean; event_status: string } | null;
 
   if (!event) {
     return c.json({ error: "Event not found" }, 404);
   }
 
-  if (!event.is_published || event.is_cancelled) {
+  if (!event.is_published || event.event_status !== 'EventScheduled') {
     return c.json({ error: "Event is not available for registration" }, 400);
   }
 
-  if (event.capacity && event.attendee_count >= event.capacity) {
+  if (event.maximum_attendee_capacity && event.attendee_count >= event.maximum_attendee_capacity) {
     return c.json({ error: "Event is at capacity" }, 400);
   }
 
@@ -82,7 +82,7 @@ registrations.post("/", async (c) => {
   ).run();
 
   await c.env.DB.prepare(
-    "UPDATE events SET attendee_count = attendee_count + 1 WHERE id = ?"
+    "UPDATE events SET attendee_count = attendee_count + 1 WHERE _id = ?"
   ).bind(body.event_id).run();
 
   return c.json({ id, message: "Registration successful" }, 201);
@@ -103,11 +103,11 @@ registrations.put("/:id", async (c) => {
   }
 
   const reg = await c.env.DB.prepare(`
-    SELECT r.*, e.host_name, e.host_handle
+    SELECT r.*, e.organizer_name, e.organizer_identifier
     FROM registrations r
-    JOIN events e ON r.event_id = e.id
+    JOIN events e ON r.event_id = e._id
     WHERE r.id = ?
-  `).bind(regId).first() as { id: string; user_id: string; event_id: string; host_name: string; host_handle: string } | null;
+  `).bind(regId).first() as { id: string; user_id: string; event_id: string; organizer_name: string; organizer_identifier: string } | null;
 
   if (!reg) {
     return c.json({ error: "Registration not found" }, 404);
@@ -115,8 +115,8 @@ registrations.put("/:id", async (c) => {
 
   if (body.user_id) {
     const requestingUser = body.user_id;
-    const isHost = reg.host_handle === `@${requestingUser}` ||
-                   reg.host_name?.toLowerCase() === requestingUser.toLowerCase();
+    const isHost = reg.organizer_identifier === requestingUser ||
+                   reg.organizer_name?.toLowerCase() === requestingUser.toLowerCase();
     const isRegistrant = reg.user_id === requestingUser;
 
     if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {
@@ -149,7 +149,7 @@ registrations.delete("/:id", async (c) => {
     ).bind(regId).run();
 
     await c.env.DB.prepare(
-      "UPDATE events SET attendee_count = attendee_count - 1 WHERE id = ?"
+      "UPDATE events SET attendee_count = attendee_count - 1 WHERE _id = ?"
     ).bind(reg.event_id).run();
   }
 

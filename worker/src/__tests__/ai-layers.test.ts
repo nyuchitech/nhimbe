@@ -45,7 +45,7 @@ describe('Embeddings: eventToSearchText', () => {
 
   it('filters out falsy values', () => {
     const event = createEventFixture({
-      tags: [],
+      keywords: [],
       description: '',
     });
     const text = eventToSearchText(event);
@@ -55,7 +55,7 @@ describe('Embeddings: eventToSearchText', () => {
 
   it('handles event with all fields populated', () => {
     const event = createEventFixture({
-      tags: ['music', 'jazz', 'live'],
+      keywords: ['music', 'jazz', 'live'],
     });
     const text = eventToSearchText(event);
     expect(text).toContain('music');

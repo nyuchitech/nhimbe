@@ -17,14 +17,14 @@ stats.get("/stats", async (c) => {
     SELECT
       COUNT(*) as total_events,
       SUM(attendee_count) as total_attendees,
-      COUNT(DISTINCT host_handle) as active_hosts
+      COUNT(DISTINCT organizer_identifier) as active_hosts
     FROM events
-    WHERE is_published = TRUE AND is_cancelled = FALSE
+    WHERE is_published = TRUE AND event_status = 'EventScheduled'
   `;
   const params: string[] = [];
 
   if (city) {
-    statsQuery += " AND location_city = ?";
+    statsQuery += " AND location_locality = ?";
     params.push(city);
   }
 
@@ -42,12 +42,12 @@ stats.get("/stats", async (c) => {
       COUNT(*) as count,
       (SELECT COUNT(*) FROM events e2
        WHERE e2.category = events.category
-       AND e2.created_at < datetime('now', '-7 days')
-       ${city ? "AND e2.location_city = ?" : ""}
+       AND e2.date_created < datetime('now', '-7 days')
+       ${city ? "AND e2.location_locality = ?" : ""}
       ) as last_week
     FROM events
-    WHERE created_at >= datetime('now', '-7 days')
-    ${city ? "AND location_city = ?" : ""}
+    WHERE date_created >= datetime('now', '-7 days')
+    ${city ? "AND location_locality = ?" : ""}
     GROUP BY category
     ORDER BY count DESC
     LIMIT 5
@@ -62,10 +62,10 @@ stats.get("/stats", async (c) => {
   }
 
   const venueQuery = `
-    SELECT location_venue as venue, COUNT(*) as count
+    SELECT location_name as venue, COUNT(*) as count
     FROM events
     WHERE is_published = TRUE
-    ${city ? "AND location_city = ?" : ""}
+    ${city ? "AND location_locality = ?" : ""}
     GROUP BY location_venue
     ORDER BY count DESC
     LIMIT 5

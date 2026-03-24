@@ -97,7 +97,7 @@ async function generateSearchSummary(
     .slice(0, 5)
     .map(
       (e) =>
-        `- "${e.title}" on ${e.date.full} at ${e.location.venue}, ${e.location.city} (${e.category})`
+        `- "${e.name}" on ${e.date.full} at ${e.location.name}, ${e.location.addressLocality} (${e.category})`
     )
     .join("\n");
 

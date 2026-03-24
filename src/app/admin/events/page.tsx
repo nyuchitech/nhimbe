@@ -26,24 +26,24 @@ const API_URL =
 
 interface Event {
   id: string;
-  title: string;
+  name: string;
   description: string;
   date: {
     full: string;
-    iso: string;
   };
+  startDate: string;
   location: {
-    venue: string;
-    city: string;
+    name: string;
+    addressLocality: string;
   };
   category: string;
   attendeeCount: number;
-  capacity?: number;
-  host: {
+  maximumAttendeeCapacity?: number;
+  organizer: {
     name: string;
   };
   status: "upcoming" | "ongoing" | "past" | "cancelled";
-  createdAt: string;
+  dateCreated: string;
 }
 
 export default function EventsPage() {
@@ -203,7 +203,7 @@ export default function EventsPage() {
                         <td className="py-3 pr-4">
                           <div className="min-w-0">
                             <div className="font-medium truncate max-w-[200px]">
-                              {event.title}
+                              {event.name}
                             </div>
                             <div className="text-sm text-text-tertiary">
                               {event.category}
@@ -219,20 +219,20 @@ export default function EventsPage() {
                             <div className="flex items-center gap-1 text-text-tertiary text-sm">
                               <MapPin className="w-3 h-3" />
                               <span>
-                                {event.location.venue}, {event.location.city}
+                                {event.location.name}, {event.location.addressLocality}
                               </span>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 pr-4 hidden lg:table-cell text-sm text-text-secondary">
-                          {event.host.name}
+                          {event.organizer.name}
                         </td>
                         <td className="py-3 pr-4">
                           <div className="flex items-center gap-1 text-text-secondary">
                             <Users className="w-4 h-4" />
                             <span>
                               {event.attendeeCount}
-                              {event.capacity && `/${event.capacity}`}
+                              {event.maximumAttendeeCapacity && `/${event.maximumAttendeeCapacity}`}
                             </span>
                           </div>
                         </td>
@@ -347,7 +347,7 @@ export default function EventsPage() {
             <p className="text-text-secondary mb-6">
               Are you sure you want to delete{" "}
               <span className="text-foreground font-medium">
-                &quot;{deleteConfirm.title}&quot;
+                &quot;{deleteConfirm.name}&quot;
               </span>
               ? All registrations and data associated with this event will be
               permanently removed.

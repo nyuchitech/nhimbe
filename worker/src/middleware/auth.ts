@@ -68,14 +68,14 @@ export async function getAdminUser(request: Request, env: Env, requiredRole: Use
   const stytchUser = authResult.user;
 
   interface DbUserRow {
-    id: string;
+    _id: string;
     email: string;
     name: string;
     role: string | null;
   }
 
   const user = await env.DB.prepare(
-    "SELECT id, email, name, role FROM users WHERE stytch_user_id = ?"
+    "SELECT _id, email, name, role FROM users WHERE stytch_user_id = ?"
   ).bind(stytchUser.userId).first() as DbUserRow | null;
 
   if (!user) return null;
@@ -83,5 +83,5 @@ export async function getAdminUser(request: Request, env: Env, requiredRole: Use
   const userRole = (user.role || "user") as UserRole;
   if (!hasPermission(userRole, requiredRole)) return null;
 
-  return { id: user.id, email: user.email, name: user.name, role: userRole };
+  return { id: user._id, email: user.email, name: user.name, role: userRole };
 }

@@ -131,7 +131,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
 
         // Set initial city filter based on detected location
         if (!activeCity && eventsResponse.events.length > 0) {
-          const cities = new Set(eventsResponse.events.map((e) => e.location.city));
+          const cities = new Set(eventsResponse.events.map((e) => e.location.addressLocality));
           if (detectedCity && cities.has(detectedCity)) {
             setActiveCity(detectedCity);
           }
@@ -147,7 +147,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
 
   // Get unique cities from events
   const availableCities = useMemo(() => {
-    const citySet = new Set(events.map((e) => e.location.city));
+    const citySet = new Set(events.map((e) => e.location.addressLocality));
     return Array.from(citySet).sort();
   }, [events]);
 
@@ -166,7 +166,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       const categoryMatch = activeCategory === "All" || e.category === activeCategory;
-      const cityMatch = !activeCity || e.location.city === activeCity;
+      const cityMatch = !activeCity || e.location.addressLocality === activeCity;
       return categoryMatch && cityMatch;
     });
   }, [events, activeCategory, activeCity]);
@@ -291,10 +291,10 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
                     <EventCardHorizontal
                       key={event.id}
                       id={event.id}
-                      title={event.title}
+                      title={event.name}
                       date={event.date}
                       location={event.location}
-                      coverImage={event.coverImage}
+                      coverImage={event.image}
                       coverGradient={event.coverGradient}
                     />
                   ))}
@@ -306,10 +306,10 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
                     <EventCardHorizontal
                       key={event.id}
                       id={event.id}
-                      title={event.title}
+                      title={event.name}
                       date={event.date}
                       location={event.location}
-                      coverImage={event.coverImage}
+                      coverImage={event.image}
                       coverGradient={event.coverGradient}
                     />
                   ))}

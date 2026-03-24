@@ -14,9 +14,12 @@ interface EventCardHorizontalProps {
     time?: string;
   };
   location: {
-    venue: string;
-    city: string;
-    country: string;
+    name?: string;
+    venue?: string;
+    addressLocality?: string;
+    city?: string;
+    addressCountry?: string;
+    country?: string;
   };
   coverImage?: string;
   coverGradient?: string;
@@ -35,9 +38,9 @@ export function EventCardHorizontal({
     ? formatEventDateTime(date.full, date.time)
     : `${date.month} ${date.day}${date.time ? `, ${date.time}` : ""}`;
 
-  const venueDisplay = location.venue
-    ? `${location.venue}`
-    : `${location.city}, ${location.country}`;
+  const venueDisplay = (location.name || location.venue)
+    ? `${location.name ?? location.venue}`
+    : `${location.addressLocality ?? location.city}, ${location.addressCountry ?? location.country}`;
 
   return (
     <Link href={`/events/${id}`} className="block group">

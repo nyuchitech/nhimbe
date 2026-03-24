@@ -32,14 +32,14 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 
   const eventUrl = `https://nhimbe.com/events/${event.id}`;
   const shortUrl = `https://nhimbe.com/e/${event.shortCode}`;
-  const description = `${event.title} on ${event.date.full} at ${event.location.venue}, ${event.location.city}. ${event.description.slice(0, 150)}...`;
+  const description = `${event.name} on ${event.date.full} at ${event.location.name}, ${event.location.addressLocality}. ${event.description.slice(0, 150)}...`;
 
   // Generate dynamic OG image URL with mineral gradient
   const ogImageParams = new URLSearchParams({
-    title: event.title,
-    subtitle: `${event.date.full} at ${event.location.venue}`,
+    title: event.name,
+    subtitle: `${event.date.full} at ${event.location.name}`,
     date: `${event.date.day} ${event.date.month}`,
-    location: `${event.location.city}, ${event.location.country}`,
+    location: `${event.location.addressLocality}, ${event.location.addressCountry}`,
     category: event.category,
     gradient: "mixed",
     type: "event",
@@ -47,21 +47,21 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const ogImageUrl = `https://nhimbe.com/api/og?${ogImageParams.toString()}`;
 
   // Use cover image if available, otherwise use dynamic OG image
-  const imageUrl = event.coverImage || ogImageUrl;
+  const imageUrl = event.image || ogImageUrl;
 
   return {
-    title: `${event.title} - nhimbe`,
+    title: `${event.name} - nhimbe`,
     description,
     keywords: [
       event.category,
-      ...event.tags,
-      event.location.city,
-      event.location.country,
+      ...(event.keywords || []),
+      event.location.addressLocality,
+      event.location.addressCountry,
       "events",
       "nhimbe",
     ],
     openGraph: {
-      title: event.title,
+      title: event.name,
       description,
       type: "website",
       url: eventUrl,
@@ -72,13 +72,13 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: event.title,
+          alt: event.name,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: event.title,
+      title: event.name,
       description,
       images: [imageUrl],
     },
@@ -105,38 +105,38 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Event",
-    name: event.title,
+    name: event.name,
     description: event.description,
-    startDate: event.date.iso,
+    startDate: event.startDate,
     eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: event.isOnline
+    eventAttendanceMode: event.eventAttendanceMode === 'OnlineEventAttendanceMode'
       ? "https://schema.org/OnlineEventAttendanceMode"
       : "https://schema.org/OfflineEventAttendanceMode",
-    location: event.isOnline
+    location: event.eventAttendanceMode === 'OnlineEventAttendanceMode'
       ? {
           "@type": "VirtualLocation",
           url: eventUrl,
         }
       : {
           "@type": "Place",
-          name: event.location.venue,
+          name: event.location.name,
           address: {
             "@type": "PostalAddress",
-            streetAddress: event.location.address,
-            addressLocality: event.location.city,
-            addressCountry: event.location.country,
+            streetAddress: event.location.streetAddress,
+            addressLocality: event.location.addressLocality,
+            addressCountry: event.location.addressCountry,
           },
         },
     organizer: {
       "@type": "Organization",
-      name: event.host.name,
-      url: `https://nhimbe.com/${event.host.handle.replace("@", "")}`,
+      name: event.organizer.name,
+      url: `https://nhimbe.com/${(event.organizer.identifier || "").replace("@", "")}`,
     },
-    offers: event.price
+    offers: event.offers?.price
       ? {
           "@type": "Offer",
-          price: event.price.amount,
-          priceCurrency: event.price.currency,
+          price: event.offers.price,
+          priceCurrency: event.offers.priceCurrency,
           availability: "https://schema.org/InStock",
           url: eventUrl,
         }
@@ -147,8 +147,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           availability: "https://schema.org/InStock",
           url: eventUrl,
         },
-    image: event.coverImage,
-    maximumAttendeeCapacity: event.capacity,
+    image: event.image,
+    maximumAttendeeCapacity: event.maximumAttendeeCapacity,
   };
 
   return (

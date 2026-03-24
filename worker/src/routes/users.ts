@@ -10,7 +10,7 @@ users.get("/:id", async (c) => {
   const userId = c.req.param("id");
 
   const result = await c.env.DB.prepare(
-    "SELECT * FROM users WHERE id = ? OR handle = ?"
+    "SELECT * FROM users WHERE _id = ? OR alternate_name = ?"
   ).bind(userId, userId).first();
 
   if (!result) {
@@ -26,15 +26,15 @@ users.post("/", async (c) => {
   const id = generateId();
 
   await c.env.DB.prepare(`
-    INSERT INTO users (id, email, name, handle, city, country, interests)
+    INSERT INTO users (_id, email, name, alternate_name, address_locality, address_country, interests)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
     body.email,
     body.name,
-    body.handle,
-    body.city,
-    body.country,
+    body.alternate_name || null,
+    body.address_locality || null,
+    body.address_country || null,
     JSON.stringify(body.interests || [])
   ).run();
 
@@ -93,13 +93,13 @@ users.get("/:id/reputation", async (c) => {
   const userId = c.req.param("id");
 
   interface UserRow {
-    id: string;
+    _id: string;
     name: string;
-    handle: string | null;
+    alternate_name: string | null;
   }
 
   const user = await c.env.DB.prepare(
-    "SELECT id, name, handle FROM users WHERE id = ?"
+    "SELECT _id, name, alternate_name FROM users WHERE _id = ?"
   ).bind(userId).first() as UserRow | null;
 
   if (!user) {
@@ -118,10 +118,10 @@ users.get("/:id/reputation", async (c) => {
       SUM(attendee_count) as total_attendees,
       AVG(attendee_count) as avg_attendance
     FROM events
-    WHERE host_handle = ? OR id IN (
+    WHERE organizer_identifier = ? OR _id IN (
       SELECT event_id FROM event_hosts WHERE user_id = ?
     )
-  `).bind(user.handle || "", userId).first() as StatsRow | null;
+  `).bind(user.alternate_name || "", userId).first() as StatsRow | null;
 
   interface RatingRow {
     avg_rating: number;
@@ -133,11 +133,11 @@ users.get("/:id/reputation", async (c) => {
       AVG(r.rating) as avg_rating,
       COUNT(*) as review_count
     FROM event_reviews r
-    JOIN events e ON r.event_id = e.id
-    WHERE e.host_handle = ? OR e.id IN (
+    JOIN events e ON r.event_id = e._id
+    WHERE e.organizer_identifier = ? OR e._id IN (
       SELECT event_id FROM event_hosts WHERE user_id = ?
     )
-  `).bind(user.handle || "", userId).first() as RatingRow | null;
+  `).bind(user.alternate_name || "", userId).first() as RatingRow | null;
 
   const badges: string[] = [];
   const eventsHosted = stats?.events_hosted || 0;
@@ -151,9 +151,9 @@ users.get("/:id/reputation", async (c) => {
   if ((stats?.avg_attendance || 0) >= 50) badges.push("Crowd Puller");
 
   const hostStats = {
-    userId: user.id,
+    userId: user._id,
     name: user.name,
-    handle: user.handle || undefined,
+    handle: user.alternate_name || undefined,
     initials: getInitials(user.name),
     eventsHosted,
     totalAttendees: stats?.total_attendees || 0,

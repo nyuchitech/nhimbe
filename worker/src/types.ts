@@ -364,61 +364,66 @@ export interface EmailQueueMessage {
   templateData: Record<string, unknown>;
 }
 
-// Event Types (matching frontend)
+// Event Types (schema.org aligned)
 export interface EventLocation {
-  venue: string;
-  address: string;
-  city: string;
-  country: string;
+  type?: string;              // schema.org Place @type
+  name: string;              // Place.name (venue)
+  streetAddress?: string;    // PostalAddress.streetAddress
+  addressLocality: string;   // PostalAddress.addressLocality (city)
+  addressCountry: string;    // PostalAddress.addressCountry
+  url?: string;              // Place.url (maps link)
 }
 
 export interface EventDate {
+  // Display helpers — human-readable fragments
   day: string;
   month: string;
   full: string;
   time: string;
-  iso: string;
 }
 
-export interface EventHost {
+export interface EventOrganizer {
   name: string;
-  handle: string;
+  alternateName?: string;
   initials: string;
+  identifier?: string;   // handle / slug
   eventCount: number;
 }
 
-export interface EventPrice {
-  amount: number;
-  currency: string;
-  label: string;
+export interface EventOffers {
+  price?: number;            // Offer.price (null = free)
+  priceCurrency?: string;    // Offer.priceCurrency
+  url?: string;              // Offer.url (external ticketing)
+  availability?: string;     // Offer.availability (InStock, SoldOut, etc.)
 }
 
 export interface Event {
   id: string;
   shortCode: string;
   slug: string;
-  title: string;
+  name: string;                          // schema.org Event.name
   description: string;
-  date: EventDate;
+  startDate: string;                     // schema.org Event.startDate (ISO 8601)
+  endDate?: string;                      // schema.org Event.endDate
+  date: EventDate;                       // display fragments (not schema.org)
   location: EventLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
+  keywords: string[];                    // schema.org Event.keywords
+  image?: string;                        // schema.org Event.image
   coverGradient?: string;
+  themeId?: string;
   attendeeCount: number;
   friendsCount?: number;
-  capacity?: number;
-  isOnline?: boolean;
+  maximumAttendeeCapacity?: number;      // schema.org Event.maximumAttendeeCapacity
+  eventAttendanceMode?: string;          // schema.org EventAttendanceModeEnumeration
+  eventStatus?: string;                  // schema.org EventStatusType
+  isPublished?: boolean;
   meetingUrl?: string;
-  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
-  createdAt?: string;
-  updatedAt?: string;
+  meetingPlatform?: string;
+  organizer: EventOrganizer;             // schema.org Event.organizer
+  offers?: EventOffers;                  // schema.org Event.offers
+  dateCreated?: string;                  // schema.org CreativeWork.dateCreated
+  dateModified?: string;                 // schema.org CreativeWork.dateModified
 }
 
 // Search Types
@@ -471,19 +476,20 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  alternateName?: string;
   handle?: string;
-  avatarUrl?: string;
-  bio?: string;
-  city?: string;
-  country?: string;
+  image?: string;            // schema.org Person.image
+  description?: string;
+  addressLocality?: string;  // schema.org PostalAddress
+  addressCountry?: string;
   interests?: string[];
   eventsAttended: number;
   eventsHosted: number;
   role: UserRole;
   onboardingCompleted: boolean;
   stytchUserId?: string;
-  createdAt: string;
-  updatedAt: string;
+  dateCreated: string;       // schema.org dateCreated
+  dateModified: string;
 }
 
 // Role permission helpers

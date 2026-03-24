@@ -18,11 +18,11 @@ events.get("/", async (c) => {
   const limit = safeParseInt(c.req.query("limit") || null, 20, 1, 100);
   const offset = safeParseInt(c.req.query("offset") || null, 0, 0, 10000);
 
-  let query = "SELECT * FROM events WHERE is_published = TRUE AND is_cancelled = FALSE";
+  let query = "SELECT * FROM events WHERE is_published = TRUE AND event_status = 'EventScheduled'";
   const params: unknown[] = [];
 
   if (city) {
-    query += " AND location_city = ?";
+    query += " AND location_locality = ?";
     params.push(city);
   }
   if (category) {
@@ -30,7 +30,7 @@ events.get("/", async (c) => {
     params.push(category);
   }
 
-  query += " ORDER BY date_iso ASC LIMIT ? OFFSET ?";
+  query += " ORDER BY start_date ASC LIMIT ? OFFSET ?";
   params.push(limit, offset);
 
   const result = await c.env.DB.prepare(query).bind(...params).all();
@@ -49,16 +49,16 @@ events.get("/trending", async (c) => {
 
   let query = `
     SELECT e.*,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id) as views,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = e.id AND created_at >= datetime('now', '-7 days')) as recent_views
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e._id) as views,
+      (SELECT COUNT(*) FROM event_views WHERE event_id = e._id AND viewed_at >= datetime('now', '-7 days')) as recent_views
     FROM events e
-    WHERE e.is_published = TRUE AND e.is_cancelled = FALSE
-    AND e.date_iso >= datetime('now')
+    WHERE e.is_published = TRUE AND e.event_status = 'EventScheduled'
+    AND e.start_date >= datetime('now')
   `;
   const params: (string | number)[] = [];
 
   if (city) {
-    query += " AND e.location_city = ?";
+    query += " AND e.location_locality = ?";
     params.push(city);
   }
 
@@ -89,7 +89,9 @@ events.get("/trending", async (c) => {
 events.get("/:id", async (c) => {
   const eventId = c.req.param("id");
 
-  const result = await c.env.DB.prepare("SELECT * FROM events WHERE id = ? OR slug = ? OR short_code = ?")
+  const result = await c.env.DB.prepare(
+    "SELECT * FROM events WHERE _id = ? OR slug = ? OR short_code = ?"
+  )
     .bind(eventId, eventId, eventId)
     .first();
 
@@ -106,75 +108,81 @@ events.post("/", async (c) => {
 
   const id = body.id || generateId();
   const shortCode = body.shortCode || generateShortCode();
-  const slug = body.slug || slugify(body.title || "");
+  const slug = body.slug || slugify(body.name || "");
 
   await c.env.DB.prepare(`
     INSERT INTO events (
-      id, short_code, slug, title, description,
-      date_day, date_month, date_full, date_time, date_iso,
-      location_venue, location_address, location_city, location_country,
-      category, tags, cover_image, cover_gradient,
-      attendee_count, capacity, is_online, meeting_url, meeting_platform,
-      host_name, host_handle, host_initials, host_event_count,
-      is_free, ticket_url,
-      price_amount, price_currency, price_label
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      _id, short_code, slug, name, description,
+      start_date, end_date,
+      date_display_day, date_display_month, date_display_full, date_display_time,
+      location_name, location_street_address, location_locality, location_country, location_url,
+      category, keywords, image, cover_gradient,
+      attendee_count, maximum_attendee_capacity,
+      event_attendance_mode, event_status,
+      meeting_url, meeting_platform,
+      organizer_name, organizer_alternate_name, organizer_initials, organizer_identifier, organizer_event_count,
+      offer_price, offer_price_currency, offer_url, offer_availability
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
     shortCode,
     slug,
-    body.title,
+    body.name,
     body.description,
+    body.startDate,
+    body.endDate || null,
     body.date?.day,
     body.date?.month,
     body.date?.full,
     body.date?.time,
-    body.date?.iso,
-    body.location?.venue,
-    body.location?.address,
-    body.location?.city,
-    body.location?.country,
+    body.location?.name,
+    body.location?.streetAddress || null,
+    body.location?.addressLocality,
+    body.location?.addressCountry,
+    body.location?.url || null,
     body.category,
-    JSON.stringify(body.tags || []),
-    body.coverImage,
-    body.coverGradient,
+    JSON.stringify(body.keywords || []),
+    body.image || null,
+    body.coverGradient || null,
     body.attendeeCount || 0,
-    body.capacity,
-    body.isOnline || false,
-    body.meetingUrl,
-    body.meetingPlatform,
-    body.host?.name,
-    body.host?.handle,
-    body.host?.initials,
-    body.host?.eventCount || 0,
-    body.isFree !== false,
-    body.ticketUrl || null,
-    body.price?.amount,
-    body.price?.currency,
-    body.price?.label
+    body.maximumAttendeeCapacity || null,
+    body.eventAttendanceMode || "OfflineEventAttendanceMode",
+    body.eventStatus || "EventScheduled",
+    body.meetingUrl || null,
+    body.meetingPlatform || null,
+    body.organizer?.name,
+    body.organizer?.alternateName || null,
+    body.organizer?.initials || getInitials(body.organizer?.name || ""),
+    body.organizer?.identifier || null,
+    body.organizer?.eventCount || 0,
+    body.offers?.price || null,
+    body.offers?.priceCurrency || null,
+    body.offers?.url || null,
+    body.offers?.availability || (body.offers?.price ? "InStock" : "Free"),
   ).run();
 
   const event: Event = {
     id,
     shortCode,
     slug,
-    title: body.title || "",
+    name: body.name || "",
     description: body.description || "",
+    startDate: body.startDate || "",
+    endDate: body.endDate,
     date: body.date!,
     location: body.location!,
     category: body.category || "",
-    tags: body.tags || [],
-    coverImage: body.coverImage,
+    keywords: body.keywords || [],
+    image: body.image,
     coverGradient: body.coverGradient,
     attendeeCount: body.attendeeCount || 0,
-    capacity: body.capacity,
-    isOnline: body.isOnline,
+    maximumAttendeeCapacity: body.maximumAttendeeCapacity,
+    eventAttendanceMode: body.eventAttendanceMode || "OfflineEventAttendanceMode",
+    eventStatus: body.eventStatus || "EventScheduled",
     meetingUrl: body.meetingUrl,
     meetingPlatform: body.meetingPlatform,
-    host: body.host!,
-    isFree: body.isFree !== false,
-    ticketUrl: body.ticketUrl,
-    price: body.price,
+    organizer: body.organizer!,
+    offers: body.offers,
   };
 
   await indexEvent(c.env.AI, c.env.VECTORIZE, event);
@@ -190,19 +198,20 @@ events.put("/:id", async (c) => {
   const updates: string[] = [];
   const params: unknown[] = [];
 
-  if (body.title) { updates.push("title = ?"); params.push(body.title); }
+  if (body.name) { updates.push("name = ?"); params.push(body.name); }
   if (body.description) { updates.push("description = ?"); params.push(body.description); }
   if (body.category) { updates.push("category = ?"); params.push(body.category); }
-  if (body.tags) { updates.push("tags = ?"); params.push(JSON.stringify(body.tags)); }
+  if (body.keywords) { updates.push("keywords = ?"); params.push(JSON.stringify(body.keywords)); }
+  if (body.eventStatus) { updates.push("event_status = ?"); params.push(body.eventStatus); }
 
-  updates.push("updated_at = datetime('now')");
+  updates.push("date_modified = datetime('now')");
   params.push(eventId);
 
   await c.env.DB.prepare(
-    `UPDATE events SET ${updates.join(", ")} WHERE id = ?`
+    `UPDATE events SET ${updates.join(", ")} WHERE _id = ?`
   ).bind(...params).run();
 
-  const result = await c.env.DB.prepare("SELECT * FROM events WHERE id = ?")
+  const result = await c.env.DB.prepare("SELECT * FROM events WHERE _id = ?")
     .bind(eventId)
     .first();
 
@@ -217,7 +226,7 @@ events.put("/:id", async (c) => {
 events.delete("/:id", async (c) => {
   const eventId = c.req.param("id");
 
-  await c.env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId).run();
+  await c.env.DB.prepare("DELETE FROM events WHERE _id = ?").bind(eventId).run();
   await removeEventFromIndex(c.env.VECTORIZE, eventId);
 
   return c.json({ message: "Event deleted successfully" });
@@ -259,12 +268,11 @@ events.get("/:id/reviews", async (c) => {
   const reviewsResult = await c.env.DB.prepare(`
     SELECT r.*, u.name as user_name
     FROM event_reviews r
-    LEFT JOIN users u ON r.user_id = u.id
+    LEFT JOIN users u ON r.user_id = u._id
     WHERE r.event_id = ?
     ORDER BY r.helpful_count DESC, r.created_at DESC
     LIMIT 50
   `).bind(eventId).all();
-
 
   const reviews = (reviewsResult.results as ReviewRow[]).map((row) => ({
     id: row.id,
@@ -381,11 +389,11 @@ events.get("/:id/stats", async (c) => {
   const stats = await c.env.DB.prepare(`
     SELECT
       (SELECT COUNT(*) FROM event_views WHERE event_id = ?) as views,
-      (SELECT COUNT(DISTINCT COALESCE(user_id, source || ip_hash)) FROM event_views WHERE event_id = ?) as unique_views,
+      (SELECT COUNT(DISTINCT COALESCE(user_id, source)) FROM event_views WHERE event_id = ?) as unique_views,
       (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND status != 'cancelled') as rsvps,
       (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND checked_in_at IS NOT NULL) as checkins,
       (SELECT COUNT(*) FROM referrals WHERE event_id = ? AND status = 'converted') as referrals,
-      (SELECT COUNT(*) FROM event_views WHERE event_id = ? AND created_at < datetime('now', '-7 days')) as views_7_days_ago
+      (SELECT COUNT(*) FROM event_views WHERE event_id = ? AND viewed_at < datetime('now', '-7 days')) as views_7_days_ago
   `).bind(eventId, eventId, eventId, eventId, eventId, eventId).first() as StatsRow | null;
 
   const currentViews = stats?.views || 0;
@@ -394,96 +402,14 @@ events.get("/:id/stats", async (c) => {
   const trend = lastWeekViews > 0 ? Math.round(((recentViews - lastWeekViews) / lastWeekViews) * 100) : 0;
   const isHot = trend > 50 || (currentViews > 100 && trend > 20);
 
-  interface SourceRow {
-    source: string;
-    count: number;
-  }
-  const sourcesResult = await c.env.DB.prepare(`
-    SELECT source, COUNT(*) as count
-    FROM event_views
-    WHERE event_id = ?
-    GROUP BY source
-    ORDER BY count DESC
-    LIMIT 5
-  `).bind(eventId).all();
-
-  interface CityRow {
-    city: string;
-    count: number;
-  }
-  const citiesResult = await c.env.DB.prepare(`
-    SELECT u.city, COUNT(*) as count
-    FROM registrations r
-    JOIN users u ON r.user_id = u.id
-    WHERE r.event_id = ? AND u.city IS NOT NULL
-    GROUP BY u.city
-    ORDER BY count DESC
-    LIMIT 5
-  `).bind(eventId).all();
-
-  const eventStats = {
+  return c.json({
     eventId,
-    views: stats?.views || 0,
+    views: currentViews,
     uniqueViews: stats?.unique_views || 0,
     rsvps: stats?.rsvps || 0,
     checkins: stats?.checkins || 0,
     referrals: stats?.referrals || 0,
     trend,
     isHot,
-    topSources: (sourcesResult.results as SourceRow[]).map((r) => ({
-      source: r.source,
-      count: r.count,
-    })),
-    topCities: (citiesResult.results as CityRow[]).map((r) => ({
-      city: r.city,
-      count: r.count,
-    })),
-  };
-
-  if (c.env.ANALYTICS) {
-    c.env.ANALYTICS.writeDataPoint({
-      blobs: [eventId, "stats_view"],
-      doubles: [1],
-      indexes: [eventId],
-    });
-  }
-
-  return c.json({ stats: eventStats });
-});
-
-// GET /api/events/:id/referrals
-events.get("/:id/referrals", async (c) => {
-  const eventId = c.req.param("id");
-
-  interface LeaderboardRow {
-    user_id: string;
-    user_name: string | null;
-    referral_count: number;
-    conversion_count: number;
-  }
-
-  const result = await c.env.DB.prepare(`
-    SELECT
-      r.referrer_user_id as user_id,
-      u.name as user_name,
-      COUNT(*) as referral_count,
-      SUM(CASE WHEN r.status = 'converted' THEN 1 ELSE 0 END) as conversion_count
-    FROM referrals r
-    LEFT JOIN users u ON r.referrer_user_id = u.id
-    WHERE r.event_id = ?
-    GROUP BY r.referrer_user_id
-    ORDER BY conversion_count DESC, referral_count DESC
-    LIMIT 10
-  `).bind(eventId).all();
-
-  const leaderboard = (result.results as LeaderboardRow[]).map((row, index) => ({
-    rank: index + 1,
-    userId: row.user_id,
-    userName: row.user_name || "Anonymous",
-    userInitials: getInitials(row.user_name || "Anonymous"),
-    referralCount: row.referral_count,
-    conversionCount: row.conversion_count,
-  }));
-
-  return c.json({ leaderboard });
+  });
 });

@@ -43,7 +43,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   const [userReferral, setUserReferral] = useState<UserReferralCode | null>(null);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
-  const isPastEvent = new Date(event.date.iso) < new Date();
+  const isPastEvent = new Date(event.startDate) < new Date();
 
   // Fetch event stats from API
   useEffect(() => {
@@ -91,9 +91,9 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
     fetchReferralCode();
   }, [user?.id]);
 
-  const coverStyle = event.coverImage
+  const coverStyle = event.image
     ? {
-        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5)), url('${event.coverImage}')`,
+        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5)), url('${event.image}')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }
@@ -121,10 +121,10 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
           className="h-100 rounded-(--radius-card) relative mb-8 overflow-hidden"
           style={coverStyle}
         >
-          {event.coverImage && (
+          {event.image && (
             <Image
-              src={event.coverImage}
-              alt={event.title}
+              src={event.image}
+              alt={event.name}
               fill
               className="object-cover"
               priority
@@ -184,9 +184,9 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
           </div>
 
           {/* Tags */}
-          {event.tags.length > 0 && (
+          {event.keywords && event.keywords.length > 0 && (
             <div className="absolute bottom-6 left-6 flex gap-2 flex-wrap max-w-[80%] z-10">
-              {event.tags.slice(0, 5).map((tag) => (
+              {event.keywords.slice(0, 5).map((tag) => (
                 <span
                   key={tag}
                   className="bg-black/50 backdrop-blur-sm text-white/80 px-2.5 py-1 rounded-full text-[11px]"
@@ -203,7 +203,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
           {/* Main Content */}
           <div>
             <h1 className="font-serif text-4xl font-bold leading-tight mb-6">
-              {event.title}
+              {event.name}
             </h1>
 
             {/* Host Row with Reputation */}
@@ -212,21 +212,21 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-[#0A0A0A]"
                 style={{ background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))` }}
               >
-                {event.host.initials}
+                {event.organizer.initials}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold">{event.host.name}</h4>
-                  {event.host.eventCount > 5 && (
+                  <h4 className="font-semibold">{event.organizer.name}</h4>
+                  {event.organizer.eventCount > 5 && (
                     <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full">
                       Trusted Host
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-foreground/60">
-                  <span>{event.host.handle}</span>
+                  <span>{event.organizer.identifier}</span>
                   <span>·</span>
-                  <span>{event.host.eventCount} events hosted</span>
+                  <span>{event.organizer.eventCount} events hosted</span>
                   {reviewStats && reviewStats.averageRating > 0 && (
                     <>
                       <span>·</span>
@@ -262,11 +262,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                 style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}
               >
-                {event.isOnline ? <Video className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+                {event.eventAttendanceMode === 'OnlineEventAttendanceMode' ? <Video className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">{event.location.venue}</h4>
-                {event.isOnline && event.meetingPlatform ? (
+                <h4 className="font-semibold">{event.location.name}</h4>
+                {event.eventAttendanceMode === 'OnlineEventAttendanceMode' && event.meetingPlatform ? (
                   <p className="text-sm text-foreground/60">
                     {event.meetingPlatform === "zoom" && "Zoom Meeting"}
                     {event.meetingPlatform === "google_meet" && "Google Meet"}
@@ -275,11 +275,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   </p>
                 ) : (
                   <p className="text-sm text-foreground/60">
-                    {event.location.address && `${event.location.address}, `}{event.location.city}, {event.location.country}
+                    {event.location.streetAddress && `${event.location.streetAddress}, `}{event.location.addressLocality}, {event.location.addressCountry}
                   </p>
                 )}
               </div>
-              {event.isOnline && event.meetingUrl ? (
+              {event.eventAttendanceMode === 'OnlineEventAttendanceMode' && event.meetingUrl ? (
                 <Button
                   variant="secondary"
                   onClick={() => window.open(event.meetingUrl, "_blank")}
@@ -292,21 +292,21 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             </div>
 
             {/* Google Map - only for in-person events */}
-            {!event.isOnline && event.location.city !== "Online" && (
+            {event.eventAttendanceMode !== 'OnlineEventAttendanceMode' && event.location.addressLocality !== "Online" && (
               <div className="mt-6 mb-6">
                 <EventMap
-                  venue={event.location.venue}
-                  address={event.location.address}
-                  city={event.location.city}
-                  country={event.location.country}
+                  venue={event.location.name}
+                  address={event.location.streetAddress || ""}
+                  city={event.location.addressLocality}
+                  country={event.location.addressCountry}
                 />
               </div>
             )}
 
             {/* Weather - only for in-person events */}
-            {!event.isOnline && event.location.city !== "Online" && (
+            {event.eventAttendanceMode !== 'OnlineEventAttendanceMode' && event.location.addressLocality !== "Online" && (
               <div className="mb-8">
-                <EventWeather city={event.location.city} eventDate={event.date.iso} />
+                <EventWeather city={event.location.addressLocality} eventDate={event.startDate} />
               </div>
             )}
 
@@ -352,43 +352,43 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               style={{ backgroundColor: "var(--event-surface)" }}
             >
               <h3 className="text-sm text-foreground/60 mb-2">
-                {event.price?.label || "Free Event"}
+                {event.offers?.price ? "Tickets" : "Free Event"}
               </h3>
               <div className="text-[32px] font-extrabold mb-5" style={{ color: "var(--event-primary)" }}>
-                {event.price ? (
+                {event.offers?.price ? (
                   <>
-                    ${event.price.amount}{" "}
+                    ${event.offers.price}{" "}
                     <span className="text-sm font-medium text-foreground/60">
-                      {event.price.currency}
+                      {event.offers.priceCurrency}
                     </span>
                   </>
                 ) : (
                   "Free"
                 )}
               </div>
-              <RSVPButton eventId={event.id} price={event.price} />
+              <RSVPButton eventId={event.id} price={event.offers} />
 
               {/* Capacity indicator */}
-              {event.capacity && (
+              {event.maximumAttendeeCapacity && (
                 <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--event-border)" }}>
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-foreground/60">Spots</span>
                     <span className="font-medium">
-                      {event.attendeeCount} / {event.capacity}
+                      {event.attendeeCount} / {event.maximumAttendeeCapacity}
                     </span>
                   </div>
                   <div className="h-2 bg-background rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
-                        width: `${Math.min((event.attendeeCount / event.capacity) * 100, 100)}%`,
+                        width: `${Math.min((event.attendeeCount / event.maximumAttendeeCapacity) * 100, 100)}%`,
                         backgroundColor: "var(--event-primary)",
                       }}
                     />
                   </div>
-                  {event.capacity - event.attendeeCount < event.capacity * 0.2 && (
+                  {event.maximumAttendeeCapacity - event.attendeeCount < event.maximumAttendeeCapacity * 0.2 && (
                     <p className="text-xs text-red-400 mt-2">
-                      Only {event.capacity - event.attendeeCount} spots left!
+                      Only {event.maximumAttendeeCapacity - event.attendeeCount} spots left!
                     </p>
                   )}
                 </div>
@@ -456,7 +456,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 <QrCode className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
                 <h4 className="font-semibold text-sm">Share Event</h4>
               </div>
-              <EventQRCode shortCode={event.shortCode} title={event.title} />
+              <EventQRCode shortCode={event.shortCode} title={event.name} />
               <div className="mt-4 flex gap-2">
                 <ShareButton event={event} />
               </div>
@@ -494,13 +494,13 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             {/* Host Reputation Card - only show rating/reviews when API has data */}
             <HostReputation
               host={{
-                name: event.host.name,
-                handle: event.host.handle,
-                initials: event.host.initials,
-                eventsHosted: event.host.eventCount,
+                name: event.organizer.name,
+                handle: event.organizer.identifier,
+                initials: event.organizer.initials,
+                eventsHosted: event.organizer.eventCount,
                 rating: reviewStats?.averageRating,
                 reviewCount: reviewStats?.totalReviews,
-                badges: event.host.eventCount > 10 ? ["trusted-host", "veteran"] : event.host.eventCount > 5 ? ["trusted-host"] : ["rising-star"],
+                badges: event.organizer.eventCount > 10 ? ["trusted-host", "veteran"] : event.organizer.eventCount > 5 ? ["trusted-host"] : ["rising-star"],
               }}
               variant="compact"
             />

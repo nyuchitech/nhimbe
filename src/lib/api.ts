@@ -5,12 +5,14 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://events-api.mukoko.com";
 
-// Types matching backend
+// Types matching backend (schema.org-aligned)
 export interface EventLocation {
-  venue: string;
-  address: string;
-  city: string;
-  country: string;
+  type?: string;
+  name: string;             // venue name
+  streetAddress?: string;
+  addressLocality: string;  // city
+  addressCountry: string;
+  url?: string;
 }
 
 export interface EventDate {
@@ -18,49 +20,51 @@ export interface EventDate {
   month: string;
   full: string;
   time: string;
-  iso: string;
 }
 
-export interface EventHost {
+export interface EventOrganizer {
   name: string;
-  handle: string;
+  alternateName?: string;
   initials: string;
+  identifier?: string;      // handle/slug
   eventCount: number;
 }
 
-export interface EventPrice {
-  amount: number;
-  currency: string;
-  label: string;
+export interface EventOffers {
+  price?: number;
+  priceCurrency?: string;
+  url?: string;
+  availability?: string;
 }
 
 export interface Event {
   id: string;
   shortCode: string;
   slug: string;
-  title: string;
+  name: string;
   description: string;
+  startDate: string;
+  endDate?: string;
   date: EventDate;
   location: EventLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
+  keywords: string[];
+  image?: string;
   coverGradient?: string;
+  themeId?: string;
   attendeeCount: number;
   friendsCount?: number;
-  capacity?: number;
-  isOnline?: boolean;
+  maximumAttendeeCapacity?: number;
+  eventAttendanceMode?: string;
+  eventStatus?: string;
+  isPublished?: boolean;
   meetingUrl?: string;
-  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
+  meetingPlatform?: string;
+  organizer: EventOrganizer;
+  offers?: EventOffers;
   friends?: { name: string; gradient: string }[];
-  createdAt?: string;
-  updatedAt?: string;
+  dateCreated?: string;
+  dateModified?: string;
 }
 
 export interface EventsResponse {
@@ -162,24 +166,23 @@ export async function findEvent(identifier: string): Promise<Event | null> {
 
 // Create event input type
 export interface CreateEventInput {
-  title: string;
+  name: string;
   description: string;
+  startDate: string;
+  endDate?: string;
   date: EventDate;
   location: EventLocation;
   category: string;
-  tags: string[];
-  coverImage?: string;
+  keywords: string[];
+  image?: string;
   coverGradient?: string;
-  capacity?: number;
-  isOnline?: boolean;
+  maximumAttendeeCapacity?: number;
+  eventAttendanceMode?: string;
+  eventStatus?: string;
   meetingUrl?: string;
-  meetingPlatform?: "zoom" | "google_meet" | "teams" | "other";
-  host: EventHost;
-  // Ticketing - free events on nhimbe, paid events link to external
-  isFree?: boolean;
-  ticketUrl?: string; // External ticketing URL for paid events
-  // Legacy price field (deprecated)
-  price?: EventPrice;
+  meetingPlatform?: string;
+  organizer: EventOrganizer;
+  offers?: EventOffers;
 }
 
 // Create a new event
@@ -278,18 +281,18 @@ export async function cancelRegistration(registrationId: string): Promise<{ mess
 // ============================================
 
 export interface User {
-  id: string;
+  _id: string;
   email: string;
   name: string;
-  handle?: string;
-  avatar_url?: string;
-  bio?: string;
-  city?: string;
-  country?: string;
+  alternate_name?: string;
+  image?: string;
+  description?: string;
+  address_locality?: string;
+  address_country?: string;
   interests?: string[];
   events_attended: number;
   events_hosted: number;
-  created_at: string;
+  date_created: string;
 }
 
 // Get user by ID or handle
@@ -306,9 +309,9 @@ export async function getUser(idOrHandle: string): Promise<User | null> {
 export async function createUser(data: {
   email: string;
   name: string;
-  handle?: string;
-  city?: string;
-  country?: string;
+  alternate_name?: string;
+  address_locality?: string;
+  address_country?: string;
   interests?: string[];
 }): Promise<{ id: string; message: string }> {
   return apiFetch<{ id: string; message: string }>("/api/users", {
@@ -320,7 +323,7 @@ export async function createUser(data: {
 // Update authenticated user's profile
 export async function updateProfile(
   sessionJwt: string,
-  fields: Partial<{ name: string; city: string; country: string; interests: string[] }>
+  fields: Partial<{ name: string; address_locality: string; address_country: string; interests: string[] }>
 ): Promise<{ user: User }> {
   const response = await fetch(`${API_URL}/api/auth/profile`, {
     method: "PATCH",
