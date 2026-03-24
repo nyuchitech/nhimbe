@@ -1,5 +1,11 @@
--- Add ticketing fields to events table
--- Free events on nhimbe, paid events link to external ticketing
+-- Migration: Ticketing/offers fields (schema.org Offer model)
+-- offer_price, offer_price_currency, offer_url, offer_availability are in schema.sql for new installs.
+-- No-op for fresh installs; retained for upgrade path from pre-schema.org databases.
 
-ALTER TABLE events ADD COLUMN is_free BOOLEAN DEFAULT TRUE;
-ALTER TABLE events ADD COLUMN ticket_url TEXT;
+-- If upgrading from old schema, run these manually:
+-- ALTER TABLE events ADD COLUMN offer_price REAL;
+-- ALTER TABLE events ADD COLUMN offer_price_currency TEXT;
+-- ALTER TABLE events ADD COLUMN offer_url TEXT;
+-- ALTER TABLE events ADD COLUMN offer_availability TEXT;
+
+SELECT 1; -- placeholder so migration file is valid SQL

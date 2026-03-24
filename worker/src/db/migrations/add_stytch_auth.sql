@@ -1,17 +1,12 @@
--- Migration: Add Stytch authentication fields
--- Run with: wrangler d1 execute mukoko-nhimbe-db --file=./src/db/migrations/add_stytch_auth.sql
+-- Migration: Stytch auth fields
+-- stytch_user_id, email_verified, onboarding_completed, last_login_at are in schema.sql for new installs.
+-- No-op for fresh installs; retained for upgrade path from pre-schema.org databases.
 
--- Add Stytch user ID for identity mapping
-ALTER TABLE users ADD COLUMN stytch_user_id TEXT;
+-- If upgrading from old schema, run these manually:
+-- ALTER TABLE users ADD COLUMN stytch_user_id TEXT;
+-- ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0;
+-- ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0;
+-- ALTER TABLE users ADD COLUMN last_login_at TEXT;
+-- CREATE UNIQUE INDEX IF NOT EXISTS idx_users_stytch_user_id ON users(stytch_user_id);
 
--- Track email verification status
-ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0;
-
--- Track onboarding completion
-ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0;
-
--- Track last login timestamp
-ALTER TABLE users ADD COLUMN last_login_at TEXT;
-
--- Create unique index for Stytch user ID lookups (enforces uniqueness)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_stytch_user_id ON users(stytch_user_id);
+SELECT 1; -- placeholder so migration file is valid SQL

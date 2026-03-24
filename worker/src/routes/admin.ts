@@ -79,17 +79,17 @@ admin.get("/stats", async (c) => {
       id: string;
       subject: string;
       status: string;
-      created_at: string;
+      date_created: string;
     }
     const ticketsResult = await c.env.DB.prepare(
-      "SELECT id, subject, status, created_at FROM support_tickets ORDER BY created_at DESC LIMIT 5"
-    ).all() as { results: (TicketRow & { created_at?: string })[] };
+      "SELECT id, subject, status, date_created FROM support_tickets ORDER BY date_created DESC LIMIT 5"
+    ).all() as { results: (TicketRow & { date_created?: string })[] };
 
     tickets = ticketsResult.results.map(t => ({
       id: t.id,
       subject: t.subject,
       status: t.status,
-      createdAt: new Date(t.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      createdAt: new Date(t.date_created || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     }));
   } catch {
     // Table doesn't exist yet
@@ -391,7 +391,7 @@ admin.get("/support", async (c) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    query += " ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
+    query += " ORDER BY t.date_created DESC LIMIT ? OFFSET ?";
 
     interface TicketRow {
       id: string;
@@ -403,8 +403,8 @@ admin.get("/support", async (c) => {
       category: string;
       priority: string;
       status: string;
-      created_at: string;
-      updated_at: string;
+      date_created: string;
+      date_modified: string;
     }
 
     const [ticketsResult, countResult] = await Promise.all([
@@ -418,11 +418,11 @@ admin.get("/support", async (c) => {
         sender_type: string;
         sender_id: string | null;
         content: string;
-        created_at: string;
+        date_created: string;
       }
 
       const messagesResult = await c.env.DB.prepare(
-        "SELECT m.*, u.name as sender_name FROM support_messages m LEFT JOIN users u ON m.sender_id = u.id WHERE m.ticket_id = ? ORDER BY m.created_at ASC"
+        "SELECT m.*, u.name as sender_name FROM support_messages m LEFT JOIN users u ON m.sender_id = u._id WHERE m.ticket_id = ? ORDER BY m.date_created ASC"
       ).bind(t.id).all() as { results: (MessageRow & { sender_name: string | null })[] };
 
       return {
@@ -442,10 +442,10 @@ admin.get("/support", async (c) => {
           content: m.content,
           sender: m.sender_type as 'user' | 'admin',
           senderName: m.sender_name || (m.sender_type === 'admin' ? 'Support Team' : 'User'),
-          createdAt: m.created_at,
+          createdAt: m.date_created,
         })),
-        createdAt: t.created_at,
-        updatedAt: t.updated_at,
+        createdAt: t.date_created,
+        updatedAt: t.date_modified,
       };
     }));
 
@@ -479,7 +479,7 @@ admin.put("/support/:id/status", async (c) => {
 
   try {
     await c.env.DB.prepare(
-      "UPDATE support_tickets SET status = ?, updated_at = datetime('now') WHERE id = ?"
+      "UPDATE support_tickets SET status = ?, date_modified = datetime('now') WHERE id = ?"
     ).bind(status, ticketId).run();
 
     return c.json({ message: "Ticket status updated" });
@@ -508,12 +508,12 @@ admin.post("/support/:id/reply", async (c) => {
     const messageId = crypto.randomUUID();
 
     await c.env.DB.prepare(`
-      INSERT INTO support_messages (id, ticket_id, sender_type, sender_id, content, created_at)
-      VALUES (?, ?, 'admin', ?, ?, datetime('now'))
+      INSERT INTO support_messages (id, ticket_id, sender_type, sender_id, content)
+      VALUES (?, ?, 'admin', ?, ?)
     `).bind(messageId, ticketId, adminUser.id, content).run();
 
     await c.env.DB.prepare(
-      "UPDATE support_tickets SET status = 'pending', updated_at = datetime('now') WHERE id = ?"
+      "UPDATE support_tickets SET status = 'pending', date_modified = datetime('now') WHERE id = ?"
     ).bind(ticketId).run();
 
     return c.json({

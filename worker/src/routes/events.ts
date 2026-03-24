@@ -261,7 +261,7 @@ events.get("/:id/reviews", async (c) => {
     comment: string | null;
     helpful_count: number;
     is_verified_attendee: number;
-    created_at: string;
+    date_created: string;
     user_name: string | null;
   }
 
@@ -270,7 +270,7 @@ events.get("/:id/reviews", async (c) => {
     FROM event_reviews r
     LEFT JOIN users u ON r.user_id = u._id
     WHERE r.event_id = ?
-    ORDER BY r.helpful_count DESC, r.created_at DESC
+    ORDER BY r.helpful_count DESC, r.date_created DESC
     LIMIT 50
   `).bind(eventId).all();
 
@@ -284,7 +284,7 @@ events.get("/:id/reviews", async (c) => {
     comment: row.comment || undefined,
     helpfulCount: row.helpful_count,
     isVerifiedAttendee: !!row.is_verified_attendee,
-    createdAt: row.created_at,
+    createdAt: row.date_created,
   }));
 
   interface StatsRow {

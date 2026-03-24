@@ -1,4 +1,4 @@
--- nhimbe D1 Database Schema
+-- nhimbe D1 Database Schema (schema.org-aligned)
 -- Run with: wrangler d1 execute mukoko-nhimbe-db --file=./src/db/schema.sql
 
 -- Mineral themes (reference table)
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS themes (
   name TEXT NOT NULL,
   gradient TEXT NOT NULL,
   colors TEXT NOT NULL, -- JSON array of 3 colors for Three.js
-  created_at TEXT DEFAULT (datetime('now'))
+  date_created TEXT DEFAULT (datetime('now'))
 );
 
 -- Insert default mineral themes
@@ -18,93 +18,101 @@ INSERT OR IGNORE INTO themes (id, name, gradient, colors) VALUES
   ('tigers-eye', 'Tiger''s Eye', 'linear-gradient(135deg, #4A2C00 0%, #8B4513 50%, #D4A574 100%)', '["#4A2C00", "#8B4513", "#D4A574"]'),
   ('obsidian', 'Obsidian', 'linear-gradient(135deg, #0A0A0A 0%, #1E1E1E 50%, #3A3A3A 100%)', '["#0A0A0A", "#1E1E1E", "#3A3A3A"]');
 
--- Events table
+-- Events table (schema.org Event model)
 CREATE TABLE IF NOT EXISTS events (
-  id TEXT PRIMARY KEY,
+  _id TEXT PRIMARY KEY,
   short_code TEXT UNIQUE NOT NULL,
   slug TEXT UNIQUE NOT NULL,
-  title TEXT NOT NULL,
+
+  -- schema.org Event core fields
+  name TEXT NOT NULL,
   description TEXT NOT NULL,
+  start_date TEXT NOT NULL,   -- ISO 8601
+  end_date TEXT,
 
-  -- Date fields (stored as JSON)
-  date_day TEXT NOT NULL,
-  date_month TEXT NOT NULL,
-  date_full TEXT NOT NULL,
-  date_time TEXT NOT NULL,
-  date_iso TEXT NOT NULL,
+  -- Display helpers (pre-formatted for UI)
+  date_display_day TEXT NOT NULL,
+  date_display_month TEXT NOT NULL,
+  date_display_full TEXT NOT NULL,
+  date_display_time TEXT NOT NULL,
 
-  -- Location fields
-  location_venue TEXT NOT NULL,
-  location_address TEXT NOT NULL,
-  location_city TEXT NOT NULL,
+  -- schema.org Place / PostalAddress
+  location_type TEXT,
+  location_name TEXT NOT NULL,
+  location_street_address TEXT,
+  location_locality TEXT NOT NULL,
   location_country TEXT NOT NULL,
+  location_url TEXT,
 
   -- Categorization
   category TEXT NOT NULL,
-  tags TEXT NOT NULL, -- JSON array
+  keywords TEXT NOT NULL DEFAULT '[]', -- JSON array (schema.org keywords)
 
   -- Media
-  cover_image TEXT,
+  image TEXT,
   cover_gradient TEXT,
-
-  -- Theme (mineral gradients: malachite, tanzanite, gold, tigers-eye, obsidian)
   theme_id TEXT DEFAULT 'malachite',
 
   -- Stats
   attendee_count INTEGER DEFAULT 0,
   friends_count INTEGER DEFAULT 0,
-  capacity INTEGER,
+  maximum_attendee_capacity INTEGER, -- schema.org maximumAttendeeCapacity
 
-  -- Flags
-  is_online BOOLEAN DEFAULT FALSE,
+  -- schema.org eventAttendanceMode
+  event_attendance_mode TEXT DEFAULT 'OfflineEventAttendanceMode',
+
+  -- schema.org eventStatus
+  event_status TEXT DEFAULT 'EventScheduled',
+
+  -- Visibility
   is_published BOOLEAN DEFAULT TRUE,
-  is_cancelled BOOLEAN DEFAULT FALSE,
-  require_approval BOOLEAN DEFAULT FALSE,
-  visibility TEXT DEFAULT 'public', -- public, private
 
-  -- Online meeting (for virtual events)
+  -- Online meeting (for OnlineEventAttendanceMode)
   meeting_url TEXT,
   meeting_platform TEXT, -- zoom, google_meet, teams, other
 
-  -- Host (stored as JSON)
-  host_name TEXT NOT NULL,
-  host_handle TEXT NOT NULL,
-  host_initials TEXT NOT NULL,
-  host_event_count INTEGER DEFAULT 0,
+  -- schema.org Organization (organizer)
+  organizer_name TEXT NOT NULL,
+  organizer_alternate_name TEXT,
+  organizer_initials TEXT NOT NULL,
+  organizer_identifier TEXT,  -- handle/slug
+  organizer_event_count INTEGER DEFAULT 0,
 
-  -- Ticketing (free events on nhimbe, paid events link to external)
-  is_free BOOLEAN DEFAULT TRUE,
-  ticket_url TEXT, -- External ticketing URL for paid events
+  -- schema.org Offer
+  offer_price REAL,
+  offer_price_currency TEXT,
+  offer_url TEXT,
+  offer_availability TEXT,    -- InStock, SoldOut, Free
 
-  -- Legacy pricing fields (deprecated, kept for migration)
-  price_amount REAL,
-  price_currency TEXT,
-  price_label TEXT,
-
-  -- Timestamps
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
+  -- schema.org dateCreated / dateModified
+  date_created TEXT DEFAULT (datetime('now')),
+  date_modified TEXT DEFAULT (datetime('now'))
 );
 
 -- Indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_events_city ON events(location_city);
+CREATE INDEX IF NOT EXISTS idx_events_locality ON events(location_locality);
 CREATE INDEX IF NOT EXISTS idx_events_category ON events(category);
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(date_iso);
+CREATE INDEX IF NOT EXISTS idx_events_start_date ON events(start_date);
 CREATE INDEX IF NOT EXISTS idx_events_short_code ON events(short_code);
 CREATE INDEX IF NOT EXISTS idx_events_slug ON events(slug);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(event_status);
+CREATE INDEX IF NOT EXISTS idx_events_published ON events(is_published);
+CREATE INDEX IF NOT EXISTS idx_events_organizer ON events(organizer_identifier);
 
--- Users table
+-- Users table (schema.org Person)
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
+  _id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  handle TEXT UNIQUE,
-  avatar_url TEXT,
-  bio TEXT,
+  alternate_name TEXT UNIQUE,   -- handle/username
 
-  -- Location
-  city TEXT,
-  country TEXT,
+  -- schema.org image
+  image TEXT,
+  description TEXT,
+
+  -- schema.org PostalAddress
+  address_locality TEXT,
+  address_country TEXT,
 
   -- Preferences (JSON)
   interests TEXT, -- JSON array of categories
@@ -113,16 +121,27 @@ CREATE TABLE IF NOT EXISTS users (
   events_attended INTEGER DEFAULT 0,
   events_hosted INTEGER DEFAULT 0,
 
-  -- Timestamps
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
+  -- Auth
+  stytch_user_id TEXT UNIQUE,
+  role TEXT DEFAULT 'user',       -- user, moderator, admin, super_admin
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  email_verified BOOLEAN DEFAULT FALSE,
+  last_login_at TEXT,
+
+  -- schema.org dateCreated / dateModified
+  date_created TEXT DEFAULT (datetime('now')),
+  date_modified TEXT DEFAULT (datetime('now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_stytch ON users(stytch_user_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_alternate_name ON users(alternate_name);
 
 -- Event registrations
 CREATE TABLE IF NOT EXISTS registrations (
   id TEXT PRIMARY KEY,
-  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_id TEXT NOT NULL REFERENCES events(_id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
 
   -- Status
   status TEXT DEFAULT 'registered', -- pending, registered, approved, rejected, cancelled, attended
@@ -135,48 +154,93 @@ CREATE TABLE IF NOT EXISTS registrations (
   -- Timestamps
   registered_at TEXT DEFAULT (datetime('now')),
   cancelled_at TEXT,
+  checked_in_at TEXT,
 
   UNIQUE(event_id, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_registrations_event ON registrations(event_id);
 CREATE INDEX IF NOT EXISTS idx_registrations_user ON registrations(user_id);
+CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(status);
 
 -- User follows (for "friends attending")
 CREATE TABLE IF NOT EXISTS follows (
-  follower_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  following_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at TEXT DEFAULT (datetime('now')),
+  follower_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
+  following_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
+  date_created TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (follower_id, following_id)
 );
 
 -- Event views for analytics
 CREATE TABLE IF NOT EXISTS event_views (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  event_id TEXT NOT NULL REFERENCES events(_id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(_id) ON DELETE SET NULL,
   viewed_at TEXT DEFAULT (datetime('now')),
   source TEXT -- web, app, share
 );
 
 CREATE INDEX IF NOT EXISTS idx_event_views_event ON event_views(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_views_viewed_at ON event_views(viewed_at);
+
+-- Event reviews
+CREATE TABLE IF NOT EXISTS event_reviews (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES events(_id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  helpful_count INTEGER DEFAULT 0,
+  is_verified_attendee BOOLEAN DEFAULT FALSE,
+  date_created TEXT DEFAULT (datetime('now')),
+  UNIQUE(event_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_event ON event_reviews(event_id);
+
+-- Referrals
+CREATE TABLE IF NOT EXISTS referrals (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES events(_id) ON DELETE CASCADE,
+  referrer_user_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
+  referred_user_id TEXT REFERENCES users(_id) ON DELETE SET NULL,
+  referral_code TEXT NOT NULL,
+  status TEXT DEFAULT 'pending', -- pending, converted
+  date_created TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_referrals_event ON referrals(event_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_code ON referrals(referral_code);
+
+-- User referral codes
+CREATE TABLE IF NOT EXISTS user_referral_codes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(_id) ON DELETE CASCADE,
+  code TEXT UNIQUE NOT NULL,
+  total_referrals INTEGER DEFAULT 0,
+  total_conversions INTEGER DEFAULT 0,
+  date_created TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_referral_codes_user ON user_referral_codes(user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON user_referral_codes(code);
 
 -- Search queries for analytics
 CREATE TABLE IF NOT EXISTS search_queries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   query TEXT NOT NULL,
-  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  user_id TEXT REFERENCES users(_id) ON DELETE SET NULL,
   results_count INTEGER,
   searched_at TEXT DEFAULT (datetime('now'))
 );
 
--- AI conversation history (optional, for personalization)
+-- AI conversation history
 CREATE TABLE IF NOT EXISTS ai_conversations (
   id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(_id) ON DELETE CASCADE,
   messages TEXT NOT NULL, -- JSON array of messages
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
+  date_created TEXT DEFAULT (datetime('now')),
+  date_modified TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_ai_conversations_user ON ai_conversations(user_id);

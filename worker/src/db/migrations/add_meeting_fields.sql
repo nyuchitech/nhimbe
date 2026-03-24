@@ -1,8 +1,9 @@
--- Migration: Add meeting fields for online events
--- Run with: wrangler d1 execute mukoko-nhimbe-db --file=./src/db/migrations/add_meeting_fields.sql
+-- Migration: Meeting fields for online events
+-- meeting_url and meeting_platform are already in schema.sql for new installs.
+-- No-op for fresh installs; retained for upgrade path from pre-schema.org databases.
 
--- Add meeting_url column
-ALTER TABLE events ADD COLUMN meeting_url TEXT;
+-- If upgrading from old schema (id-based), run these:
+-- ALTER TABLE events ADD COLUMN meeting_url TEXT;
+-- ALTER TABLE events ADD COLUMN meeting_platform TEXT;
 
--- Add meeting_platform column
-ALTER TABLE events ADD COLUMN meeting_platform TEXT;
+SELECT 1; -- placeholder so migration file is valid SQL
