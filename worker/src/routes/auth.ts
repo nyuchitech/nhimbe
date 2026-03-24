@@ -170,13 +170,11 @@ auth.patch("/profile", async (c) => {
     "SELECT * FROM users WHERE stytch_user_id = ?"
   ).bind(stytchUser.userId).first() as DbUser | null;
 
-  let userId: string;
-
   if (!existingUser) {
     return c.json({ error: "User not found. Please sign out and sign in again." }, 404);
   }
 
-  userId = existingUser._id;
+  const userId = existingUser._id;
   const setClauses: string[] = [];
   const values: (string | number)[] = [];
 
