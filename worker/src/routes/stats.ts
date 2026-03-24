@@ -66,7 +66,7 @@ stats.get("/stats", async (c) => {
     FROM events
     WHERE is_published = TRUE
     ${city ? "AND location_locality = ?" : ""}
-    GROUP BY location_venue
+    GROUP BY location_name
     ORDER BY count DESC
     LIMIT 5
   `;

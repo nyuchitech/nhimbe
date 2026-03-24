@@ -12,7 +12,7 @@ ENVIRONMENT = "development"
 ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:3001"
 # Stytch project ID — public value, used for local JWT validation via JWKS.
 # No Stytch secret needed; auth is handled entirely by the frontend SDK.
-STYTCH_PROJECT_ID = "project-live-110e4e1d-725e-4d5b-b519-8fbf5a1c0c9e"
+STYTCH_PROJECT_ID = "project-live-86090362-2491-4ca7-9037-f7688c7699ce"
 
 # Development settings
 [dev]
@@ -120,7 +120,7 @@ simple = { limit = 100, period = 60 }  # 100 requests per minute
 # ============================================
 [env.production]
 name = "mukoko-nhimbe-api"
-vars = { ENVIRONMENT = "production", ALLOWED_ORIGINS = "https://nhimbe.com,https://www.nhimbe.com,https://mukoko.com,https://www.mukoko.com", STYTCH_PROJECT_ID = "project-live-110e4e1d-725e-4d5b-b519-8fbf5a1c0c9e" }
+vars = { ENVIRONMENT = "production", ALLOWED_ORIGINS = "https://nhimbe.com,https://www.nhimbe.com,https://mukoko.com,https://www.mukoko.com", STYTCH_PROJECT_ID = "project-live-86090362-2491-4ca7-9037-f7688c7699ce" }
 routes = [
   { pattern = "events-api.mukoko.com", custom_domain = true }
 ]

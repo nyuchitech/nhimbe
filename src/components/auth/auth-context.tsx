@@ -104,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setNhimbeUser(data.user);
       } else {
+        const errData = await response.json().catch(() => ({})) as { error?: string; reason?: string };
+        console.error("[nhimbe] auth/sync failed:", response.status, errData.reason || errData.error || "unknown");
         // Fallback: create user from Stytch data
         setNhimbeUser({
           id: stytchUser.user_id,
@@ -113,8 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: "user",
         });
       }
-    } catch {
+    } catch (err) {
       // Fallback on network error
+      console.error("[nhimbe] auth/sync network error:", err);
       const email = stytchUser.emails?.[0]?.email || "";
       const name =
         `${stytchUser.name?.first_name || ""} ${stytchUser.name?.last_name || ""}`.trim();

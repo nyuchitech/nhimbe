@@ -323,7 +323,7 @@ export async function createUser(data: {
 // Update authenticated user's profile
 export async function updateProfile(
   sessionJwt: string,
-  fields: Partial<{ name: string; address_locality: string; address_country: string; interests: string[] }>
+  fields: Partial<{ name: string; city: string; country: string; interests: string[] }>
 ): Promise<{ user: User }> {
   const response = await fetch(`${API_URL}/api/auth/profile`, {
     method: "PATCH",
@@ -335,7 +335,8 @@ export async function updateProfile(
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await response.json().catch(() => ({})) as { error?: string; reason?: string };
+    console.error("[nhimbe] updateProfile failed:", response.status, errorData);
     throw new Error(errorData.error || "Failed to update profile");
   }
 

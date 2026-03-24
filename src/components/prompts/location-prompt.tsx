@@ -37,7 +37,7 @@ export function LocationPrompt() {
       const tokens = stytch.session.getTokens();
       const sessionJwt = tokens?.session_jwt;
       if (!sessionJwt) return;
-      await updateProfile(sessionJwt, { address_locality: selected.city, address_country: selected.country });
+      await updateProfile(sessionJwt, { city: selected.city, country: selected.country });
       await refreshUser();
     } catch {
       // Silently fail — non-blocking prompt
