@@ -181,13 +181,14 @@ describe('createEvent', () => {
     mockFetch({ event: { id: 'new-1' }, message: 'Created' });
 
     const input = {
-      title: 'New Event',
+      name: 'New Event',
       description: 'Test',
-      date: { day: '1', month: 'Jan', full: 'Jan 1', time: '10:00', iso: '2026-01-01' },
-      location: { venue: 'V', address: 'A', city: 'Harare', country: 'Zimbabwe' },
+      startDate: '2026-01-01T10:00:00Z',
+      date: { day: '1', month: 'Jan', full: 'Jan 1', time: '10:00' },
+      location: { name: 'V', streetAddress: 'A', addressLocality: 'Harare', addressCountry: 'Zimbabwe' },
       category: 'Tech',
-      tags: ['test'],
-      host: { name: 'Host', handle: 'h', initials: 'H', eventCount: 0 },
+      keywords: ['test'],
+      organizer: { name: 'Host', identifier: 'h', initials: 'H', eventCount: 0 },
     };
 
     await createEvent(input);
@@ -202,7 +203,7 @@ describe('updateEvent', () => {
   it('sends PUT with partial update', async () => {
     mockFetch({ message: 'Updated' });
 
-    await updateEvent('evt-1', { title: 'Updated Title' });
+    await updateEvent('evt-1', { name: 'Updated Title' });
     expect(global.fetch).toHaveBeenCalledWith(
       `${API_URL}/api/events/evt-1`,
       expect.objectContaining({ method: 'PUT' })
