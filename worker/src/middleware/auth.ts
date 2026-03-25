@@ -30,10 +30,18 @@ export function isAllowedOrigin(request: Request, env: Env): boolean {
   return extraOrigins.some(allowed => origin === allowed.trim());
 }
 
-// Validate API key from request
+// Validate API key from request (timing-safe comparison)
 export function validateApiKey(request: Request, env: Env): boolean {
   const apiKey = request.headers.get("X-API-Key") || request.headers.get("Authorization")?.replace("Bearer ", "");
-  return apiKey === env.API_KEY;
+  if (!apiKey || !env.API_KEY) return false;
+
+  const encoder = new TextEncoder();
+  const a = encoder.encode(apiKey);
+  const b = encoder.encode(env.API_KEY);
+
+  if (a.byteLength !== b.byteLength) return false;
+
+  return crypto.subtle.timingSafeEqual(a, b);
 }
 
 // Middleware: require API key or allowed origin for write operations

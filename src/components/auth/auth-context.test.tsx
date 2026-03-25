@@ -136,7 +136,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user-name').textContent).toBe('Backend User');
   });
 
-  it('falls back to Stytch data when backend sync fails', async () => {
+  it('stays logged out when backend sync fails', async () => {
     mockStytchUser = {
       user_id: 'stytch-456',
       emails: [{ email: 'fallback@example.com' }],
@@ -159,8 +159,7 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('loading').textContent).toBe('not-loading');
     });
 
-    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-    expect(screen.getByTestId('user-name').textContent).toBe('Fallback User');
+    expect(screen.getByTestId('authenticated').textContent).toBe('no');
   });
 
   it('computes profileCompleteness based on user fields', async () => {

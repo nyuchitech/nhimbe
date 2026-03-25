@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { generateId } from "../utils/ids";
+import { writeAuth } from "../middleware/auth";
 
 export const reviews = new Hono<{ Bindings: Env }>();
+
+// Apply writeAuth to all POST/PUT/DELETE operations
+reviews.use("*", writeAuth);
 
 // POST /api/reviews/:id/helpful
 reviews.post("/:id/helpful", async (c) => {

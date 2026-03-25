@@ -9,6 +9,8 @@ export const media = new Hono<{ Bindings: Env }>();
 media.use("*", writeAuth);
 
 // POST /api/media/upload
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+
 media.post("/upload", async (c) => {
   const contentType = c.req.header("Content-Type") || "";
 
@@ -16,8 +18,19 @@ media.post("/upload", async (c) => {
     return c.json({ error: "Content-Type must be an image type" }, 400);
   }
 
+  // Check Content-Length before reading body to prevent DoS
+  const contentLength = parseInt(c.req.header("Content-Length") || "0", 10);
+  if (contentLength > MAX_UPLOAD_SIZE) {
+    return c.json({ error: `File too large. Maximum size is ${MAX_UPLOAD_SIZE / 1024 / 1024}MB` }, 413);
+  }
+
   const key = `events/${generateId()}.${contentType.split("/")[1]}`;
   const body = await c.req.raw.arrayBuffer();
+
+  // Also check actual body size (Content-Length can be spoofed)
+  if (body.byteLength > MAX_UPLOAD_SIZE) {
+    return c.json({ error: `File too large. Maximum size is ${MAX_UPLOAD_SIZE / 1024 / 1024}MB` }, 413);
+  }
 
   await c.env.MEDIA.put(key, body, {
     httpMetadata: {

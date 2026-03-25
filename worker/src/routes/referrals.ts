@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { generateId } from "../utils/ids";
+import { writeAuth } from "../middleware/auth";
 
 export const referrals = new Hono<{ Bindings: Env }>();
+
+// Apply writeAuth to all POST/PUT/DELETE operations
+referrals.use("*", writeAuth);
 
 // POST /api/referrals/track
 referrals.post("/track", async (c) => {

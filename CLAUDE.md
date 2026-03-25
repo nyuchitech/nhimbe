@@ -44,43 +44,48 @@ All 5 must pass. The build uses placeholder env vars so `NEXT_PUBLIC_*` values d
 
 ### Frontend → Backend Communication
 
-All frontend API calls go through `src/lib/api.ts` (centralized client, 687 lines, 20+ exported types) → Cloudflare Worker at `NEXT_PUBLIC_API_URL`.
+All frontend API calls go through `src/lib/api.ts` (centralized client) → Cloudflare Worker at `NEXT_PUBLIC_API_URL`. Write operations pass session JWT as `Authorization: Bearer` header.
 
 ### Backend Routing (Hono)
 
-`worker/src/index.ts` (~110 lines) is the entry point using the **Hono** framework with modular route mounting:
+`worker/src/index.ts` (~142 lines) is the entry point using the **Hono** framework with modular route mounting:
 ```ts
 app.route("/api/events", events);
 app.route("/api/auth", auth);
-app.route("/api", search);
+app.route("/api/payments", payments);
 ```
 
-Global middleware applied in `index.ts`: CORS, observability (request IDs), rate limiting, error handling, 404 handler, and queue consumer.
+Global middleware applied in `index.ts`: CORS (restricted to trusted origins), observability (request IDs + structured logging), rate limiting, error handling (generic messages — no error details leaked), 404 handler, and queue consumer.
 
-**14 route modules** in `worker/src/routes/`:
+**18 route modules** in `worker/src/routes/`:
 
-| Route Module | Lines | Endpoints |
-|-------------|-------|-----------|
-| `events.ts` | 415 | Event CRUD, list, filtering by city/category |
-| `admin.ts` | 527 | Admin operations (events, users, content moderation) |
-| `health.ts` | 358 | Health checks, system probes for D1/Vectorize/R2/KV |
-| `seed.ts` | 330 | Database seeding with sample data |
-| `auth.ts` | 209 | `/api/auth/sync` JWT validation, user sync |
-| `users.ts` | 167 | Profile management, onboarding |
-| `registrations.ts` | 157 | Event registrations |
-| `stats.ts` | 95 | Community insights |
-| `media.ts` | 89 | Image upload to R2 |
-| `search.ts` | 68 | RAG search via Vectorize |
-| `categories.ts` | 58 | Category listing |
-| `ai.ts` | 56 | AI routes (assistant, description generator) |
-| `referrals.ts` | 55 | Referral tracking |
-| `reviews.ts` | 37 | Event reviews |
+| Route Module | Endpoints |
+|-------------|-----------|
+| `events.ts` | Event CRUD, list, filtering, cancel, CSV export |
+| `admin.ts` | Admin operations (events, users, content moderation) |
+| `health.ts` | Health checks, system probes for D1/Vectorize/R2/KV |
+| `seed.ts` | Database seeding with sample data |
+| `auth.ts` | `/api/auth/sync` JWT validation, user sync |
+| `users.ts` | Profile management, onboarding, account deletion (soft delete) |
+| `registrations.ts` | Event registrations |
+| `stats.ts` | Community insights, host analytics |
+| `media.ts` | Image upload to R2 (10MB limit) |
+| `search.ts` | RAG search via Vectorize |
+| `categories.ts` | Category listing (DB-first, hardcoded fallback) |
+| `ai.ts` | AI routes (assistant, description generator) with prompt injection detection |
+| `referrals.ts` | Referral tracking (writeAuth protected) |
+| `reviews.ts` | Event reviews (writeAuth protected) |
+| `series.ts` | Recurring event series CRUD (RRULE support) |
+| `waitlist.ts` | Waitlist join/leave/list |
+| `checkin.ts` | QR-based check-in and attendance stats |
+| `payments.ts` | Payment intents, Paynow webhooks, status checks |
 
 ### Middleware (`worker/src/middleware/`)
 
-- `auth.ts` — JWT extraction and validation
-- `observability.ts` — Request ID generation and logging
-- `rate-limit.ts` — Rate limiting for AI/auth/search (100 req/min)
+- `auth.ts` — JWT extraction, validation, timing-safe API key comparison
+- `observability.ts` — Request ID generation and structured logging
+- `rate-limit.ts` — Rate limiting for AI/auth/search/payments (100 req/min)
+- `ai-safety.ts` — Prompt injection detection, input sanitization, max length enforcement
 
 ### Utils (`worker/src/utils/`)
 
@@ -89,6 +94,22 @@ Global middleware applied in `index.ts`: CORS, observability (request IDs), rate
 - `response.ts` — Consistent JSON response formatting
 - `validation.ts` — Input validation schemas
 - `timeout.ts` — Request timeout handling
+- `circuit-breaker.ts` — Netflix Hystrix-inspired circuit breaker (CLOSED→OPEN→HALF_OPEN)
+- `retry.ts` — Exponential backoff with jitter
+- `observability.ts` — Backend structured logging with `[mukoko]` prefix
+- `audit.ts` — Audit logging to `audit_logs` table
+- `export.ts` — CSV export with proper escaping
+
+### Email (`worker/src/email/`)
+
+- `resend.ts` — Fetch-based Resend API client (no SDK, Workers-compatible)
+- `templates.ts` — 5 email templates: registration confirmed, event reminder, event cancelled, host new registration, registration cancelled
+- `triggers.ts` — Queue message producers for each email type
+
+### Payments (`worker/src/payments/`)
+
+- `types.ts` — PaymentProvider interface abstraction
+- `paynow.ts` — Paynow provider for Zimbabwean mobile money (EcoCash, OneMoney, Telecash)
 
 ### Authentication Flow
 
@@ -96,7 +117,7 @@ Global middleware applied in `index.ts`: CORS, observability (request IDs), rate
 2. On login, `AuthProvider` (`src/components/auth/auth-context.tsx`) calls `/api/auth/sync` with the Stytch session JWT
 3. Backend validates JWT locally using Stytch's JWKS endpoint (`worker/src/auth/stytch.ts`) — no Stytch API secret needed
 4. `getAuthenticatedUser()` returns `AuthResult` with structured `failureReason` (e.g., `token_expired`, `issuer_mismatch`, `jwks_fetch_failed`, `invalid_signature`)
-5. If `/api/auth/sync` fails, `AuthProvider` has a fallback that creates a temporary user object with `onboardingCompleted: false` — this can mask JWT validation failures
+5. If `/api/auth/sync` fails, user stays logged out (no fallback user creation)
 
 Authentication page: `src/app/authenticate/page.tsx`. Stytch theme overrides: `src/app/stytch-overrides.css`.
 
@@ -104,7 +125,7 @@ Authentication page: `src/app/authenticate/page.tsx`. Stytch theme overrides: `s
 
 Protected endpoints use either:
 - **JWT auth** via `getAuthenticatedUser()` for user-specific operations (onboarding, profile)
-- **Origin check** via `isAllowedOrigin()` OR **API key** via `X-API-Key` header for write operations (create/update events, registrations)
+- **writeAuth middleware** — Origin check via `isAllowedOrigin()` OR API key via `X-API-Key` header (timing-safe comparison)
 
 Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe.com` and all subdomains are always allowed.
 
@@ -114,6 +135,14 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 - **AI Assistant** (`assistant.ts`): "Shamwari" chat interface
 - **Description Wizard** (`description-generator.ts`): Qwen 3 30B generation
 - **Embeddings** (`embeddings.ts`): Shared embedding utilities
+- **AI Safety** (`middleware/ai-safety.ts`): Prompt injection detection on all AI routes
+
+### Resilience Patterns (Mukoko Registry)
+
+- **Circuit Breaker** (`worker/src/utils/circuit-breaker.ts`) — Per-provider configs for stytch, vectorize, ai, r2
+- **Retry with Backoff** (`worker/src/utils/retry.ts`) — Exponential backoff with jitter for transient failures
+- **Structured Logging** — `[mukoko]` prefix on all log output (frontend: `src/lib/observability.ts`, backend: `worker/src/utils/observability.ts`)
+- **Section Error Boundary** (`src/components/error/section-error-boundary.tsx`) — 3-layer error boundary with retry
 
 ## Frontend Structure
 
@@ -123,12 +152,22 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 - Info: search, calendar, about, help, privacy, terms
 - Short links: `/e/[shortCode]`
 
-### Components (`src/components/`, 47 files)
-- `ui/` (27 files) — Buttons, cards, badges, modals, AI wizard, address autocomplete, QR code, referral leaderboard, ratings
-- `auth/` (5 files) — `auth-context.tsx`, `stytch-provider.tsx`, `auth-guard.tsx` + tests
-- `modals/` (7 files) — Bottom sheets for category, date, location, capacity, description, ticketing
-- `prompts/` (3 files) — Onboarding: name, location, interests
-- `layout/` (2 files) — Header, footer
+### Components (`src/components/`)
+- `ui/` — Buttons, cards, badges, modals, AI wizard, address autocomplete, QR code, referral leaderboard, ratings, share button, invite friends
+- `auth/` — `auth-context.tsx`, `stytch-provider.tsx`, `auth-guard.tsx` + tests
+- `modals/` — Bottom sheets for category, date, location, capacity, description, ticketing
+- `prompts/` — Onboarding: name, location, interests
+- `layout/` — Header, footer
+- `error/` — `section-error-boundary.tsx` (Mukoko 3-layer pattern)
+- `pwa/` — Service worker registration
+
+### i18n (`src/lib/i18n/`)
+
+Lightweight custom i18n with `t()`, `setLocale()`, `getLocale()`. Languages: English (default) + Shona.
+
+### PWA
+
+Service worker at `public/sw.js` — cache-first for static assets, network-first for API calls. Registered in production via `src/components/pwa/sw-register.tsx`.
 
 ### State Management
 - **React Context** only — `AuthProvider` (JWT + user state), `ThemeProvider` (dark/light mode)
@@ -136,28 +175,25 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 
 ## Testing
 
-### Frontend Tests (8 files)
+### Frontend Tests (8 files, 160 tests)
 
 Tests colocate with modules (e.g., `src/lib/api.test.ts`) or live in `src/__tests__/`. Config: `vitest.config.ts` with jsdom and React plugin.
 
-- `src/lib/api.test.ts` — API client (13,045 lines)
-- `src/lib/calendar.test.ts`, `timezone.test.ts`, `utils.test.ts` — Utilities
-- `src/components/auth/auth-context.test.tsx`, `auth-guard.test.tsx` — Auth components
-- `src/__tests__/accessibility.test.ts` — WCAG AAA compliance
-- `src/__tests__/seo.test.ts` — SEO metadata validation
-
-### Backend Tests (6 files + mocks)
+### Backend Tests (9 files, 210 tests)
 
 All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config.ts` with `globals: true`.
 
 - `auth.test.ts` — JWT validation, JWKS caching, failure reasons
 - `auth-profile.test.ts` — User sync and profile management
+- `events.test.ts` — Event CRUD, pagination, cancellation, CSV export
+- `registrations.test.ts` — Registration flow, waitlist auto-promotion
+- `users.test.ts` — User management, soft delete, PII anonymization
 - `validation.test.ts` — Input validation, security checks
 - `ai-layers.test.ts` — AI feature testing
 - `security.test.ts` — Authorization, origin checks, API key validation
 - `observability.test.ts` — Logging, request IDs
 
-**Mock architecture** (`worker/src/__tests__/mocks.ts`, 9,241 lines) — 4 layers:
+**Mock architecture** (`worker/src/__tests__/mocks.ts`) — 4 layers:
 - **L1: Primitives** — `createMockD1()`, `createMockKV()`, `createMockR2()`, `createMockVectorize()`, `createMockAI()`
 - **L2: Env Factory** — `createMockEnv()` combines all bindings
 - **L3: Request Builders** — `createRequest()`, `createAuthenticatedRequest()`, `createApiKeyRequest()`
@@ -165,50 +201,46 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 
 **Note:** Worker test files (`__tests__/**`, `*.test.ts`, `*.spec.ts`) are excluded from `worker/tsconfig.json` so `tsc --noEmit` only checks production code.
 
-## Key Files
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| `worker/src/index.ts` | ~110 | Hono app entry, routing, middleware setup |
-| `worker/src/types.ts` | 627 | Backend type definitions (Cloudflare bindings, DB models) |
-| `worker/src/auth/stytch.ts` | 257 | JWT validation with JWKS, `AuthResult` type, failure reasons |
-| `worker/src/routes/events.ts` | 415 | Event CRUD and filtering |
-| `worker/src/routes/admin.ts` | 527 | Admin operations |
-| `worker/src/db/schema.sql` | 247 | D1 database schema (14 tables) |
-| `worker/src/db/migrations/` | — | 5 SQL migration files |
-| `src/lib/api.ts` | 687 | All frontend API client functions + 20+ types |
-| `src/lib/themes.ts` | ~80 | Mineral theme definitions (Malachite, Tanzanite, Gold, Tiger's Eye, Obsidian) |
-| `src/components/auth/auth-context.tsx` | 213 | Auth state management, Stytch sync |
-| `src/components/auth/stytch-provider.tsx` | — | Stytch SDK initialization |
-| `src/app/globals.css` | — | CSS variables, theme system |
-| `src/app/stytch-overrides.css` | — | Stytch component theme overrides |
-| `worker/wrangler.toml` | 241 | Cloudflare bindings and env config |
-
 ## Database
 
-**Primary: MongoDB Atlas.** Connected via `MONGODB_URI` secret (set via `wrangler secret put MONGODB_URI`). Source of truth for all persistent data — events, users, registrations, reviews, referrals, analytics.
+**Primary: Cloudflare D1 (SQLite).** Schema: `worker/src/db/schema.sql`. Migrations: `worker/src/db/migrations/`.
 
-**Edge: Cloudflare D1 (SQLite).** Schema: `worker/src/db/schema.sql`. Migrations: `worker/src/db/migrations/`. Used for edge processing — fast reads, caching, and data that benefits from being co-located with the Worker.
+**Planned future: MongoDB Atlas.** Connected via `MONGODB_URI` secret. Not yet active — D1 is the current primary database.
 
-14 tables: `themes`, `events` (schema.org Event, 21 columns), `users` (schema.org Person, 18 columns with roles), `registrations`, `follows`, `event_views`, `event_reviews`, `referrals`, `user_referral_codes`, `search_queries`, `ai_conversations`.
+### Core Tables
+`events` (schema.org Event), `users` (schema.org Person with roles), `registrations`, `follows`, `themes`
 
-**Migrations** (5 files): `add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`.
+### Features Tables
+`event_reviews`, `referrals`, `user_referral_codes`, `event_series`, `waitlists`, `payments`
 
-## Tech Stack
+### Analytics Tables
+`event_views`, `search_queries`, `ai_conversations`, `audit_logs`
 
-### Frontend
-- Next.js 16.1.1, React 19.2.3, TypeScript 5.9.3
-- Tailwind CSS v4, tailwind-merge, clsx, lucide-react
-- Stytch SDK (@stytch/nextjs 21.18.1)
-- Three.js 0.182.0 (theme visualization)
-- Vitest 4.0.17 with jsdom
+### Migrations (7 files)
+`add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`, `005_backend_hardening.sql` (soft deletes, audit logs, categories, FTS5), `006_event_series.sql`, `007_waitlists_payments.sql`
 
-### Backend
-- Hono 4.11.9 (HTTP framework)
-- Cloudflare Workers (Wrangler 4.75.0)
-- @cloudflare/workers-types 4.20260117.0
-- Stytch 12.43.1 (JWT validation only)
-- TypeScript 5.7.2, Vitest 4.0.18
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `worker/src/index.ts` | Hono app entry, routing, middleware setup |
+| `worker/src/types.ts` | Backend type definitions (Cloudflare bindings, DB models) |
+| `worker/src/auth/stytch.ts` | JWT validation with JWKS, `AuthResult` type |
+| `worker/src/middleware/auth.ts` | Auth middleware, timing-safe API key validation |
+| `worker/src/middleware/ai-safety.ts` | Prompt injection detection |
+| `worker/src/utils/circuit-breaker.ts` | Circuit breaker for external services |
+| `worker/src/email/` | Resend email client, templates, triggers |
+| `worker/src/payments/` | Payment provider abstraction (Paynow) |
+| `worker/src/db/schema.sql` | D1 database schema |
+| `worker/src/db/migrations/` | SQL migration files |
+| `src/lib/api.ts` | All frontend API client functions |
+| `src/lib/observability.ts` | Frontend structured logging (`[mukoko]` prefix) |
+| `src/lib/i18n/index.ts` | i18n translations (English + Shona) |
+| `src/lib/themes.ts` | Mineral theme definitions |
+| `src/components/auth/auth-context.tsx` | Auth state management, Stytch sync |
+| `src/components/error/section-error-boundary.tsx` | Mukoko 3-layer error boundary |
+| `src/components/ui/share-button.tsx` | WhatsApp-first social sharing |
+| `worker/wrangler.toml` | Cloudflare bindings and env config |
 
 ## Code Conventions
 
@@ -220,15 +252,19 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 - **WCAG AAA** compliance — 7:1+ contrast ratios for primary/secondary text, 44px touch targets
 - **Dark/light modes** via `.dark` and `.light` CSS classes, design tokens in `globals.css`
 - **Schema.org alignment** — Events and users modeled after schema.org specs
+- **Structured logging** — `[mukoko]` prefix on all log output, structured JSON in backend
 - **Request ID tracking** — Every backend request gets a unique ID for observability
+- **Audit logging** — All destructive operations logged to `audit_logs` table
 - **Path alias** — `@/*` maps to `./src/*` in frontend
 
 ## Environment Variables
 
 Frontend (`.env.local`): `NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-Backend (`worker/.dev.vars`): `API_KEY`, `MONGODB_URI`
+Backend (`worker/.dev.vars`): `API_KEY`, `MONGODB_URI`, `RESEND_API_KEY`
 
 Backend (`worker/wrangler.toml` vars): `ENVIRONMENT`, `ALLOWED_ORIGINS`, `STYTCH_PROJECT_ID` (public value for JWKS validation — different per environment)
+
+Backend secrets: `PAYNOW_INTEGRATION_ID`, `PAYNOW_INTEGRATION_KEY` (set via `wrangler secret put`)
 
 Cloudflare bindings: `AI` (Workers AI), `VECTORIZE`, `DB` (D1), `CACHE` (KV), `MEDIA` (R2), `IMAGES`, `ANALYTICS`, `ANALYTICS_QUEUE`, `EMAIL_QUEUE`, `RATE_LIMITER`

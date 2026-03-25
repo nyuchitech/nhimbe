@@ -5,6 +5,7 @@ import { generateId, generateShortCode } from "../utils/ids";
 import { dbRowToEvent } from "../utils/db";
 import { writeAuth } from "../middleware/auth";
 import { indexEvent, removeEventFromIndex } from "../ai/embeddings";
+import { toCsv } from "../utils/export";
 
 export const events = new Hono<{ Bindings: Env }>();
 
@@ -18,19 +19,28 @@ events.get("/", async (c) => {
   const limit = safeParseInt(c.req.query("limit") || null, 20, 1, 100);
   const offset = safeParseInt(c.req.query("offset") || null, 0, 0, 10000);
 
-  let query = "SELECT * FROM events WHERE is_published = TRUE AND event_status = 'EventScheduled'";
+  let whereClause = "WHERE is_published = TRUE AND event_status = 'EventScheduled'";
   const params: unknown[] = [];
+  const countParams: unknown[] = [];
 
   if (city) {
-    query += " AND location_locality = ?";
+    whereClause += " AND location_locality = ?";
     params.push(city);
+    countParams.push(city);
   }
   if (category) {
-    query += " AND category = ?";
+    whereClause += " AND category = ?";
     params.push(category);
+    countParams.push(category);
   }
 
-  query += " ORDER BY start_date ASC LIMIT ? OFFSET ?";
+  // Get total count for accurate pagination
+  const countResult = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total FROM events ${whereClause}`
+  ).bind(...countParams).first() as { total: number } | null;
+  const total = countResult?.total || 0;
+
+  const query = `SELECT * FROM events ${whereClause} ORDER BY start_date ASC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   const result = await c.env.DB.prepare(query).bind(...params).all();
@@ -38,7 +48,7 @@ events.get("/", async (c) => {
 
   return c.json({
     events: eventsList,
-    pagination: { limit, offset, total: eventsList.length },
+    pagination: { limit, offset, total },
   });
 });
 
@@ -220,6 +230,29 @@ events.put("/:id", async (c) => {
   }
 
   return c.json({ message: "Event updated successfully" });
+});
+
+// POST /api/events/:id/cancel — Cancel an event (does NOT delete)
+events.post("/:id/cancel", async (c) => {
+  const eventId = c.req.param("id");
+
+  const existing = await c.env.DB.prepare(
+    "SELECT _id, event_status FROM events WHERE _id = ?"
+  ).bind(eventId).first() as { _id: string; event_status: string } | null;
+
+  if (!existing) {
+    return c.json({ error: "Event not found" }, 404);
+  }
+
+  if (existing.event_status === "EventCancelled") {
+    return c.json({ error: "Event is already cancelled" }, 400);
+  }
+
+  await c.env.DB.prepare(
+    "UPDATE events SET event_status = 'EventCancelled', date_modified = datetime('now') WHERE _id = ?"
+  ).bind(eventId).run();
+
+  return c.json({ eventId, eventStatus: "EventCancelled", message: "Event cancelled successfully" });
 });
 
 // DELETE /api/events/:id
@@ -411,5 +444,34 @@ events.get("/:id/stats", async (c) => {
     referrals: stats?.referrals || 0,
     trend,
     isHot,
+  });
+});
+
+// GET /api/events/:id/registrations/export — Export registrations as CSV
+events.get("/:id/registrations/export", async (c) => {
+  const eventId = c.req.param("id");
+  const format = c.req.query("format") || "csv";
+
+  if (format !== "csv") {
+    return c.json({ error: "Only CSV format is currently supported" }, 400);
+  }
+
+  const result = await c.env.DB.prepare(`
+    SELECT r.id, r.user_id, r.status, r.created_at, r.checked_in_at,
+           u.name as user_name, u.email as user_email
+    FROM registrations r
+    LEFT JOIN users u ON r.user_id = u._id
+    WHERE r.event_id = ?
+    ORDER BY r.created_at ASC
+  `).bind(eventId).all();
+
+  const rows = result.results as Record<string, unknown>[];
+  const csv = toCsv(rows, ["id", "user_id", "user_name", "user_email", "status", "created_at", "checked_in_at"]);
+
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="registrations-${eventId}.csv"`,
+    },
   });
 });

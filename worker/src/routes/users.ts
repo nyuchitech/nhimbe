@@ -2,15 +2,22 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { getInitials } from "../utils/validation";
 import { generateId, generateReferralCode } from "../utils/ids";
+import { writeAuth } from "../middleware/auth";
+import { logAudit } from "../utils/audit";
 
 export const users = new Hono<{ Bindings: Env }>();
 
-// GET /api/users/:id
+// Apply writeAuth to all POST/PUT/DELETE operations
+users.use("*", writeAuth);
+
+// GET /api/users/:id — returns public fields only
 users.get("/:id", async (c) => {
   const userId = c.req.param("id");
 
   const result = await c.env.DB.prepare(
-    "SELECT * FROM users WHERE _id = ? OR alternate_name = ?"
+    `SELECT _id, name, alternate_name, image, address_locality, address_country,
+            interests, onboarding_completed, role, created_at
+     FROM users WHERE _id = ? OR alternate_name = ?`
   ).bind(userId, userId).first();
 
   if (!result) {
@@ -165,3 +172,63 @@ users.get("/:id/reputation", async (c) => {
 
   return c.json({ host: hostStats });
 });
+
+// DELETE /api/users/:id — Soft-delete user, anonymize PII, cancel registrations
+users.delete("/:id", async (c) => {
+  const userId = c.req.param("id");
+
+  // Verify the user exists and is not already deleted
+  const user = await c.env.DB.prepare(
+    "SELECT _id, email FROM users WHERE _id = ? AND deleted_at IS NULL"
+  ).bind(userId).first() as { _id: string; email: string } | null;
+
+  if (!user) {
+    return c.json({ error: "User not found" }, 404);
+  }
+
+  const now = new Date().toISOString();
+  // Create an anonymized email hash so we can detect duplicates without storing PII
+  const anonymizedEmail = `deleted_${await hashEmail(user.email)}@deleted.nhimbe.com`;
+
+  // Soft-delete and anonymize user PII
+  await c.env.DB.prepare(`
+    UPDATE users
+    SET deleted_at = ?,
+        name = 'Deleted User',
+        email = ?,
+        alternate_name = NULL,
+        image = NULL,
+        interests = '[]',
+        address_locality = NULL,
+        address_country = NULL
+    WHERE _id = ?
+  `).bind(now, anonymizedEmail, userId).run();
+
+  // Cancel all active registrations for this user
+  await c.env.DB.prepare(`
+    UPDATE registrations
+    SET deleted_at = ?
+    WHERE user_id = ? AND deleted_at IS NULL
+  `).bind(now, userId).run();
+
+  const ipAddress = c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || null;
+
+  await logAudit(c.env, {
+    actorId: userId,
+    action: "user.deleted",
+    resourceType: "user",
+    resourceId: userId,
+    details: { method: "soft_delete" },
+    ipAddress: ipAddress || undefined,
+  });
+
+  return c.json({ message: "User account deleted successfully" });
+});
+
+async function hashEmail(email: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(email.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 16);
+}

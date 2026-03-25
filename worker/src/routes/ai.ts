@@ -2,8 +2,12 @@ import { Hono } from "hono";
 import type { Env, AssistantRequest } from "../types";
 import { chat } from "../ai/assistant";
 import { generateDescription, regenerateDescription, getWizardSteps, type DescriptionContext } from "../ai/description-generator";
+import { aiSafety } from "../middleware/ai-safety";
 
 export const ai = new Hono<{ Bindings: Env }>();
+
+// AI safety: prompt injection detection on all POST requests
+ai.use("*", aiSafety);
 
 // POST /api/assistant
 ai.post("/assistant", async (c) => {

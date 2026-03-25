@@ -327,6 +327,9 @@ export interface AppVariables {
 export interface Env {
   ENVIRONMENT: string;
   API_KEY: string;
+  RESEND_API_KEY?: string;
+  PAYNOW_INTEGRATION_ID?: string;
+  PAYNOW_INTEGRATION_KEY?: string;
   ALLOWED_ORIGINS?: string;
   // Stytch (frontend SDK handles auth; backend only needs project ID for local JWT validation)
   STYTCH_PROJECT_ID: string;
@@ -358,7 +361,7 @@ export interface AnalyticsQueueMessage {
 }
 
 export interface EmailQueueMessage {
-  type: "event_reminder" | "feedback_request" | "welcome" | "rsvp_confirmation";
+  type: "registration_confirmation" | "event_reminder" | "event_cancelled" | "host_new_registration" | "registration_cancelled";
   to: string;
   subject: string;
   templateData: Record<string, unknown>;
