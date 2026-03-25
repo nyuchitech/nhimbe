@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Trophy, Users, Share2, Crown, Medal, Award, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getEventReferralLeaderboard, type ReferralLeaderboardEntry } from "@/lib/api";
 
 interface Referrer {
@@ -162,13 +163,10 @@ export function ReferralLeaderboard({
             <span className="text-sm text-text-secondary">Your referrals</span>
             <span className="font-bold">{userReferrals}</span>
           </div>
-          <button
-            onClick={handleCopyReferralLink}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-opacity"
-          >
+          <Button onClick={handleCopyReferralLink} className="w-full">
             <Share2 className="w-4 h-4" />
             Share Your Link
-          </button>
+          </Button>
           <p className="text-xs text-text-tertiary text-center mt-2">
             Help build the community! Share with friends and climb the leaderboard.
           </p>

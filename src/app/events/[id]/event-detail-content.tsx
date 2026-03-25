@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ArrowLeft, CalendarDays, MapPin, Video, Star } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Rating } from "@/components/ui/rating";
 import { AddToCalendarButton, GetDirectionsButton } from "./event-actions";
 import { EventThemeWrapper } from "./event-theme-wrapper";
 import { EventMap } from "./event-map";
@@ -102,10 +103,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   {reviewStats && reviewStats.averageRating > 0 && (
                     <>
                       <span>·</span>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-accent fill-accent" />
-                        <span>{reviewStats.averageRating.toFixed(1)}</span>
-                      </div>
+                      <Rating value={reviewStats.averageRating} readOnly size="sm" showValue />
                     </>
                   )}
                 </div>

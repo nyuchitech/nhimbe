@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Star, Award, Users, Calendar, TrendingUp, CheckCircle, Shield, Loader2 } from "lucide-react";
+import { Rating } from "@/components/ui/rating";
 import { getHostReputation, type HostStats as ApiHostStats } from "@/lib/api";
 
 interface HostStats {
@@ -39,24 +40,7 @@ export function HostReputation({
   showRating = true,
   className = "",
 }: HostReputationProps) {
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-4 h-4 ${
-              star <= rating
-                ? "text-accent fill-accent"
-                : star <= rating + 0.5
-                ? "text-accent fill-accent/50"
-                : "text-text-tertiary"
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
+  // Rating primitive replaces inline renderStars
 
   if (variant === "inline") {
     return (
@@ -112,7 +96,7 @@ export function HostReputation({
 
         {showRating && host.rating !== undefined && host.rating > 0 && (
           <div className="flex items-center justify-between">
-            {renderStars(host.rating)}
+            <Rating value={host.rating} readOnly />
             <span className="text-sm text-text-secondary">
               {host.reviewCount || 0} reviews
             </span>
@@ -169,7 +153,7 @@ export function HostReputation({
       {showRating && host.rating !== undefined && host.rating > 0 && (
         <div className="flex items-center justify-between py-4 border-t border-elevated mb-4">
           <div className="flex items-center gap-3">
-            {renderStars(host.rating)}
+            <Rating value={host.rating} readOnly />
             <span className="text-lg font-bold">{host.rating.toFixed(1)}</span>
           </div>
           <span className="text-sm text-text-secondary">
