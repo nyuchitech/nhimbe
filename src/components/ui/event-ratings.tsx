@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
+import { Rating } from "@/components/ui/rating";
+import { Button } from "@/components/ui/button";
 import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
 
 interface Review {
@@ -80,30 +82,8 @@ export function EventRatings({
 
   const totalRatings = Object.values(ratingDistribution).reduce((a, b) => a + b, 0);
 
-  const renderStars = (rating: number, size: "sm" | "md" | "lg" = "md") => {
-    const sizeClasses = {
-      sm: "w-3 h-3",
-      md: "w-4 h-4",
-      lg: "w-6 h-6",
-    };
-
-    return (
-      <div className="flex items-center gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`${sizeClasses[size]} ${
-              star <= rating
-                ? "text-accent fill-accent"
-                : star <= rating + 0.5
-                ? "text-accent fill-accent/50"
-                : "text-text-tertiary"
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
+  const ratingSize = (size: "sm" | "md" | "lg" = "md") =>
+    size === "sm" ? "sm" as const : size === "lg" ? "lg" as const : "default" as const;
 
   const handleHelpful = async (reviewId: string) => {
     if (helpfulClicked.has(reviewId)) return;
@@ -158,10 +138,10 @@ export function EventRatings({
         <div className="text-center py-8">
           <p className="text-text-secondary mb-4">No reviews yet. Be the first to share your experience!</p>
           {userCanReview && isPastEvent && (
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity mx-auto">
+            <Button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity mx-auto">
               <Star className="w-4 h-4" />
               Write a Review
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -186,7 +166,7 @@ export function EventRatings({
         {/* Average Rating */}
         <div className="text-center">
           <div className="text-4xl font-bold mb-1">{averageRating.toFixed(1)}</div>
-          {renderStars(averageRating, "lg")}
+          <Rating value={averageRating} readOnly size="lg" />
           <div className="text-sm text-text-secondary mt-1">
             {totalReviews} reviews
           </div>
@@ -228,13 +208,15 @@ export function EventRatings({
                   <span className="font-medium">{review.userName}</span>
                   <span className="text-xs text-text-tertiary">{review.date}</span>
                 </div>
-                {renderStars(review.rating, "sm")}
+                <Rating value={review.rating} readOnly size="sm" />
               </div>
             </div>
             <p className="text-sm text-text-secondary mb-3">{review.comment}</p>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleHelpful(review.id)}
-              className={`flex items-center gap-1 text-xs transition-colors ${
+              className={`flex items-center gap-1 text-xs transition-colors p-0 h-auto min-h-0 ${
                 helpfulClicked.has(review.id)
                   ? "text-primary"
                   : "text-text-tertiary hover:text-text-secondary"
@@ -244,7 +226,7 @@ export function EventRatings({
               <span>
                 Helpful ({review.helpful + (helpfulClicked.has(review.id) ? 1 : 0)})
               </span>
-            </button>
+            </Button>
           </div>
         ))}
       </div>
@@ -252,18 +234,20 @@ export function EventRatings({
       {/* Show More / Write Review */}
       <div className="mt-4 flex items-center justify-between">
         {reviews.length > 3 && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowAllReviews(!showAllReviews)}
-            className="text-sm text-primary font-medium hover:underline"
+            className="text-sm text-primary font-medium hover:underline p-0 h-auto min-h-0"
           >
             {showAllReviews ? "Show less" : `View all ${reviews.length} reviews`}
-          </button>
+          </Button>
         )}
         {userCanReview && isPastEvent && (
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
+          <Button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
             <Star className="w-4 h-4" />
             Write a Review
-          </button>
+          </Button>
         )}
       </div>
 

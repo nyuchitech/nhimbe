@@ -66,14 +66,16 @@ export function InterestsPrompt() {
           <Sparkles className="w-5 h-5 text-primary" />
           <p className="text-sm font-medium">What interests you?</p>
         </div>
-        <button onClick={handleDismiss} className="text-text-tertiary hover:text-foreground p-1">
+        <Button variant="ghost" size="sm" onClick={handleDismiss} className="text-text-tertiary hover:text-foreground p-1 h-auto min-h-0">
           <X className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
       <div className="flex flex-wrap gap-2 mb-3">
         {categories.slice(0, 12).map((cat) => (
-          <button
+          <Button
             key={cat.id}
+            variant="ghost"
+            size="sm"
             onClick={() => toggleInterest(cat.id)}
             className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
               selected.includes(cat.id)
@@ -82,11 +84,11 @@ export function InterestsPrompt() {
             }`}
           >
             {cat.name}
-          </button>
+          </Button>
         ))}
       </div>
       <Button
-        variant="primary"
+        variant="default"
         onClick={handleSave}
         disabled={selected.length === 0 || loading}
       >

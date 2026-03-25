@@ -218,16 +218,18 @@ export default function UsersPage() {
                           {formatDate(user.created_at)}
                         </td>
                         <td className="py-3 relative">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() =>
                               setActionMenuOpen(
                                 actionMenuOpen === user.id ? null : user.id
                               )
                             }
-                            className="p-2 hover:bg-elevated rounded-lg"
+                            className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0"
                           >
                             <MoreVertical className="w-4 h-4" />
-                          </button>
+                          </Button>
                           {actionMenuOpen === user.id && (
                             <>
                               <div
@@ -235,42 +237,46 @@ export default function UsersPage() {
                                 onClick={() => setActionMenuOpen(null)}
                               />
                               <div className="absolute right-0 top-full mt-1 z-20 bg-surface border border-elevated rounded-lg shadow-lg py-1 min-w-[150px]">
-                                <button
+                                <Button
+                                  variant="ghost"
                                   onClick={() => setSelectedUser(user)}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated"
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated rounded-none justify-start h-auto"
                                 >
                                   <Eye className="w-4 h-4" />
                                   View Details
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  variant="ghost"
                                   onClick={() =>
                                     (window.location.href = `mailto:${user.email}`)
                                   }
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated"
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-elevated rounded-none justify-start h-auto"
                                 >
                                   <Mail className="w-4 h-4" />
                                   Send Email
-                                </button>
+                                </Button>
                                 {user.status === "active" ? (
-                                  <button
+                                  <Button
+                                    variant="ghost"
                                     onClick={() =>
                                       handleAction(user.id, "suspend")
                                     }
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated rounded-none justify-start h-auto"
                                   >
                                     <Ban className="w-4 h-4" />
                                     Suspend User
-                                  </button>
+                                  </Button>
                                 ) : (
-                                  <button
+                                  <Button
+                                    variant="ghost"
                                     onClick={() =>
                                       handleAction(user.id, "activate")
                                     }
-                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:bg-elevated"
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:bg-elevated rounded-none justify-start h-auto"
                                   >
                                     <Ban className="w-4 h-4" />
                                     Activate User
-                                  </button>
+                                  </Button>
                                 )}
                               </div>
                             </>
@@ -333,12 +339,14 @@ export default function UsersPage() {
                   )}
                 </div>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSelectedUser(null)}
-                className="p-2 hover:bg-elevated rounded-lg"
+                className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0"
               >
                 ×
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-4">

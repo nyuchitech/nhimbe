@@ -25,12 +25,35 @@ import { reviews } from "./routes/reviews";
 import { stats } from "./routes/stats";
 import { admin } from "./routes/admin";
 import { seed } from "./routes/seed";
+import { series } from "./routes/series";
+import { waitlist } from "./routes/waitlist";
+import { checkin } from "./routes/checkin";
+import { payments } from "./routes/payments";
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
-// Global CORS middleware
+// Global CORS middleware — restrict to trusted origins
 app.use("*", cors({
-  origin: "*",
+  origin: (origin, c) => {
+    if (!origin) return origin;
+    // Allow localhost in development
+    if (origin.startsWith("http://localhost:")) return origin;
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+      const trustedDomains = ["nyuchi.com", "mukoko.com", "nhimbe.com"];
+      if (trustedDomains.some(d => hostname === d || hostname.endsWith(`.${d}`))) {
+        return origin;
+      }
+    } catch { /* invalid origin */ }
+    // Check ALLOWED_ORIGINS env var
+    const env = c.env as Env;
+    const extraOrigins = (env.ALLOWED_ORIGINS || "").split(",").filter(Boolean);
+    if (extraOrigins.some(allowed => origin === allowed.trim())) {
+      return origin;
+    }
+    return null; // Deny unknown origins
+  },
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
 }));
@@ -39,11 +62,16 @@ app.use("*", cors({
 app.use("*", requestIdMiddleware);
 app.use("*", requestLogger);
 
-// Rate limit AI and auth endpoints
+// Rate limit sensitive endpoints
 app.use("/api/assistant/*", rateLimit);
 app.use("/api/ai/*", rateLimit);
 app.use("/api/auth/*", rateLimit);
 app.use("/api/search", rateLimit);
+app.use("/api/users/*", rateLimit);
+app.use("/api/reviews/*", rateLimit);
+app.use("/api/referrals/*", rateLimit);
+app.use("/api/media/*", rateLimit);
+app.use("/api/payments/*", rateLimit);
 
 // Mount route modules
 app.route("/", health);
@@ -59,7 +87,11 @@ app.route("/api/referrals", referrals);
 app.route("/api/reviews", reviews);
 app.route("/api/community", stats);
 app.route("/api/admin", admin);
+app.route("/api/series", series);
 app.route("/api", seed);
+app.route("/api", waitlist);
+app.route("/api", checkin);
+app.route("/api/payments", payments);
 
 // Global error handler
 app.onError((err, c) => {
@@ -73,7 +105,6 @@ app.onError((err, c) => {
   return c.json(
     {
       error: "Internal Server Error",
-      message: err instanceof Error ? err.message : "Unknown error",
       requestId: reqId,
     },
     500

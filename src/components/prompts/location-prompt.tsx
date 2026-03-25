@@ -75,15 +75,15 @@ export function LocationPrompt() {
         </select>
       </div>
       <Button
-        variant="primary"
+        variant="default"
         onClick={handleSave}
         disabled={!selected || loading}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Set"}
       </Button>
-      <button onClick={handleDismiss} className="text-text-tertiary hover:text-foreground p-1">
+      <Button variant="ghost" size="sm" onClick={handleDismiss} className="text-text-tertiary hover:text-foreground p-1 h-auto min-h-0">
         <X className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 }

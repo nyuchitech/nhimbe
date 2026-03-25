@@ -93,3 +93,34 @@ stats.get("/stats", async (c) => {
 
   return c.json({ stats: communityStats });
 });
+
+// GET /api/community/events/:eventId/analytics — Host analytics for a specific event
+stats.get("/events/:eventId/analytics", async (c) => {
+  const eventId = c.req.param("eventId");
+
+  interface AnalyticsRow {
+    views: number;
+    registrations: number;
+    referrals: number;
+  }
+
+  const result = await c.env.DB.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM event_views WHERE event_id = ?) as views,
+      (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND status != 'cancelled') as registrations,
+      (SELECT COUNT(*) FROM referrals WHERE event_id = ?) as referrals
+  `).bind(eventId, eventId, eventId).first() as AnalyticsRow | null;
+
+  const views = result?.views || 0;
+  const registrations = result?.registrations || 0;
+  const referrals = result?.referrals || 0;
+  const conversionRate = views > 0 ? Math.round((registrations / views) * 10000) / 100 : 0;
+
+  return c.json({
+    eventId,
+    views,
+    registrations,
+    conversionRate,
+    referrals,
+  });
+});

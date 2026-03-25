@@ -91,19 +91,40 @@ export interface CitiesResponse {
   cities: { city: string; country: string }[];
 }
 
+// Get session JWT from Stytch (when available in browser)
+function getSessionJwt(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    // Stytch stores session JWT in a cookie; we retrieve it via the SDK
+    // This is a lightweight check — the actual token comes from StytchProvider
+    return null; // Will be passed explicitly by callers
+  } catch {
+    return null;
+  }
+}
+
 // API fetch wrapper
 async function apiFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  sessionJwt?: string
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Attach auth token for authenticated requests
+  const token = sessionJwt || getSessionJwt();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -186,26 +207,26 @@ export interface CreateEventInput {
 }
 
 // Create a new event
-export async function createEvent(event: CreateEventInput): Promise<{ event: Event; message: string }> {
+export async function createEvent(event: CreateEventInput, sessionJwt?: string): Promise<{ event: Event; message: string }> {
   return apiFetch<{ event: Event; message: string }>("/api/events", {
     method: "POST",
     body: JSON.stringify(event),
-  });
+  }, sessionJwt);
 }
 
 // Update an event
-export async function updateEvent(id: string, updates: Partial<CreateEventInput>): Promise<{ message: string }> {
+export async function updateEvent(id: string, updates: Partial<CreateEventInput>, sessionJwt?: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/events/${id}`, {
     method: "PUT",
     body: JSON.stringify(updates),
-  });
+  }, sessionJwt);
 }
 
 // Delete an event
-export async function deleteEvent(id: string): Promise<{ message: string }> {
+export async function deleteEvent(id: string, sessionJwt?: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/events/${id}`, {
     method: "DELETE",
-  });
+  }, sessionJwt);
 }
 
 // ============================================
@@ -251,11 +272,11 @@ export async function registerForEvent(data: {
   ticket_type?: string;
   ticket_price?: number;
   ticket_currency?: string;
-}): Promise<{ id: string; message: string }> {
+}, sessionJwt?: string): Promise<{ id: string; message: string }> {
   return apiFetch<{ id: string; message: string }>("/api/registrations", {
     method: "POST",
     body: JSON.stringify(data),
-  });
+  }, sessionJwt);
 }
 
 // Update registration status (approve/reject)

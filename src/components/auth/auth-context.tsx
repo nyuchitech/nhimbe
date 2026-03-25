@@ -106,28 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         const errData = await response.json().catch(() => ({})) as { error?: string; reason?: string };
         console.error("[nhimbe] auth/sync failed:", response.status, errData.reason || errData.error || "unknown");
-        // Fallback: create user from Stytch data
-        setNhimbeUser({
-          id: stytchUser.user_id,
-          email,
-          name: name || "User",
-          stytchUserId: stytchUser.user_id,
-          role: "user",
-        });
+        // Do not create fallback user — stay logged out so the UI accurately reflects auth state
+        setNhimbeUser(null);
       }
     } catch (err) {
-      // Fallback on network error
       console.error("[nhimbe] auth/sync network error:", err);
-      const email = stytchUser.emails?.[0]?.email || "";
-      const name =
-        `${stytchUser.name?.first_name || ""} ${stytchUser.name?.last_name || ""}`.trim();
-      setNhimbeUser({
-        id: stytchUser.user_id,
-        email,
-        name: name || "User",
-        stytchUserId: stytchUser.user_id,
-        role: "user",
-      });
+      // Do not create fallback user — stay logged out on network errors
+      setNhimbeUser(null);
     } finally {
       setSyncing(false);
       setHasSynced(true);
@@ -149,7 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     (returnUrl?: string) => {
       if (returnUrl && typeof window !== "undefined") {
-        localStorage.setItem("auth_redirect", returnUrl);
+        // Only allow relative paths to prevent open redirect attacks
+        const isRelativePath = returnUrl.startsWith("/") && !returnUrl.startsWith("//");
+        if (isRelativePath) {
+          localStorage.setItem("auth_redirect", returnUrl);
+        }
       }
       router.push("/auth/signin");
     },

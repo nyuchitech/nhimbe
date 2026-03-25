@@ -123,20 +123,22 @@ END:VCALENDAR`;
   return (
     <>
       {/* Add to Calendar button */}
-      <button
+      <Button
+        variant="ghost"
         onClick={handleAddToCalendar}
-        className="text-primary text-sm font-semibold hover:underline"
+        className="text-primary text-sm font-semibold hover:underline p-0 h-auto min-h-0"
       >
         Add to Calendar
-      </button>
+      </Button>
 
       {/* Get Directions button - rendered separately */}
-      <button
+      <Button
+        variant="ghost"
         onClick={handleGetDirections}
-        className="text-primary text-sm font-semibold hover:underline"
+        className="text-primary text-sm font-semibold hover:underline p-0 h-auto min-h-0"
       >
         Get Directions
-      </button>
+      </Button>
 
       {/* Share button */}
       <Button onClick={handleShare} variant="secondary" className="flex-1 py-2.5 text-sm">
@@ -187,30 +189,33 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
+        variant="ghost"
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-1 text-primary text-sm font-semibold hover:underline"
+        className="flex items-center gap-1 text-primary text-sm font-semibold hover:underline p-0 h-auto min-h-0"
       >
         <Calendar className="w-4 h-4" />
         Add to Calendar
         <ChevronDown className={`w-3 h-3 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
-      </button>
+      </Button>
 
       {showDropdown && (
         <div className="absolute right-0 top-full mt-2 bg-surface rounded-xl shadow-xl border border-elevated py-2 min-w-50 z-50">
-          <button
+          <Button
+            variant="ghost"
             onClick={handleDownloadICS}
-            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3 rounded-none h-auto justify-start"
           >
             <Download className="w-4 h-4 text-text-tertiary" />
             <div>
               <div className="font-medium">Download .ics</div>
               <div className="text-xs text-text-tertiary">Apple Calendar, etc.</div>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={handleGoogleCalendar}
-            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3 rounded-none h-auto justify-start"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.5 4H18V3a1 1 0 0 0-2 0v1H8V3a1 1 0 0 0-2 0v1H4.5C3.12 4 2 5.12 2 6.5v13C2 20.88 3.12 22 4.5 22h15c1.38 0 2.5-1.12 2.5-2.5v-13C22 5.12 20.88 4 19.5 4zm0 15.5h-15a.5.5 0 0 1-.5-.5V9h16v10a.5.5 0 0 1-.5.5z" />
@@ -219,10 +224,11 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
               <div className="font-medium">Google Calendar</div>
               <div className="text-xs text-text-tertiary">Opens in new tab</div>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={handleOutlook}
-            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3 rounded-none h-auto justify-start"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M21.5 4H2.5C1.67 4 1 4.67 1 5.5v13c0 .83.67 1.5 1.5 1.5h19c.83 0 1.5-.67 1.5-1.5v-13c0-.83-.67-1.5-1.5-1.5zm-10 12l-8-5V7l8 5 8-5v4l-8 5z" />
@@ -231,10 +237,11 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
               <div className="font-medium">Outlook (Office 365)</div>
               <div className="text-xs text-text-tertiary">Work or school</div>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={handleOutlookLive}
-            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3"
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-elevated transition-colors flex items-center gap-3 rounded-none h-auto justify-start"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M21.5 4H2.5C1.67 4 1 4.67 1 5.5v13c0 .83.67 1.5 1.5 1.5h19c.83 0 1.5-.67 1.5-1.5v-13c0-.83-.67-1.5-1.5-1.5zm-10 12l-8-5V7l8 5 8-5v4l-8 5z" />
@@ -243,7 +250,7 @@ export function AddToCalendarButton({ event }: EventActionsProps) {
               <div className="font-medium">Outlook.com</div>
               <div className="text-xs text-text-tertiary">Personal account</div>
             </div>
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -259,12 +266,13 @@ export function GetDirectionsButton({ event }: EventActionsProps) {
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={handleGetDirections}
-      className="text-primary text-sm font-semibold hover:underline"
+      className="text-primary text-sm font-semibold hover:underline p-0 h-auto min-h-0"
     >
       Get Directions
-    </button>
+    </Button>
   );
 }
 

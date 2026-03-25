@@ -3,6 +3,9 @@
 import { Globe } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { BottomSheetModal } from "./bottom-sheet-modal";
 
 interface LocationModalProps {
@@ -59,7 +62,7 @@ export function LocationModal({
           <>
             {/* Meeting Platform */}
             <div>
-              <label className="block text-sm text-text-secondary mb-2">Meeting Platform</label>
+              <Label className="block text-sm text-text-secondary mb-2">Meeting Platform</Label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { value: "zoom", label: "Zoom" },
@@ -67,8 +70,9 @@ export function LocationModal({
                   { value: "teams", label: "Microsoft Teams" },
                   { value: "other", label: "Other" },
                 ].map((platform) => (
-                  <button
+                  <Button
                     key={platform.value}
+                    variant="ghost"
                     onClick={() => setMeetingPlatform(platform.value as typeof meetingPlatform)}
                     className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                       meetingPlatform === platform.value
@@ -77,14 +81,14 @@ export function LocationModal({
                     }`}
                   >
                     {platform.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
             {/* Meeting URL */}
             <div>
-              <label className="block text-sm text-text-secondary mb-2">Meeting URL</label>
-              <input
+              <Label className="block text-sm text-text-secondary mb-2">Meeting URL</Label>
+              <Input
                 type="url"
                 value={meetingUrl}
                 onChange={(e) => setMeetingUrl(e.target.value)}
@@ -109,7 +113,7 @@ export function LocationModal({
           <>
             {/* Google Places Autocomplete */}
             <div>
-              <label className="block text-sm text-text-secondary mb-2">Search Location</label>
+              <Label className="block text-sm text-text-secondary mb-2">Search Location</Label>
               <AddressAutocomplete
                 value={addressSearch}
                 onChange={setAddressSearch}
@@ -132,8 +136,8 @@ export function LocationModal({
             </div>
 
             <div>
-              <label className="block text-sm text-text-secondary mb-2">Venue Name</label>
-              <input
+              <Label className="block text-sm text-text-secondary mb-2">Venue Name</Label>
+              <Input
                 type="text"
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
@@ -142,8 +146,8 @@ export function LocationModal({
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-2">Address</label>
-              <input
+              <Label className="block text-sm text-text-secondary mb-2">Address</Label>
+              <Input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -152,32 +156,35 @@ export function LocationModal({
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-2">City</label>
+              <Label className="block text-sm text-text-secondary mb-2">City</Label>
               <div className="grid grid-cols-2 gap-2">
                 {cities.map((c) => (
-                  <button
+                  <Button
                     key={`${c.city}-${c.country}`}
+                    variant="ghost"
                     onClick={() => setSelectedCity(c)}
-                    className={`px-4 py-3 rounded-xl text-left ${
+                    className={`px-4 py-3 rounded-xl text-left justify-start h-auto ${
                       selectedCity?.city === c.city
                         ? "bg-primary text-primary-foreground"
                         : "bg-surface hover:bg-elevated"
                     }`}
                   >
-                    <div className="font-medium">{c.city}</div>
-                    <div className="text-sm opacity-70">{c.country}</div>
-                  </button>
+                    <div className="flex flex-col items-start">
+                      <div className="font-medium">{c.city}</div>
+                      <div className="text-sm opacity-70">{c.country}</div>
+                    </div>
+                  </Button>
                 ))}
               </div>
             </div>
           </>
         )}
-        <button
+        <Button
           onClick={onClose}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
         >
           Done
-        </button>
+        </Button>
       </div>
     </BottomSheetModal>
   );

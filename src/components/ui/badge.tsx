@@ -1,34 +1,54 @@
-"use client";
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from "radix-ui"
 
-import { forwardRef, HTMLAttributes } from "react";
+import { cn } from "@/lib/utils"
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: "default" | "primary" | "secondary" | "accent" | "success" | "warning" | "error" | "outline";
+const badgeVariants = cva(
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+        secondary:
+          "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+        destructive:
+          "bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+        success:
+          "bg-green-500/20 text-green-400 border-green-500/30",
+        warning:
+          "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+        error:
+          "bg-red-500/20 text-red-400 border-red-500/30",
+        outline:
+          "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 [a&]:hover:underline",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
+function Badge({
+  className,
+  variant = "default",
+  asChild = false,
+  ...props
+}: React.ComponentProps<"span"> &
+  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot.Root : "span"
+
+  return (
+    <Comp
+      data-slot="badge"
+      data-variant={variant}
+      className={cn(badgeVariants({ variant }), className)}
+      {...props}
+    />
+  )
 }
 
-export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ variant = "default", className = "", children, ...props }, ref) => {
-    const variants = {
-      default: "bg-elevated text-foreground",
-      primary: "bg-primary/20 text-primary",
-      secondary: "bg-secondary/20 text-secondary",
-      accent: "bg-accent/20 text-accent",
-      success: "bg-green-500/20 text-green-400",
-      warning: "bg-yellow-500/20 text-yellow-400",
-      error: "bg-red-500/20 text-red-400",
-      outline: "border border-elevated text-text-secondary",
-    };
-
-    return (
-      <span
-        ref={ref}
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
-        {...props}
-      >
-        {children}
-      </span>
-    );
-  }
-);
-
-Badge.displayName = "Badge";
+export { Badge, badgeVariants }

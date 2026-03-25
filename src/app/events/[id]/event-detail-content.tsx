@@ -2,36 +2,30 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import dynamic from "next/dynamic";
-import { ArrowLeft, CalendarDays, MapPin, Users, QrCode, Video, Eye, TrendingUp, Flame, Star, Share2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EventQRCode } from "./event-qr-code";
-import { AddToCalendarButton, GetDirectionsButton, ShareButton } from "./event-actions";
-import { RSVPButton } from "./rsvp-button";
+import { Separator } from "@/components/ui/separator";
+import { Rating } from "@/components/ui/rating";
+import { AddToCalendarButton, GetDirectionsButton } from "./event-actions";
 import { EventThemeWrapper } from "./event-theme-wrapper";
 import { EventMap } from "./event-map";
 import { EventWeather } from "./event-weather";
-import { HostReputation } from "@/components/ui/host-reputation";
+import { EventCover } from "./event-cover";
+import { EventSidebar } from "./event-sidebar";
 import { useAuth } from "@/components/auth/auth-context";
 import { getUserReferralCode, generateUserReferralCode, getEventStats, getEventReviews, type UserReferralCode, type EventStats, type ReviewStats } from "@/lib/api";
 import type { Event } from "@/lib/api";
 
 const EventRatings = dynamic(
   () => import("@/components/ui/event-ratings").then(m => ({ default: m.EventRatings })),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-48 w-full rounded-2xl" />,
-  }
+  { ssr: false, loading: () => <Skeleton className="h-48 w-full rounded-2xl" /> }
 );
 
 const ReferralLeaderboard = dynamic(
   () => import("@/components/ui/referral-leaderboard").then(m => ({ default: m.ReferralLeaderboard })),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-64 w-full rounded-2xl" />,
-  }
+  { ssr: false, loading: () => <Skeleton className="h-64 w-full rounded-2xl" /> }
 );
 
 interface EventDetailContentProps {
@@ -44,170 +38,49 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   const [stats, setStats] = useState<EventStats | null>(null);
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
   const isPastEvent = new Date(event.startDate) < new Date();
+  const isOnline = event.eventAttendanceMode === "OnlineEventAttendanceMode";
+  const isInPerson = !isOnline && event.location.addressLocality !== "Online";
 
-  // Fetch event stats from API
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const eventStats = await getEventStats(event.id);
-        setStats(eventStats);
-      } catch (error) {
-        console.error("Failed to fetch event stats:", error);
-      }
-    }
-    fetchStats();
+    getEventStats(event.id).then(setStats).catch(() => {});
   }, [event.id]);
 
-  // Fetch review stats from API
   useEffect(() => {
-    async function fetchReviewStats() {
-      try {
-        const response = await getEventReviews(event.id);
-        setReviewStats(response.stats);
-      } catch (error) {
-        console.error("Failed to fetch review stats:", error);
-      }
-    }
-    fetchReviewStats();
+    getEventReviews(event.id).then(r => setReviewStats(r.stats)).catch(() => {});
   }, [event.id]);
 
-  // Fetch or generate user's referral code
   useEffect(() => {
     async function fetchReferralCode() {
       if (!user?.id) return;
-
       try {
         let referral = await getUserReferralCode(user.id);
         if (!referral) {
-          // Generate a new referral code if user doesn't have one
           const result = await generateUserReferralCode(user.id);
           referral = { code: result.code, totalReferrals: 0, totalConversions: 0 };
         }
         setUserReferral(referral);
-      } catch (error) {
-        console.error("Failed to fetch referral code:", error);
-      }
+      } catch {}
     }
     fetchReferralCode();
   }, [user?.id]);
 
-  const coverStyle = event.image
-    ? {
-        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5)), url('${event.image}')`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }
-    : { background: event.coverGradient || "linear-gradient(135deg, #004D40, #00796B)" };
-
-  const formatViews = (count: number): string => {
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toString();
-  };
-
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
       <div className="max-w-250 mx-auto px-6 py-10">
-        {/* Back Link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-6"
-        >
+        <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-6">
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
         </Link>
 
-        {/* Cover Image */}
-        <div
-          className="h-100 rounded-(--radius-card) relative mb-8 overflow-hidden"
-          style={coverStyle}
-        >
-          {event.image && (
-            <Image
-              src={event.image}
-              alt={event.name}
-              fill
-              className="object-cover"
-              priority
-            />
-          )}
-          <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+        <EventCover event={event} stats={stats} reviewStats={reviewStats} />
 
-          <div className="absolute top-6 left-6 flex gap-3 z-10">
-            {/* Date Badge */}
-            <div className="bg-black/70 backdrop-blur-sm px-3.5 py-2.5 rounded-xl text-center">
-              <div className="text-2xl font-extrabold text-white leading-none" style={{ color: "var(--event-primary)" }}>
-                {event.date.day}
-              </div>
-              <div className="text-[11px] font-semibold text-white/60 uppercase tracking-wide">
-                {event.date.month}
-              </div>
-            </div>
-
-            {/* Category Badge */}
-            <div
-              className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase self-start"
-              style={{ backgroundColor: "var(--event-primary)", color: "#0A0A0A" }}
-            >
-              {event.category}
-            </div>
-
-            {/* Hot/Trending Badge - only shown when API returns data */}
-            {stats?.isHot && (
-              <div className="flex items-center gap-1 bg-accent/90 text-background px-2.5 py-1.5 rounded-full self-start">
-                <Flame className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold">HOT</span>
-              </div>
-            )}
-            {!stats?.isHot && stats?.trend && stats.trend > 20 && (
-              <div className="flex items-center gap-1 bg-green-500/90 text-white px-2.5 py-1.5 rounded-full self-start">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold">+{stats.trend}%</span>
-              </div>
-            )}
-          </div>
-
-          {/* Open Data: Views & Rating on Cover - only shown when API returns data */}
-          <div className="absolute top-6 right-6 flex flex-col items-end gap-2 z-10">
-            {stats?.views !== undefined && stats.views > 0 && (
-              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
-                <Eye className="w-4 h-4" />
-                <span className="text-sm font-medium">{formatViews(stats.views)} views</span>
-              </div>
-            )}
-            {reviewStats && reviewStats.averageRating > 0 && reviewStats.totalReviews > 0 && (
-              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full">
-                <Star className="w-4 h-4 text-accent fill-accent" />
-                <span className="text-sm font-medium">{reviewStats.averageRating.toFixed(1)}</span>
-                <span className="text-xs text-white/60">({reviewStats.totalReviews})</span>
-              </div>
-            )}
-          </div>
-
-          {/* Tags */}
-          {event.keywords && event.keywords.length > 0 && (
-            <div className="absolute bottom-6 left-6 flex gap-2 flex-wrap max-w-[80%] z-10">
-              {event.keywords.slice(0, 5).map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-black/50 backdrop-blur-sm text-white/80 px-2.5 py-1 rounded-full text-[11px]"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12">
           {/* Main Content */}
           <div>
-            <h1 className="font-serif text-4xl font-bold leading-tight mb-6">
-              {event.name}
-            </h1>
+            <h1 className="font-serif text-4xl font-bold leading-tight mb-6">{event.name}</h1>
 
-            {/* Host Row with Reputation */}
-            <div className="flex items-center gap-3.5 py-4 border-b mb-6" style={{ borderColor: "var(--event-surface)" }}>
+            {/* Host Row */}
+            <div className="flex items-center gap-3.5 py-4" style={{ borderColor: "var(--event-surface)" }}>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-[#0A0A0A]"
                 style={{ background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))` }}
@@ -230,10 +103,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   {reviewStats && reviewStats.averageRating > 0 && (
                     <>
                       <span>·</span>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-accent fill-accent" />
-                        <span>{reviewStats.averageRating.toFixed(1)}</span>
-                      </div>
+                      <Rating value={reviewStats.averageRating} readOnly size="sm" showValue />
                     </>
                   )}
                 </div>
@@ -241,12 +111,11 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               <Button variant="secondary">Follow</Button>
             </div>
 
+            <Separator style={{ backgroundColor: "var(--event-surface)" }} />
+
             {/* Date Row */}
-            <div className="flex items-start gap-4 py-4 border-b" style={{ borderColor: "var(--event-surface)" }}>
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}
-              >
+            <div className="flex items-start gap-4 py-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}>
                 <CalendarDays className="w-5 h-5" />
               </div>
               <div className="flex-1">
@@ -256,17 +125,16 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               <AddToCalendarButton event={event} />
             </div>
 
+            <Separator style={{ backgroundColor: "var(--event-surface)" }} />
+
             {/* Location Row */}
-            <div className="flex items-start gap-4 py-4 border-b" style={{ borderColor: "var(--event-surface)" }}>
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}
-              >
-                {event.eventAttendanceMode === 'OnlineEventAttendanceMode' ? <Video className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+            <div className="flex items-start gap-4 py-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}>
+                {isOnline ? <Video className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
               </div>
               <div className="flex-1">
                 <h4 className="font-semibold">{event.location.name}</h4>
-                {event.eventAttendanceMode === 'OnlineEventAttendanceMode' && event.meetingPlatform ? (
+                {isOnline && event.meetingPlatform ? (
                   <p className="text-sm text-foreground/60">
                     {event.meetingPlatform === "zoom" && "Zoom Meeting"}
                     {event.meetingPlatform === "google_meet" && "Google Meet"}
@@ -279,232 +147,51 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   </p>
                 )}
               </div>
-              {event.eventAttendanceMode === 'OnlineEventAttendanceMode' && event.meetingUrl ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => window.open(event.meetingUrl, "_blank")}
-                >
-                  Join
-                </Button>
+              {isOnline && event.meetingUrl ? (
+                <Button variant="secondary" onClick={() => window.open(event.meetingUrl, "_blank")}>Join</Button>
               ) : (
                 <GetDirectionsButton event={event} />
               )}
             </div>
 
-            {/* Google Map - only for in-person events */}
-            {event.eventAttendanceMode !== 'OnlineEventAttendanceMode' && event.location.addressLocality !== "Online" && (
-              <div className="mt-6 mb-6">
-                <EventMap
-                  venue={event.location.name}
-                  address={event.location.streetAddress || ""}
-                  city={event.location.addressLocality}
-                  country={event.location.addressCountry}
-                />
-              </div>
-            )}
-
-            {/* Weather - only for in-person events */}
-            {event.eventAttendanceMode !== 'OnlineEventAttendanceMode' && event.location.addressLocality !== "Online" && (
-              <div className="mb-8">
-                <EventWeather city={event.location.addressLocality} eventDate={event.startDate} />
-              </div>
+            {/* Map & Weather */}
+            {isInPerson && (
+              <>
+                <div className="mt-6 mb-6">
+                  <EventMap venue={event.location.name} address={event.location.streetAddress || ""} city={event.location.addressLocality} country={event.location.addressCountry} />
+                </div>
+                <div className="mb-8">
+                  <EventWeather city={event.location.addressLocality} eventDate={event.startDate} />
+                </div>
+              </>
             )}
 
             {/* Description */}
             <div className="mt-8">
               <h3 className="text-lg font-bold mb-4">About This Event</h3>
               {event.description.split("\n\n").map((paragraph, index) => (
-                <p
-                  key={index}
-                  className="text-[15px] leading-relaxed text-foreground/60 mb-4"
-                >
-                  {paragraph}
-                </p>
+                <p key={index} className="text-[15px] leading-relaxed text-foreground/60 mb-4">{paragraph}</p>
               ))}
             </div>
 
-            {/* Event Ratings - Public Feedback */}
+            {/* Ratings */}
             {isPastEvent && (
               <div className="mt-8">
-                <EventRatings
-                  eventId={event.id}
-                  isPastEvent={true}
-                  userCanReview={true}
-                />
+                <EventRatings eventId={event.id} isPastEvent={true} userCanReview={true} />
               </div>
             )}
 
-            {/* Referral Leaderboard - Community Builders */}
+            {/* Referral Leaderboard */}
             <div className="mt-8">
               <ReferralLeaderboard
                 eventId={event.id}
-                userReferralCode={userReferral?.code || (user ? undefined : undefined)}
+                userReferralCode={userReferral?.code}
                 userReferrals={userReferral?.totalReferrals || 0}
               />
             </div>
           </div>
 
-          {/* Sidebar */}
-          <aside className="lg:sticky lg:top-25 self-start space-y-6">
-            {/* Ticket Card */}
-            <div
-              className="rounded-(--radius-card) p-6"
-              style={{ backgroundColor: "var(--event-surface)" }}
-            >
-              <h3 className="text-sm text-foreground/60 mb-2">
-                {event.offers?.price ? "Tickets" : "Free Event"}
-              </h3>
-              <div className="text-[32px] font-extrabold mb-5" style={{ color: "var(--event-primary)" }}>
-                {event.offers?.price ? (
-                  <>
-                    ${event.offers.price}{" "}
-                    <span className="text-sm font-medium text-foreground/60">
-                      {event.offers.priceCurrency}
-                    </span>
-                  </>
-                ) : (
-                  "Free"
-                )}
-              </div>
-              <RSVPButton eventId={event.id} price={event.offers} />
-
-              {/* Capacity indicator */}
-              {event.maximumAttendeeCapacity && (
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--event-border)" }}>
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-foreground/60">Spots</span>
-                    <span className="font-medium">
-                      {event.attendeeCount} / {event.maximumAttendeeCapacity}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-background rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min((event.attendeeCount / event.maximumAttendeeCapacity) * 100, 100)}%`,
-                        backgroundColor: "var(--event-primary)",
-                      }}
-                    />
-                  </div>
-                  {event.maximumAttendeeCapacity - event.attendeeCount < event.maximumAttendeeCapacity * 0.2 && (
-                    <p className="text-xs text-red-400 mt-2">
-                      Only {event.maximumAttendeeCapacity - event.attendeeCount} spots left!
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Event Stats Card - Open Data - only shown when API returns data */}
-            {(stats || reviewStats) && (
-              <div
-                className="rounded-(--radius-card) p-5"
-                style={{ backgroundColor: "var(--event-surface)" }}
-              >
-                <div className="flex items-center gap-2.5 mb-4">
-                  <TrendingUp className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
-                  <h4 className="font-semibold text-sm">Event Insights</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {stats?.views !== undefined && (
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span className="text-xs">Views</span>
-                      </div>
-                      <div className="text-lg font-bold">{formatViews(stats.views)}</div>
-                    </div>
-                  )}
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                    <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                      <Users className="w-3.5 h-3.5" />
-                      <span className="text-xs">Going</span>
-                    </div>
-                    <div className="text-lg font-bold">{event.attendeeCount}</div>
-                  </div>
-                  {reviewStats && reviewStats.totalReviews > 0 && (
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                        <Star className="w-3.5 h-3.5 text-accent" />
-                        <span className="text-xs">Rating</span>
-                      </div>
-                      <div className="text-lg font-bold">{reviewStats.averageRating.toFixed(1)}</div>
-                    </div>
-                  )}
-                  {stats?.referrals !== undefined && stats.referrals > 0 && (
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: "var(--background)" }}>
-                      <div className="flex items-center gap-1.5 text-foreground/60 mb-1">
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="text-xs">Referrals</span>
-                      </div>
-                      <div className="text-lg font-bold">{stats.referrals}</div>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-foreground/40 text-center mt-3">
-                  Open data - Transparency builds trust
-                </p>
-              </div>
-            )}
-
-            {/* QR Code Card */}
-            <div
-              className="rounded-(--radius-card) p-5"
-              style={{ backgroundColor: "var(--event-surface)" }}
-            >
-              <div className="flex items-center gap-2.5 mb-4">
-                <QrCode className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
-                <h4 className="font-semibold text-sm">Share Event</h4>
-              </div>
-              <EventQRCode shortCode={event.shortCode} title={event.name} />
-              <div className="mt-4 flex gap-2">
-                <ShareButton event={event} />
-              </div>
-            </div>
-
-            {/* Friends Card */}
-            {event.friends && event.friends.length > 0 && (
-              <div
-                className="rounded-(--radius-card) p-5"
-                style={{ backgroundColor: "var(--event-surface)" }}
-              >
-                <div className="flex items-center gap-2.5 mb-4">
-                  <Users className="w-4.5 h-4.5" style={{ color: "var(--event-primary)" }} />
-                  <h4 className="font-semibold text-sm">
-                    {event.friends.length} friend{event.friends.length > 1 ? "s" : ""} going
-                  </h4>
-                </div>
-                <div className="flex gap-4">
-                  {event.friends.map((friend, index) => (
-                    <div key={index} className="flex flex-col items-center gap-2">
-                      <div
-                        className="w-13 h-[52px] rounded-full border-2"
-                        style={{
-                          background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))`,
-                          borderColor: "var(--event-primary)",
-                        }}
-                      />
-                      <span className="text-xs text-foreground/60">{friend.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Host Reputation Card - only show rating/reviews when API has data */}
-            <HostReputation
-              host={{
-                name: event.organizer.name,
-                handle: event.organizer.identifier,
-                initials: event.organizer.initials,
-                eventsHosted: event.organizer.eventCount,
-                rating: reviewStats?.averageRating,
-                reviewCount: reviewStats?.totalReviews,
-                badges: event.organizer.eventCount > 10 ? ["trusted-host", "veteran"] : event.organizer.eventCount > 5 ? ["trusted-host"] : ["rising-star"],
-              }}
-              variant="compact"
-            />
-          </aside>
+          <EventSidebar event={event} stats={stats} reviewStats={reviewStats} />
         </div>
       </div>
     </EventThemeWrapper>

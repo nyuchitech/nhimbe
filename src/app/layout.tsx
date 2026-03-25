@@ -10,6 +10,7 @@ import { StytchProvider } from "@/components/auth/stytch-provider";
 import { ErrorBoundary } from "@/components/error/error-boundary";
 import { WidgetErrorBoundary } from "@/components/error/widget-error-boundary";
 import { LiveRegionProvider } from "@/components/ui/live-region";
+import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -183,6 +184,7 @@ export default function RootLayout({
           </StytchProvider>
         </ErrorBoundary>
         <Analytics />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

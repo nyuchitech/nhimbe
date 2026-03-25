@@ -2,6 +2,9 @@
 
 import { Ticket } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { BottomSheetModal } from "./bottom-sheet-modal";
 
 interface TicketingModalProps {
@@ -37,8 +40,8 @@ export function TicketingModal({
         {/* External Ticket URL (shown for paid events) */}
         {!isFree && (
           <div>
-            <label className="block text-sm text-text-secondary mb-2">External Ticket URL</label>
-            <input
+            <Label className="block text-sm text-text-secondary mb-2">External Ticket URL</Label>
+            <Input
               type="url"
               value={ticketUrl}
               onChange={(e) => setTicketUrl(e.target.value)}
@@ -59,12 +62,12 @@ export function TicketingModal({
           </div>
         )}
 
-        <button
+        <Button
           onClick={onClose}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
         >
           Done
-        </button>
+        </Button>
       </div>
     </BottomSheetModal>
   );

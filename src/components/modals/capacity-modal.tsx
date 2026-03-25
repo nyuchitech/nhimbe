@@ -1,5 +1,8 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { BottomSheetModal } from "./bottom-sheet-modal";
 
 interface CapacityModalProps {
@@ -19,8 +22,8 @@ export function CapacityModal({
     <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Capacity">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-text-secondary mb-2">Maximum Attendees</label>
-          <input
+          <Label className="block text-sm text-text-secondary mb-2">Maximum Attendees</Label>
+          <Input
             type="number"
             value={capacity || ""}
             onChange={(e) => setCapacity(e.target.value ? Number(e.target.value) : null)}
@@ -30,12 +33,12 @@ export function CapacityModal({
           />
         </div>
         <p className="text-sm text-text-tertiary">Leave empty for unlimited capacity</p>
-        <button
+        <Button
           onClick={onClose}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
         >
           Done
-        </button>
+        </Button>
       </div>
     </BottomSheetModal>
   );

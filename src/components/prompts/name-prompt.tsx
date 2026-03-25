@@ -6,6 +6,8 @@ import { useAuth } from "@/components/auth/auth-context";
 import { updateProfile } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface NamePromptProps {
   onComplete: () => void;
@@ -45,11 +47,11 @@ export function NamePrompt({ onComplete }: NamePromptProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <label className="text-sm font-medium text-text-secondary">
+      <Label className="text-sm font-medium text-text-secondary">
         What&apos;s your name?
-      </label>
+      </Label>
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -58,7 +60,7 @@ export function NamePrompt({ onComplete }: NamePromptProps) {
           autoFocus
           disabled={loading}
         />
-        <Button type="submit" variant="primary" disabled={loading || name.trim().length < 2}>
+        <Button type="submit" variant="default" disabled={loading || name.trim().length < 2}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continue"}
         </Button>
       </div>

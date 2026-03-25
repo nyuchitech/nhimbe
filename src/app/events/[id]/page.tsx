@@ -108,7 +108,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     name: event.name,
     description: event.description,
     startDate: event.startDate,
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus: `https://schema.org/${event.eventStatus || "EventScheduled"}`,
     eventAttendanceMode: event.eventAttendanceMode === 'OnlineEventAttendanceMode'
       ? "https://schema.org/OnlineEventAttendanceMode"
       : "https://schema.org/OfflineEventAttendanceMode",

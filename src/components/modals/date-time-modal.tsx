@@ -1,5 +1,8 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { BottomSheetModal } from "./bottom-sheet-modal";
 
 interface DateTimeModalProps {
@@ -27,8 +30,8 @@ export function DateTimeModal({
     <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Date & Time">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-text-secondary mb-2">Date</label>
-          <input
+          <Label className="block text-sm text-text-secondary mb-2">Date</Label>
+          <Input
             type="date"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
@@ -37,8 +40,8 @@ export function DateTimeModal({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-text-secondary mb-2">Start Time</label>
-            <input
+            <Label className="block text-sm text-text-secondary mb-2">Start Time</Label>
+            <Input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
@@ -46,8 +49,8 @@ export function DateTimeModal({
             />
           </div>
           <div>
-            <label className="block text-sm text-text-secondary mb-2">End Time</label>
-            <input
+            <Label className="block text-sm text-text-secondary mb-2">End Time</Label>
+            <Input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
@@ -55,12 +58,12 @@ export function DateTimeModal({
             />
           </div>
         </div>
-        <button
+        <Button
           onClick={onClose}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
         >
           Done
-        </button>
+        </Button>
       </div>
     </BottomSheetModal>
   );

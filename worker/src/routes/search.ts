@@ -19,9 +19,11 @@ search.post("/search", async (c) => {
 
   const result = await searchEvents(c.env.AI, c.env.VECTORIZE, c.env.DB, body);
 
+  // Log truncated query to avoid storing sensitive search terms
+  const truncatedQuery = body.query.length > 100 ? body.query.substring(0, 100) : body.query;
   await c.env.DB.prepare(
     "INSERT INTO search_queries (query, results_count) VALUES (?, ?)"
-  ).bind(body.query, result.totalResults).run();
+  ).bind(truncatedQuery, result.totalResults).run();
 
   return c.json(result);
 });

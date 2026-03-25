@@ -6,6 +6,8 @@ import { useStytch } from "@stytch/nextjs";
 import { useAuth } from "@/components/auth/auth-context";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getCities, getCategories, updateProfile, type Category } from "@/lib/api";
 import {
   ArrowLeft,
@@ -123,10 +125,10 @@ function ProfileEditContent() {
 
       {/* Name */}
       <div className="bg-surface rounded-xl p-4 mb-6">
-        <label htmlFor="name" className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        <Label htmlFor="name" className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
           Name
-        </label>
-        <input
+        </Label>
+        <Input
           id="name"
           type="text"
           value={name}
@@ -141,17 +143,18 @@ function ProfileEditContent() {
 
       {/* City */}
       <div className="bg-surface rounded-xl p-4 mb-6">
-        <label className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        <Label className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
           Location
-        </label>
+        </Label>
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {cities.map((loc) => {
             const isSelected = city === loc.city && country === loc.country;
             return (
-              <button
+              <Button
                 key={`${loc.city}-${loc.country}`}
+                variant="ghost"
                 onClick={() => selectCity(loc.city, loc.country)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors h-auto ${
                   isSelected
                     ? "bg-primary/20 border border-primary"
                     : "bg-elevated border border-elevated hover:border-primary/50"
@@ -165,7 +168,7 @@ function ProfileEditContent() {
                   </div>
                 </div>
                 {isSelected && <Check className="w-5 h-5 text-primary" />}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -173,9 +176,9 @@ function ProfileEditContent() {
 
       {/* Interests */}
       <div className="bg-surface rounded-xl p-4 mb-6">
-        <label className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+        <Label className="block text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-3">
           Interests
-        </label>
+        </Label>
         <p className="text-sm text-text-secondary mb-4">
           Select categories that interest you to personalize your experience.
         </p>
@@ -184,8 +187,10 @@ function ProfileEditContent() {
             <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">{group}</p>
             <div className="flex flex-wrap gap-2">
               {cats.map((category) => (
-                <button
+                <Button
                   key={category.id}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => toggleInterest(category.id)}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                     interests.includes(category.id)
@@ -194,7 +199,7 @@ function ProfileEditContent() {
                   }`}
                 >
                   {category.name}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

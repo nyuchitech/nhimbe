@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TrendingUp, Users, MapPin, Clock, Flame, Loader2 } from "lucide-react";
+import { StatsCard } from "@/components/ui/stats-card";
 import { getCommunityStats, type CommunityStats } from "@/lib/api";
 
 interface TrendingCategory {
@@ -102,20 +103,18 @@ export function CommunityInsights({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-elevated rounded-xl p-4">
-          <div className="flex items-center gap-2 text-text-secondary mb-1">
-            <Flame className="w-4 h-4 text-accent" />
-            <span className="text-xs">Active Events</span>
-          </div>
-          <div className="text-2xl font-bold">{totalEvents}</div>
-        </div>
-        <div className="bg-elevated rounded-xl p-4">
-          <div className="flex items-center gap-2 text-text-secondary mb-1">
-            <Users className="w-4 h-4 text-primary" />
-            <span className="text-xs">Community</span>
-          </div>
-          <div className="text-2xl font-bold">{totalAttendees.toLocaleString()}</div>
-        </div>
+        <StatsCard
+          label="Active Events"
+          value={totalEvents}
+          icon={<Flame className="w-4 h-4" />}
+          className="bg-elevated border-0"
+        />
+        <StatsCard
+          label="Community"
+          value={totalAttendees.toLocaleString()}
+          icon={<Users className="w-4 h-4" />}
+          className="bg-elevated border-0"
+        />
       </div>
 
       {/* Trending Categories */}
