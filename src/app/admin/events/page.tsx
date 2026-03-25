@@ -153,7 +153,8 @@ export default function EventsPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 bg-surface border border-elevated rounded-lg text-foreground"
+              className="px-4 py-2 bg-surface border border-elevated rounded-lg text-foreground min-h-11"
+              aria-label="Filter by status"
             >
               <option value="all">All Status</option>
               <option value="upcoming">Upcoming</option>
@@ -246,16 +247,18 @@ export default function EventsPage() {
                           </span>
                         </td>
                         <td className="py-3 relative">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() =>
                               setActionMenuOpen(
                                 actionMenuOpen === event.id ? null : event.id
                               )
                             }
-                            className="p-2 hover:bg-elevated rounded-lg"
+                            className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0"
                           >
                             <MoreVertical className="w-4 h-4" />
-                          </button>
+                          </Button>
                           {actionMenuOpen === event.id && (
                             <>
                               <div
@@ -277,13 +280,14 @@ export default function EventsPage() {
                                   <ExternalLink className="w-4 h-4" />
                                   Manage Event
                                 </Link>
-                                <button
+                                <Button
+                                  variant="ghost"
                                   onClick={() => setDeleteConfirm(event)}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated"
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated rounded-none justify-start h-auto"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                   Delete Event
-                                </button>
+                                </Button>
                               </div>
                             </>
                           )}

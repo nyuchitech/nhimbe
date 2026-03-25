@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Search, MapPin, Clock, ArrowRight, Loader2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 
 export default function SearchPage() {
@@ -70,7 +72,7 @@ export default function SearchPage() {
       {/* Search Input */}
       <div className="relative mb-8">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-text-tertiary" />
-        <input
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -84,12 +86,14 @@ export default function SearchPage() {
           className="w-full pl-14 pr-12 py-4 bg-surface rounded-2xl border-none outline-none text-lg text-foreground placeholder:text-text-tertiary focus:ring-2 focus:ring-primary/50"
         />
         {searchQuery && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSearchQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-text-tertiary hover:text-foreground transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-text-tertiary hover:text-foreground transition-colors h-auto min-h-0"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -161,22 +165,25 @@ export default function SearchPage() {
                 <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wider">
                   Recent Searches
                 </h2>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={clearRecentSearches}
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-primary hover:underline h-auto min-h-0 p-0"
                 >
                   Clear
-                </button>
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {recentSearches.map((search) => (
-                  <button
+                  <Button
                     key={search}
+                    variant="ghost"
                     onClick={() => setSearchQuery(search)}
                     className="px-4 py-2 bg-surface rounded-full text-sm hover:bg-elevated transition-colors"
                   >
                     {search}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

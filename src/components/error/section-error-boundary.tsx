@@ -2,6 +2,7 @@
 
 import { Component, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { trackError } from "@/lib/observability";
 
 interface Props {
@@ -54,6 +55,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
 
       return (
         <div
+          role="alert"
           className={`p-6 rounded-xl bg-surface border border-elevated text-center ${this.props.className || ""}`}
           data-slot="section-error-boundary"
         >
@@ -64,14 +66,10 @@ export class SectionErrorBoundary extends Component<Props, State> {
           <p className="text-xs text-text-secondary mb-4">
             Something went wrong in this section.
           </p>
-          <button
-            onClick={this.handleRetry}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg
-                       bg-elevated hover:bg-hover text-text-primary transition-colors"
-          >
+          <Button variant="outline" size="sm" onClick={this.handleRetry}>
             <RefreshCw className="w-4 h-4" />
             Try again
-          </button>
+          </Button>
         </div>
       );
     }

@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CityDropdown } from "@/components/ui/city-dropdown";
+import { Button } from "@/components/ui/button";
 
 const CommunityInsightsCompact = dynamic(
   () => import("@/components/ui/community-insights").then(m => ({ default: m.CommunityInsightsCompact })),
@@ -251,7 +252,9 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
 
           {/* Category Pills */}
           <div className="flex gap-2 flex-wrap mb-8">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setActiveCategory("All")}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === "All"
@@ -260,10 +263,12 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
               }`}
             >
               All
-            </button>
+            </Button>
             {categories.map((category) => (
-              <button
+              <Button
                 key={category.id}
+                variant="ghost"
+                size="sm"
                 onClick={() => setActiveCategory(category.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === category.id
@@ -272,7 +277,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
                 }`}
               >
                 {category.name}
-              </button>
+              </Button>
             ))}
           </div>
 

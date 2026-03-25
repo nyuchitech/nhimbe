@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { writeAuth } from "../middleware/auth";
+import { getAuthenticatedUser } from "../auth/stytch";
 import { validateRequiredFields } from "../utils/validation";
 import { generateId } from "../utils/ids";
 
@@ -113,10 +114,11 @@ registrations.put("/:id", async (c) => {
     return c.json({ error: "Registration not found" }, 404);
   }
 
-  if (body.user_id) {
-    const requestingUser = body.user_id;
-    const isHost = reg.organizer_identifier === requestingUser ||
-                   reg.organizer_name?.toLowerCase() === requestingUser.toLowerCase();
+  // Extract user identity from JWT — never trust body.user_id for authorization
+  const authResult = await getAuthenticatedUser(c.req.raw, c.env);
+  if (authResult.user) {
+    const requestingUser = authResult.user.userId;
+    const isHost = reg.organizer_identifier === requestingUser;
     const isRegistrant = reg.user_id === requestingUser;
 
     if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {

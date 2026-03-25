@@ -1,6 +1,8 @@
 "use client";
 
 import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { BottomSheetModal } from "./bottom-sheet-modal";
 
 interface DescriptionModalProps {
@@ -33,7 +35,7 @@ export function DescriptionModal({
         />
       </div>
       <div className="space-y-4">
-        <textarea
+        <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe your event..."
@@ -43,12 +45,12 @@ export function DescriptionModal({
         <p className="text-xs text-text-tertiary">
           Tip: Click &quot;Ask Shamwari&quot; to let our AI friend help write your description
         </p>
-        <button
+        <Button
           onClick={onClose}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
         >
           Done
-        </button>
+        </Button>
       </div>
     </BottomSheetModal>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, ArrowRight, ArrowLeft, Loader2, RefreshCw, Check, X } from "lucide-react";
 import { Button } from "./button";
+import { Textarea } from "./textarea";
 import {
   generateEventDescription,
   regenerateEventDescription,
@@ -164,9 +165,9 @@ export function AIDescriptionWizard({
                   <p className="text-sm text-text-secondary">Your AI friend created this for you</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-elevated rounded-lg">
+              <Button variant="ghost" size="sm" onClick={onClose} className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0">
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -197,7 +198,7 @@ export function AIDescriptionWizard({
             {/* Regenerate input */}
             {showRegenerateInput && (
               <div className="space-y-3">
-                <textarea
+                <Textarea
                   value={regenerateFeedback}
                   onChange={(e) => setRegenerateFeedback(e.target.value)}
                   placeholder="Tell me what you'd like to change... (e.g., make it shorter, more formal, add more details about networking)"
@@ -283,9 +284,9 @@ export function AIDescriptionWizard({
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-elevated rounded-lg">
+            <Button variant="ghost" size="sm" onClick={onClose} className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0">
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           {/* Progress bar */}
@@ -306,7 +307,7 @@ export function AIDescriptionWizard({
             )}
           </div>
 
-          <textarea
+          <Textarea
             value={answers[step.key] || ""}
             onChange={(e) => setAnswers((prev) => ({ ...prev, [step.key]: e.target.value }))}
             placeholder={step.placeholder}
@@ -387,14 +388,16 @@ export function AIDescriptionBadge({
 
   return (
     <>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setShowWizard(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-medium transition-colors border border-primary/20"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-medium transition-colors border border-primary/20 h-auto min-h-0"
         title="Ask Shamwari to help write your description"
       >
         <Sparkles className="w-3.5 h-3.5" />
         Ask Shamwari
-      </button>
+      </Button>
 
       {showWizard && (
         <AIDescriptionWizard

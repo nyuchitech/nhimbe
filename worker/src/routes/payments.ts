@@ -20,6 +20,10 @@ payments.post("/create", writeAuth, async (c) => {
     return c.json({ error: "registrationId, eventId, amount, and returnUrl are required" }, 400);
   }
 
+  if (typeof body.amount !== "number" || body.amount <= 0 || body.amount > 1000000) {
+    return c.json({ error: "Invalid amount" }, 400);
+  }
+
   // Verify the registration exists
   const registration = await c.env.DB.prepare(
     "SELECT id, user_id FROM registrations WHERE id = ? AND event_id = ?"
@@ -47,9 +51,13 @@ payments.post("/create", writeAuth, async (c) => {
   ).run();
 
   // Attempt to create payment with provider
+  if (!c.env.PAYNOW_INTEGRATION_ID || !c.env.PAYNOW_INTEGRATION_KEY) {
+    return c.json({ error: "Payment provider not configured" }, 500);
+  }
+
   const provider = new PaynowProvider(
-    c.env.PAYNOW_INTEGRATION_ID || "",
-    c.env.PAYNOW_INTEGRATION_KEY || ""
+    c.env.PAYNOW_INTEGRATION_ID,
+    c.env.PAYNOW_INTEGRATION_KEY
   );
 
   const result = await provider.createPayment({
@@ -89,15 +97,20 @@ payments.post("/webhook", async (c) => {
     return c.json({ error: "Invalid webhook payload" }, 400);
   }
 
-  const statusUpdate = result.status === "completed"
-    ? "status = 'completed', completed_at = datetime('now')"
-    : result.status === "refunded"
-    ? "status = 'refunded', refunded_at = datetime('now')"
-    : `status = '${result.status}'`;
+  // Whitelist valid statuses to prevent SQL injection
+  const VALID_STATUSES = ["completed", "refunded", "pending", "failed", "cancelled"];
+  if (!VALID_STATUSES.includes(result.status)) {
+    return c.json({ error: "Invalid payment status" }, 400);
+  }
+
+  // Parameterized update with conditional timestamp
+  const timestampCol = result.status === "completed" ? ", completed_at = datetime('now')"
+    : result.status === "refunded" ? ", refunded_at = datetime('now')"
+    : "";
 
   await c.env.DB.prepare(
-    `UPDATE payments SET ${statusUpdate} WHERE id = ? OR provider_reference = ?`
-  ).bind(result.reference, result.reference).run();
+    `UPDATE payments SET status = ?${timestampCol} WHERE id = ? OR provider_reference = ?`
+  ).bind(result.status, result.reference, result.reference).run();
 
   return c.json({ received: true });
 });

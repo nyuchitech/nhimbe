@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { EventsClient } from "./events-client";
 import type { Event, Category } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "Browse Events",
+  description: "Discover community events near you — concerts, meetups, workshops, and more on nhimbe.",
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://events-api.mukoko.com";
 

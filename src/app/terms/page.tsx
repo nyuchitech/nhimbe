@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "nhimbe terms and conditions for using our community events platform.",
+};
+
 export default function TermsPage() {
   return (
     <div className="max-w-200 mx-auto px-6 py-12">

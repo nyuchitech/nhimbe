@@ -113,10 +113,11 @@ function MyEventsContent() {
       {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-elevated">
         {tabs.map((tab) => (
-          <button
+          <Button
             key={tab.id}
+            variant="ghost"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors rounded-none h-auto ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-text-secondary hover:text-foreground"
@@ -131,7 +132,7 @@ function MyEventsContent() {
             }`}>
               {tab.count}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
 

@@ -13,6 +13,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface FAQItem {
   question: string;
@@ -142,7 +143,7 @@ export default function HelpPage() {
         {/* Search */}
         <div className="relative max-w-md mx-auto">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
-          <input
+          <Input
             type="text"
             placeholder="Search for help..."
             value={searchQuery}
@@ -189,9 +190,10 @@ export default function HelpPage() {
                     key={itemIndex}
                     className="bg-surface rounded-xl border border-elevated overflow-hidden"
                   >
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => toggleItem(categoryIndex, itemIndex)}
-                      className="w-full flex items-center justify-between p-4 text-left"
+                      className="w-full flex items-center justify-between p-4 text-left rounded-none h-auto"
                     >
                       <span className="font-medium text-foreground">
                         {item.question}
@@ -201,7 +203,7 @@ export default function HelpPage() {
                           isOpen ? "rotate-180" : ""
                         }`}
                       />
-                    </button>
+                    </Button>
                     {isOpen && (
                       <div className="px-4 pb-4">
                         <p className="text-text-secondary">{item.answer}</p>

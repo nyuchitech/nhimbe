@@ -273,7 +273,8 @@ export default function SupportPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 bg-surface border border-elevated rounded-lg text-foreground"
+              className="px-4 py-2 bg-surface border border-elevated rounded-lg text-foreground min-h-11"
+              aria-label="Filter by status"
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -403,12 +404,14 @@ export default function SupportPage() {
                   </div>
                   <h2 className="text-xl font-bold">{selectedTicket.subject}</h2>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSelectedTicket(null)}
-                  className="p-2 hover:bg-elevated rounded-lg"
+                  className="p-2 hover:bg-elevated rounded-lg h-auto min-h-0"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
 
               {/* User Info */}

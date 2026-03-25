@@ -6,6 +6,7 @@ import { dbRowToEvent } from "../utils/db";
 import { writeAuth } from "../middleware/auth";
 import { indexEvent, removeEventFromIndex } from "../ai/embeddings";
 import { toCsv } from "../utils/export";
+import { logAudit } from "../utils/audit";
 
 export const events = new Hono<{ Bindings: Env }>();
 
@@ -252,6 +253,8 @@ events.post("/:id/cancel", async (c) => {
     "UPDATE events SET event_status = 'EventCancelled', date_modified = datetime('now') WHERE _id = ?"
   ).bind(eventId).run();
 
+  await logAudit(c.env, { action: "event.cancelled", resourceType: "event", resourceId: eventId });
+
   return c.json({ eventId, eventStatus: "EventCancelled", message: "Event cancelled successfully" });
 });
 
@@ -261,6 +264,7 @@ events.delete("/:id", async (c) => {
 
   await c.env.DB.prepare("DELETE FROM events WHERE _id = ?").bind(eventId).run();
   await removeEventFromIndex(c.env.VECTORIZE, eventId);
+  await logAudit(c.env, { action: "event.deleted", resourceType: "event", resourceId: eventId });
 
   return c.json({ message: "Event deleted successfully" });
 });

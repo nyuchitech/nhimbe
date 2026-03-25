@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Search, Loader2, SlidersHorizontal, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { CategoryChip } from "@/components/ui/category-chip";
 import { EventCard } from "@/components/ui/event-card";
 import { CityDropdown } from "@/components/ui/city-dropdown";
@@ -101,7 +103,7 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
       {/* Search Bar */}
       <div className="relative mb-6">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
-        <input
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -109,12 +111,14 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
           className="w-full pl-12 pr-4 py-3.5 bg-surface rounded-xl border-none outline-none text-foreground placeholder:text-text-tertiary focus:ring-2 focus:ring-primary/50"
         />
         {searchQuery && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSearchQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-foreground"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-foreground h-auto min-h-0 p-1"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -136,7 +140,8 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
         />
 
         {/* Filter Toggle (Mobile) */}
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setShowFilters(!showFilters)}
           className="md:hidden flex items-center gap-2 px-4 py-2.5 bg-surface rounded-xl text-sm font-medium hover:bg-elevated transition-colors"
         >
@@ -147,16 +152,18 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
               {activeFiltersCount}
             </span>
           )}
-        </button>
+        </Button>
 
         {/* Clear Filters */}
         {activeFiltersCount > 0 && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={clearFilters}
-            className="text-sm text-primary font-medium hover:underline"
+            className="text-sm text-primary font-medium hover:underline h-auto min-h-0 p-0"
           >
             Clear all
-          </button>
+          </Button>
         )}
       </div>
 
@@ -218,12 +225,13 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
           <p className="text-text-secondary mb-6">
             Try adjusting your filters or search terms
           </p>
-          <button
+          <Button
+            variant="ghost"
             onClick={clearFilters}
             className="text-primary font-medium hover:underline"
           >
             Clear all filters
-          </button>
+          </Button>
         </div>
       )}
     </div>

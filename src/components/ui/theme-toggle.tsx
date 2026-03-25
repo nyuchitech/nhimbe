@@ -2,6 +2,7 @@
 
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { theme, cycleTheme } = useTheme();
@@ -29,13 +30,15 @@ export function ThemeToggle() {
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={cycleTheme}
       aria-label={getLabel()}
       title={getLabel()}
       className="flex items-center justify-center w-11 h-11 rounded-full bg-surface border border-elevated text-foreground hover:bg-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {getIcon()}
-    </button>
+    </Button>
   );
 }

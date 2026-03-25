@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { Users, Heart, Globe, Sparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "Learn about nhimbe — a community events discovery and management platform connecting people across Africa.",
+};
 
 export default function AboutPage() {
   const values = [

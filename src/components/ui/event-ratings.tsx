@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
 import { Rating } from "@/components/ui/rating";
+import { Button } from "@/components/ui/button";
 import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
 
 interface Review {
@@ -137,10 +138,10 @@ export function EventRatings({
         <div className="text-center py-8">
           <p className="text-text-secondary mb-4">No reviews yet. Be the first to share your experience!</p>
           {userCanReview && isPastEvent && (
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity mx-auto">
+            <Button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity mx-auto">
               <Star className="w-4 h-4" />
               Write a Review
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -211,9 +212,11 @@ export function EventRatings({
               </div>
             </div>
             <p className="text-sm text-text-secondary mb-3">{review.comment}</p>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleHelpful(review.id)}
-              className={`flex items-center gap-1 text-xs transition-colors ${
+              className={`flex items-center gap-1 text-xs transition-colors p-0 h-auto min-h-0 ${
                 helpfulClicked.has(review.id)
                   ? "text-primary"
                   : "text-text-tertiary hover:text-text-secondary"
@@ -223,7 +226,7 @@ export function EventRatings({
               <span>
                 Helpful ({review.helpful + (helpfulClicked.has(review.id) ? 1 : 0)})
               </span>
-            </button>
+            </Button>
           </div>
         ))}
       </div>
@@ -231,18 +234,20 @@ export function EventRatings({
       {/* Show More / Write Review */}
       <div className="mt-4 flex items-center justify-between">
         {reviews.length > 3 && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowAllReviews(!showAllReviews)}
-            className="text-sm text-primary font-medium hover:underline"
+            className="text-sm text-primary font-medium hover:underline p-0 h-auto min-h-0"
           >
             {showAllReviews ? "Show less" : `View all ${reviews.length} reviews`}
-          </button>
+          </Button>
         )}
         {userCanReview && isPastEvent && (
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
+          <Button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
             <Star className="w-4 h-4" />
             Write a Review
-          </button>
+          </Button>
         )}
       </div>
 
