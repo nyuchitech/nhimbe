@@ -86,7 +86,7 @@ export function InterestsPrompt() {
         ))}
       </div>
       <Button
-        variant="primary"
+        variant="default"
         onClick={handleSave}
         disabled={selected.length === 0 || loading}
       >

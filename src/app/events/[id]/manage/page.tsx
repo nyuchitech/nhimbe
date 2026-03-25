@@ -155,7 +155,7 @@ function ManageEventContent() {
       <div className="max-w-200 mx-auto px-6 py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Event not found</h1>
         <Link href="/my-events">
-          <Button variant="primary">Back to My Events</Button>
+          <Button variant="default">Back to My Events</Button>
         </Link>
       </div>
     );
@@ -178,7 +178,7 @@ function ManageEventContent() {
             <Button variant="secondary">View Event</Button>
           </Link>
           <Link href="/my-events">
-            <Button variant="primary">My Events</Button>
+            <Button variant="default">My Events</Button>
           </Link>
         </div>
       </div>
@@ -320,13 +320,14 @@ function ManageEventContent() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="guests" badge={
-            stats.pending > 0 ? (
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-accent text-background">
+          <TabsTrigger value="guests">
+            Guests
+            {stats.pending > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-accent text-background">
                 {stats.pending}
               </span>
-            ) : undefined
-          }>Guests</TabsTrigger>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="registration">Registration</TabsTrigger>
           <TabsTrigger value="blasts">Blasts</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
@@ -337,7 +338,7 @@ function ManageEventContent() {
         <TabsContent value="overview" className="space-y-6">
           {/* Quick Actions Row */}
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" className="gap-2" onClick={() => {}}>
+            <Button variant="default" className="gap-2" onClick={() => {}}>
               <UserPlus className="w-4 h-4" />
               Invite Guests
             </Button>
@@ -502,13 +503,13 @@ function ManageEventContent() {
                 <div className="text-3xl font-bold">{stats.approved} <span className="text-lg font-normal text-text-secondary">Going</span></div>
                 <div className="text-text-secondary">cap <span className="font-bold text-foreground">{capacity}</span></div>
               </div>
-              <Progress value={capacityUsed} max={capacity} variant="primary" />
+              <Progress value={capacityUsed} max={capacity} />
             </CardContent>
           </Card>
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" className="gap-2">
+            <Button variant="default" className="gap-2">
               <UserPlus className="w-4 h-4" />
               Invite Guests
             </Button>
@@ -538,12 +539,13 @@ function ManageEventContent() {
             <CardContent className="space-y-4">
               {/* Search and Filter */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
+                <div className="flex-1 relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search guests..."
-                    icon={<Search className="w-4 h-4" />}
                     value={guestSearch}
                     onChange={(e) => setGuestSearch(e.target.value)}
+                    className="pl-9"
                   />
                 </div>
                 <div className="flex gap-2 overflow-x-auto">

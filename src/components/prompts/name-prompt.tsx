@@ -58,7 +58,7 @@ export function NamePrompt({ onComplete }: NamePromptProps) {
           autoFocus
           disabled={loading}
         />
-        <Button type="submit" variant="primary" disabled={loading || name.trim().length < 2}>
+        <Button type="submit" variant="default" disabled={loading || name.trim().length < 2}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continue"}
         </Button>
       </div>

@@ -152,14 +152,36 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 - Info: search, calendar, about, help, privacy, terms
 - Short links: `/e/[shortCode]`
 
+### UI Component Architecture (Mukoko Registry)
+
+**34 shadcn/Radix primitives** installed from the Mukoko registry (`registry.mukoko.com`). All components use `data-slot` attributes, CVA variants, and Radix primitives for accessibility.
+
+**Core primitives** (`src/components/ui/`): button, card, badge, input, dialog, drawer, tabs, select, dropdown-menu, separator, sheet, label, textarea, switch, toggle, scroll-area, skeleton, avatar, popover, tooltip, form, checkbox, radio-group, progress, calendar, sonner, spinner, collapsible, hover-card, navigation-menu, breadcrumb, pagination, table, toggle-group
+
+**Composite components**: responsive-modal (Drawer on mobile / Dialog on desktop), share-button, invite-friends, event-ratings, host-reputation, referral-leaderboard, AI description wizard, address-autocomplete, QR code, popularity-badge
+
+**Config**: `components.json` at root — shadcn new-york style, RSC, Tailwind v4, Lucide icons
+
 ### Components (`src/components/`)
-- `ui/` — Buttons, cards, badges, modals, AI wizard, address autocomplete, QR code, referral leaderboard, ratings, share button, invite friends
+- `ui/` — 34 shadcn primitives + domain-specific composites (ratings, reputation, referrals, AI wizard)
 - `auth/` — `auth-context.tsx`, `stytch-provider.tsx`, `auth-guard.tsx` + tests
-- `modals/` — Bottom sheets for category, date, location, capacity, description, ticketing
+- `modals/` — ResponsiveModal-based sheets for category, date, location, capacity, description, ticketing
 - `prompts/` — Onboarding: name, location, interests
 - `layout/` — Header, footer
 - `error/` — `section-error-boundary.tsx` (Mukoko 3-layer pattern)
 - `pwa/` — Service worker registration
+
+### Event Form Decomposition (`src/app/events/create/`)
+- `create-event-form.tsx` — Main form (~270 lines, down from 639)
+- `cover-image-upload.tsx` — Cover image upload with preview
+- `theme-selector.tsx` — Mineral theme picker with carousel
+- `event-options-card.tsx` — Ticketing, approval, capacity settings
+- `form-field-row.tsx` — Reusable field row component
+
+### Event Detail Decomposition (`src/app/events/[id]/`)
+- `event-detail-content.tsx` — Main layout (~200 lines, down from 512)
+- `event-cover.tsx` — Cover image with badges, stats overlay
+- `event-sidebar.tsx` — Ticket card, insights, QR code, friends, host reputation
 
 ### i18n (`src/lib/i18n/`)
 

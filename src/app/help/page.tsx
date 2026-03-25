@@ -224,7 +224,7 @@ export default function HelpPage() {
         <p className="text-text-secondary mb-6">
           Our support team is here to assist you with any questions
         </p>
-        <Button variant="primary">Contact Support</Button>
+        <Button variant="default">Contact Support</Button>
       </div>
     </div>
   );

@@ -361,7 +361,7 @@ export default function EventsPage() {
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 className="flex-1 bg-red-500 hover:bg-red-600"
                 onClick={() => handleDelete(deleteConfirm.id)}
               >

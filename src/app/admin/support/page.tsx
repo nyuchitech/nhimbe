@@ -476,7 +476,7 @@ export default function SupportPage() {
               <div className="flex gap-3 mb-4">
                 <Button
                   variant={
-                    selectedTicket.status === "open" ? "primary" : "secondary"
+                    selectedTicket.status === "open" ? "default" : "secondary"
                   }
                   size="default"
                   onClick={() => handleStatusChange(selectedTicket.id, "open")}
@@ -485,7 +485,7 @@ export default function SupportPage() {
                 </Button>
                 <Button
                   variant={
-                    selectedTicket.status === "pending" ? "primary" : "secondary"
+                    selectedTicket.status === "pending" ? "default" : "secondary"
                   }
                   size="default"
                   onClick={() =>
@@ -496,7 +496,7 @@ export default function SupportPage() {
                 </Button>
                 <Button
                   variant={
-                    selectedTicket.status === "resolved" ? "primary" : "secondary"
+                    selectedTicket.status === "resolved" ? "default" : "secondary"
                   }
                   size="default"
                   onClick={() =>
@@ -515,7 +515,7 @@ export default function SupportPage() {
                   className="flex-1 min-h-[80px]"
                 />
                 <Button
-                  variant="primary"
+                  variant="default"
                   disabled={!replyText.trim() || sending}
                   onClick={handleSendReply}
                   className="self-end"

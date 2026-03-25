@@ -75,7 +75,7 @@ export function LocationPrompt() {
         </select>
       </div>
       <Button
-        variant="primary"
+        variant="default"
         onClick={handleSave}
         disabled={!selected || loading}
       >

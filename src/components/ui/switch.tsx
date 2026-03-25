@@ -1,75 +1,35 @@
-"use client";
+"use client"
 
-import { forwardRef, InputHTMLAttributes } from "react";
+import * as React from "react"
+import { Switch as SwitchPrimitive } from "radix-ui"
 
-interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "onChange" | "size"> {
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  switchSize?: "default" | "sm" | "lg";
+import { cn } from "@/lib/utils"
+
+function Switch({
+  className,
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  size?: "sm" | "default"
+}) {
+  return (
+    <SwitchPrimitive.Root
+      data-slot="switch"
+      data-size={size}
+      className={cn(
+        "peer group/switch inline-flex shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-[1.15rem] data-[size=default]:w-8 data-[size=sm]:h-3.5 data-[size=sm]:w-6 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-input/80",
+        className
+      )}
+      {...props}
+    >
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
+        className={cn(
+          "pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0 dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-foreground"
+        )}
+      />
+    </SwitchPrimitive.Root>
+  )
 }
 
-export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
-  ({ checked = false, onCheckedChange, switchSize = "default", className = "", disabled, ...props }, ref) => {
-    const sizes = {
-      sm: {
-        track: "w-9 h-5",
-        thumb: "w-4 h-4",
-        translate: "translate-x-4",
-      },
-      default: {
-        track: "w-11 h-6",
-        thumb: "w-5 h-5",
-        translate: "translate-x-5",
-      },
-      lg: {
-        track: "w-14 h-7",
-        thumb: "w-6 h-6",
-        translate: "translate-x-7",
-      },
-    };
-
-    const { track, thumb, translate } = sizes[switchSize];
-
-    return (
-      <label
-        className={`relative inline-flex items-center cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
-      >
-        <input
-          ref={ref}
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onCheckedChange?.(e.target.checked)}
-          disabled={disabled}
-          className="sr-only peer"
-          {...props}
-        />
-        <div
-          className={`
-            ${track}
-            rounded-full
-            transition-colors duration-200
-            ${checked ? "bg-primary" : "bg-elevated"}
-            peer-focus-visible:ring-2
-            peer-focus-visible:ring-primary
-            peer-focus-visible:ring-offset-2
-            peer-focus-visible:ring-offset-background
-          `}
-        >
-          <div
-            className={`
-              ${thumb}
-              absolute top-0.5 left-0.5
-              bg-white
-              rounded-full
-              shadow-sm
-              transition-transform duration-200
-              ${checked ? translate : "translate-x-0"}
-            `}
-          />
-        </div>
-      </label>
-    );
-  }
-);
-
-Switch.displayName = "Switch";
+export { Switch }
