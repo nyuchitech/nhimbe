@@ -158,6 +158,8 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 
 **Core primitives** (`src/components/ui/`): button, card, badge, input, dialog, drawer, tabs, select, dropdown-menu, separator, sheet, label, textarea, switch, toggle, scroll-area, skeleton, avatar, popover, tooltip, form, checkbox, radio-group, progress, calendar, sonner, spinner, collapsible, hover-card, navigation-menu, breadcrumb, pagination, table, toggle-group
 
+**Mukoko-exclusive components** (`src/components/ui/`): rating (interactive star rating with mineral gold accent), stats-card (metric display with trend indicators), filter-bar (horizontal chip filter with single/multi mode), status-indicator (status dot with pulse animation), timeline (composable vertical timeline with mineral dot colors), copy-button (clipboard with copied state), file-upload (drag-and-drop with validation), share-dialog (WhatsApp/X/Email sharing modal), lazy-section (TikTok-style FIFO mount queue with IntersectionObserver), detail-layout (shared detail page layout with hero/sidebar/back nav)
+
 **Composite components**: responsive-modal (Drawer on mobile / Dialog on desktop), share-button, invite-friends, event-ratings, host-reputation, referral-leaderboard, AI description wizard, address-autocomplete, QR code, popularity-badge
 
 **Config**: `components.json` at root — shadcn new-york style, RSC, Tailwind v4, Lucide icons
