@@ -1,7 +1,7 @@
 /**
  * Tests for previously untested route modules:
  * categories, checkin, health, media, payments, referrals,
- * reviews, seed, series, waitlist
+ * reviews, series, waitlist
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ExecutionContext } from '@cloudflare/workers-types';
@@ -13,7 +13,6 @@ import {
   createMockD1Statement,
   createMockR2,
   createRequest,
-  createApiKeyRequest,
 } from './mocks';
 
 let env: Env;
@@ -78,14 +77,12 @@ describe('GET / (root status page)', () => {
 // Categories Routes
 // ============================================
 describe('GET /api/categories', () => {
-  it('returns hardcoded categories when DB table is empty', async () => {
+  it('returns empty array when DB table has no categories', async () => {
     const request = createRequest('http://localhost:8787/api/categories');
     const response = await worker.fetch(request, env, {} as ExecutionContext);
     expect(response.status).toBe(200);
     const data = await response.json() as { categories: Array<{ id: string; name: string }> };
-    expect(data.categories.length).toBeGreaterThan(0);
-    expect(data.categories[0]).toHaveProperty('id');
-    expect(data.categories[0]).toHaveProperty('name');
+    expect(data.categories).toEqual([]);
   });
 
   it('returns DB categories when available', async () => {
@@ -107,14 +104,30 @@ describe('GET /api/categories', () => {
 });
 
 describe('GET /api/cities', () => {
-  it('returns list of cities', async () => {
+  it('returns empty array when no events exist', async () => {
+    const request = createRequest('http://localhost:8787/api/cities');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+    const data = await response.json() as { cities: unknown[] };
+    expect(data.cities).toEqual([]);
+  });
+
+  it('returns cities from published events', async () => {
+    const dbCities = [
+      { city: 'Harare', country: 'Zimbabwe' },
+      { city: 'Cape Town', country: 'South Africa' },
+    ];
+    const statement = createMockD1Statement({
+      all: vi.fn().mockResolvedValue({ results: dbCities }),
+    });
+    const db = createMockD1({ prepare: vi.fn().mockReturnValue(statement) });
+    env = createMockEnv({ DB: db });
+
     const request = createRequest('http://localhost:8787/api/cities');
     const response = await worker.fetch(request, env, {} as ExecutionContext);
     expect(response.status).toBe(200);
     const data = await response.json() as { cities: Array<{ city: string; country: string }> };
-    expect(data.cities.length).toBeGreaterThan(0);
-    expect(data.cities[0]).toHaveProperty('city');
-    expect(data.cities[0]).toHaveProperty('country');
+    expect(data.cities).toEqual(dbCities);
   });
 });
 
@@ -441,32 +454,7 @@ describe('POST /api/reviews/:id/helpful', () => {
   });
 });
 
-// ============================================
-// Seed Routes
-// ============================================
-describe('POST /api/admin/seed', () => {
-  it('requires API key', async () => {
-    const request = createRequest(
-      'http://localhost:8787/api/admin/seed',
-      { method: 'POST' }
-    );
-    const response = await worker.fetch(request, env, {} as ExecutionContext);
-    expect(response.status).toBe(401);
-  });
-
-  it('accepts valid API key and attempts seeding', async () => {
-    // Seed route calls DB.prepare().bind().run() for each event
-    // With mocks, it may succeed or throw — we verify it passes auth
-    const request = createApiKeyRequest(
-      'http://localhost:8787/api/admin/seed',
-      'test-api-key-12345',
-      { method: 'POST' }
-    );
-    const response = await worker.fetch(request, env, {} as ExecutionContext);
-    // Should not be 401 (auth passed)
-    expect(response.status).not.toBe(401);
-  });
-});
+// Seed route has been removed — no hardcoded/mock events in production
 
 // ============================================
 // Series Routes

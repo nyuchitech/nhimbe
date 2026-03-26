@@ -15,7 +15,6 @@ export type AuditAction =
   | "registration.created"
   | "registration.cancelled"
   | "registration.status_changed"
-  | "admin.seed"
   | "admin.index_events";
 
 export async function logAudit(
