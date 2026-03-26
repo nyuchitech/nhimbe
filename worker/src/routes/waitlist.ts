@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../types";
 import { writeAuth } from "../middleware/auth";
+import { getAuthenticatedUser } from "../auth/stytch";
 import { generateId } from "../utils/ids";
 
 export const waitlist = new Hono<{ Bindings: Env }>();
@@ -81,16 +82,48 @@ waitlist.delete("/events/:eventId/waitlist", async (c) => {
   return c.json({ message: "Removed from waitlist" });
 });
 
-// GET /api/events/:eventId/waitlist — Get waitlist for event
+// GET /api/events/:eventId/waitlist — Get waitlist for event (requires auth)
 waitlist.get("/events/:eventId/waitlist", async (c) => {
+  const authResult = await getAuthenticatedUser(c.req.raw, c.env);
+  if (!authResult.user) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
   const eventId = c.req.param("eventId");
 
+  // Only return names (not emails) unless the requester is the event host
+  const event = await c.env.DB.prepare(
+    "SELECT organizer_identifier FROM events WHERE _id = ?"
+  ).bind(eventId).first() as { organizer_identifier: string } | null;
+
+  const isHost = event?.organizer_identifier === authResult.user.userId;
+
   const result = await c.env.DB.prepare(
-    "SELECT w.*, u.name as user_name, u.email as user_email FROM waitlists w LEFT JOIN users u ON w.user_id = u._id WHERE w.event_id = ? ORDER BY w.position ASC"
+    "SELECT w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name FROM waitlists w LEFT JOIN users u ON w.user_id = u._id WHERE w.event_id = ? ORDER BY w.position ASC"
   ).bind(eventId).all();
 
+  interface WaitlistRow {
+    id: string;
+    event_id: string;
+    user_id: string;
+    position: number;
+    created_at: string;
+    user_name: string | null;
+    user_email?: string;
+  }
+
+  const waitlistEntries = (result.results as WaitlistRow[]).map((row) => ({
+    id: row.id,
+    eventId: row.event_id,
+    userId: row.user_id,
+    position: row.position,
+    userName: row.user_name,
+    ...(isHost ? { userEmail: row.user_email } : {}),
+    createdAt: row.created_at,
+  }));
+
   return c.json({
-    waitlist: result.results,
-    total: result.results.length,
+    waitlist: waitlistEntries,
+    total: waitlistEntries.length,
   });
 });

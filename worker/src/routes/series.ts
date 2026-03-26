@@ -153,7 +153,7 @@ series.delete("/:id", async (c) => {
   // Cancel all future events in the series
   const now = new Date().toISOString();
   await c.env.DB.prepare(`
-    UPDATE events SET status = 'EventCancelled', updated_at = datetime('now')
+    UPDATE events SET event_status = 'EventCancelled', date_modified = datetime('now')
     WHERE series_id = ? AND start_date > ?
   `).bind(id, now).run();
 
@@ -176,12 +176,12 @@ series.get("/:id/events", async (c) => {
     title: string;
     start_date: string;
     end_date: string | null;
-    status: string;
+    event_status: string;
     series_index: number | null;
   }
 
   const { results } = await c.env.DB.prepare(`
-    SELECT _id, title, start_date, end_date, status, series_index
+    SELECT _id, title, start_date, end_date, event_status, series_index
     FROM events
     WHERE series_id = ?
     ORDER BY series_index ASC, start_date ASC
@@ -194,7 +194,7 @@ series.get("/:id/events", async (c) => {
       title: row.title,
       startDate: row.start_date,
       endDate: row.end_date,
-      status: row.status,
+      status: row.event_status,
       seriesIndex: row.series_index,
     })),
     pagination: { limit, offset, count: results.length },

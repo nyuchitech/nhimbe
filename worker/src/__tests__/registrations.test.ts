@@ -99,7 +99,11 @@ describe('POST /api/registrations', () => {
     const dupCheck = createMockD1Statement({
       first: vi.fn().mockResolvedValue(null),
     });
-    // Mock: insert + update attendee count
+    // Mock: atomic capacity update (returns changes: 1 to indicate success)
+    const capacityUpdate = createMockD1Statement({
+      run: vi.fn().mockResolvedValue({ results: [], success: true, meta: { duration: 0, changes: 1, last_row_id: 0, served_by: 'test' } }),
+    });
+    // Mock: insert registration
     const writeStatement = createMockD1Statement();
 
     const db = createMockD1();
@@ -108,7 +112,8 @@ describe('POST /api/registrations', () => {
       callCount++;
       if (callCount === 1) return eventLookup;   // event lookup
       if (callCount === 2) return dupCheck;       // duplicate check
-      return writeStatement;                       // insert + update
+      if (callCount === 3) return capacityUpdate; // atomic capacity update
+      return writeStatement;                       // insert registration
     });
     env = createMockEnv({ DB: db });
 

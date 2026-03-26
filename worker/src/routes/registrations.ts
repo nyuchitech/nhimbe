@@ -70,6 +70,20 @@ registrations.post("/", async (c) => {
 
   const id = generateId();
 
+  // Atomic capacity check + increment to prevent race conditions
+  // If event has a capacity limit, only increment if still under capacity
+  const capacityUpdate = event.maximum_attendee_capacity
+    ? await c.env.DB.prepare(
+        "UPDATE events SET attendee_count = attendee_count + 1 WHERE _id = ? AND attendee_count < ?"
+      ).bind(body.event_id, event.maximum_attendee_capacity).run()
+    : await c.env.DB.prepare(
+        "UPDATE events SET attendee_count = attendee_count + 1 WHERE _id = ?"
+      ).bind(body.event_id).run();
+
+  if (event.maximum_attendee_capacity && !capacityUpdate.meta.changes) {
+    return c.json({ error: "Event is at capacity" }, 400);
+  }
+
   await c.env.DB.prepare(`
     INSERT INTO registrations (id, event_id, user_id, ticket_type, ticket_price, ticket_currency)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -81,10 +95,6 @@ registrations.post("/", async (c) => {
     body.ticket_price || null,
     body.ticket_currency || null
   ).run();
-
-  await c.env.DB.prepare(
-    "UPDATE events SET attendee_count = attendee_count + 1 WHERE _id = ?"
-  ).bind(body.event_id).run();
 
   return c.json({ id, message: "Registration successful" }, 201);
 });

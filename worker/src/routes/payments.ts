@@ -115,8 +115,8 @@ payments.post("/webhook", async (c) => {
   return c.json({ received: true });
 });
 
-// GET /api/payments/:id/status — Check payment status
-payments.get("/:id/status", async (c) => {
+// GET /api/payments/:id/status — Check payment status (requires writeAuth)
+payments.get("/:id/status", writeAuth, async (c) => {
   const paymentId = c.req.param("id");
 
   const payment = await c.env.DB.prepare(

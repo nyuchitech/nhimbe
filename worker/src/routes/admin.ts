@@ -205,12 +205,29 @@ async function handleAdminUserAction(
     return c.json({ error: "Cannot modify your own account" }, 400);
   }
 
-  switch (action) {
-    case 'suspend':
-      return c.json({ message: "User suspended" });
+  // Verify target user exists
+  const targetUser = await c.env.DB.prepare(
+    "SELECT _id FROM users WHERE _id = ?"
+  ).bind(userId).first();
 
-    case 'activate':
+  if (!targetUser) {
+    return c.json({ error: "User not found" }, 404);
+  }
+
+  switch (action) {
+    case 'suspend': {
+      await c.env.DB.prepare(
+        "UPDATE users SET deleted_at = datetime('now'), date_modified = datetime('now') WHERE _id = ?"
+      ).bind(userId).run();
+      return c.json({ message: "User suspended" });
+    }
+
+    case 'activate': {
+      await c.env.DB.prepare(
+        "UPDATE users SET deleted_at = NULL, date_modified = datetime('now') WHERE _id = ?"
+      ).bind(userId).run();
       return c.json({ message: "User activated" });
+    }
 
     case 'role': {
       const body = await c.req.json() as { role?: string };
