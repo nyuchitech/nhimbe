@@ -16,7 +16,7 @@ const CommunityInsightsCompact = dynamic(
     loading: () => <Skeleton className="h-40 w-full rounded-xl" />,
   }
 );
-import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
+import { getEvents, getCategories, getCommunityStats, type Event, type Category, type CommunityStats } from "@/lib/api";
 import { getUserTimezone, getCurrentTimeWithTimezone, getWeather, type WeatherData } from "@/lib/timezone";
 
 // Weather icon component
@@ -33,8 +33,21 @@ function WeatherIcon({ icon }: { icon: string }) {
   }
 }
 
+// Format large numbers (e.g., 2800 -> "2.8K")
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
 // Community Stats Bar Component
-function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: number }) {
+function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: CommunityStats | null }) {
+  const topTrending = stats?.trendingCategories?.[0];
+  const trendingLabel = topTrending
+    ? `${topTrending.category} ${topTrending.change >= 0 ? "+" : ""}${topTrending.change}%`
+    : "—";
+  const peakTime = stats?.peakTime || "—";
+  const communitySize = stats ? formatCount(stats.totalAttendees) : "—";
+
   return (
     <div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-surface rounded-xl mb-6">
       <div className="flex items-center gap-2">
@@ -53,7 +66,7 @@ function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: nu
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Trending</div>
-          <div className="font-semibold text-green-400">Tech +23%</div>
+          <div className="font-semibold text-green-400">{trendingLabel}</div>
         </div>
       </div>
       <div className="h-8 w-px bg-elevated hidden sm:block" />
@@ -63,7 +76,7 @@ function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: nu
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Peak Time</div>
-          <div className="font-semibold">Wed 6-8pm</div>
+          <div className="font-semibold">{peakTime}</div>
         </div>
       </div>
       <div className="h-8 w-px bg-elevated hidden sm:block" />
@@ -73,7 +86,7 @@ function CommunityStatsBar({ city, eventCount }: { city?: string; eventCount: nu
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Community</div>
-          <div className="font-semibold">2.8K members</div>
+          <div className="font-semibold">{communitySize} attendees</div>
         </div>
       </div>
       <Link
@@ -100,6 +113,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
   const [detectedCity, setDetectedCity] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [communityStats, setCommunityStats] = useState<CommunityStats | null>(null);
 
   // Detect user location, timezone, and weather on mount
   useEffect(() => {
@@ -145,6 +159,13 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
     }
     fetchData();
   }, [initialEvents.length, activeCity, detectedCity]);
+
+  // Fetch community stats when city changes
+  useEffect(() => {
+    getCommunityStats(activeCity || undefined)
+      .then(setCommunityStats)
+      .catch(() => setCommunityStats(null));
+  }, [activeCity]);
 
   // Get unique cities from events
   const availableCities = useMemo(() => {
@@ -224,7 +245,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
       <section className="pb-16">
         <div className="max-w-300 mx-auto px-6">
           {/* Community Stats Bar - Open Data */}
-          <CommunityStatsBar city={activeCity || undefined} eventCount={filteredEvents.length} />
+          <CommunityStatsBar eventCount={filteredEvents.length} stats={communityStats} />
 
           {/* Section Header with City Selector */}
           <div className="flex items-start justify-between mb-8">
