@@ -36,11 +36,16 @@ auth.post("/sync", async (c) => {
     onboarding_completed: number | null;
     stytch_user_id: string | null;
     role: string | null;
+    deleted_at: string | null;
   }
 
   const existingUser = await c.env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ? OR email = ?"
   ).bind(stytchUser.userId, body.email).first() as DbUser | null;
+
+  if (existingUser?.deleted_at) {
+    return c.json({ error: "Account suspended", reason: "account_suspended" }, 403);
+  }
 
   if (existingUser) {
     await c.env.DB.prepare(
@@ -106,6 +111,7 @@ auth.get("/me", async (c) => {
     onboarding_completed: number | null;
     stytch_user_id: string | null;
     role: string | null;
+    deleted_at: string | null;
   }
   const result = await c.env.DB.prepare(
     "SELECT * FROM users WHERE stytch_user_id = ?"
@@ -113,6 +119,10 @@ auth.get("/me", async (c) => {
 
   if (!result) {
     return c.json({ error: "User not found" }, 404);
+  }
+
+  if (result.deleted_at) {
+    return c.json({ error: "Account suspended", reason: "account_suspended" }, 403);
   }
 
   const user = {

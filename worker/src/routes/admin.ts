@@ -95,16 +95,46 @@ admin.get("/stats", async (c) => {
     // Table doesn't exist yet
   }
 
+  // Calculate growth percentages (30-day vs previous 30-day)
+  const [prevUsersResult, prevEventsResult, prevViewsResult] = await Promise.all([
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM users WHERE date_created >= datetime('now', '-60 days') AND date_created < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM events WHERE date_created >= datetime('now', '-60 days') AND date_created < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM event_views WHERE viewed_at >= datetime('now', '-60 days') AND viewed_at < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+  ]);
+
+  const recentUsersCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as count FROM users WHERE date_created >= datetime('now', '-30 days')"
+  ).first() as { count: number } | null;
+
+  const recentEventsCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as count FROM events WHERE date_created >= datetime('now', '-30 days')"
+  ).first() as { count: number } | null;
+
+  function calcGrowth(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  }
+
+  const userGrowth = calcGrowth(recentUsersCount?.count || 0, prevUsersResult?.count || 0);
+  const eventGrowth = calcGrowth(recentEventsCount?.count || 0, prevEventsResult?.count || 0);
+  const viewsGrowth = calcGrowth(viewsResult?.count || 0, prevViewsResult?.count || 0);
+
   return c.json({
     stats: {
       totalUsers: usersResult?.count || 0,
       totalEvents: eventsResult?.count || 0,
       totalRegistrations: registrationsResult?.count || 0,
       activeEvents: activeEventsResult?.count || 0,
-      userGrowth: 0,
-      eventGrowth: 0,
+      userGrowth,
+      eventGrowth,
       recentViews: viewsResult?.count || 0,
-      viewsGrowth: 0,
+      viewsGrowth,
     },
     recentEvents,
     recentUsers,

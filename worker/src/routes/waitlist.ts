@@ -98,8 +98,13 @@ waitlist.get("/events/:eventId/waitlist", async (c) => {
 
   const isHost = event?.organizer_identifier === authResult.user.userId;
 
+  // Include email only when the requester is the event host
+  const selectFields = isHost
+    ? "w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name, u.email as user_email"
+    : "w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name";
+
   const result = await c.env.DB.prepare(
-    "SELECT w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name FROM waitlists w LEFT JOIN users u ON w.user_id = u._id WHERE w.event_id = ? ORDER BY w.position ASC"
+    `SELECT ${selectFields} FROM waitlists w LEFT JOIN users u ON w.user_id = u._id WHERE w.event_id = ? ORDER BY w.position ASC`
   ).bind(eventId).all();
 
   interface WaitlistRow {
@@ -118,7 +123,7 @@ waitlist.get("/events/:eventId/waitlist", async (c) => {
     userId: row.user_id,
     position: row.position,
     userName: row.user_name,
-    ...(isHost ? { userEmail: row.user_email } : {}),
+    ...(isHost && row.user_email ? { userEmail: row.user_email } : {}),
     createdAt: row.created_at,
   }));
 
