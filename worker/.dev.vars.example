@@ -5,7 +5,7 @@
 # API_SECRET_KEY=your-secret-key
 
 # MongoDB Atlas — connection string for document storage alongside D1
-# MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/nhimbe?retryWrites=true&w=majority
+# MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/nhimbe?retryWrites=true&w=majority
 
 # Stytch — only the project ID is needed (no secret required).
 # Auth is handled entirely by the Stytch frontend SDK.
