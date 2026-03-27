@@ -120,9 +120,9 @@ describe('PATCH /api/auth/profile', () => {
     const response = await worker.fetch(request, env, {} as ExecutionContext);
     expect(response.status).toBe(200);
 
-    const data = await response.json() as { user: { name: string; city: string; id: string } };
+    const data = await response.json() as { user: { name: string; addressLocality: string; id: string } };
     expect(data.user.name).toBe('New Name');
-    expect(data.user.city).toBe('Harare');
+    expect(data.user.addressLocality).toBe('Harare');
     expect(data.user.id).toBe('usr-001');
   });
 

@@ -2,7 +2,6 @@ export { Button } from "./button";
 export { Avatar } from "./avatar";
 export { Badge } from "./badge";
 export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent } from "./card";
-export { CategoryChip } from "./category-chip";
 export { CopyButton } from "./copy-button";
 export { DetailLayout } from "./detail-layout";
 export { EventCard } from "./event-card";

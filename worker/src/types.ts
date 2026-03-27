@@ -613,7 +613,7 @@ export interface EventStats {
 }
 
 export interface CommunityStats {
-  city?: string;
+  addressLocality?: string;
   totalEvents: number;
   totalAttendees: number;
   activeHosts: number;

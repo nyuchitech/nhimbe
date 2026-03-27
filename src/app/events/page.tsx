@@ -37,7 +37,7 @@ async function fetchInitialCategories(): Promise<Category[]> {
   }
 }
 
-async function fetchInitialCities(): Promise<{ city: string; country: string }[]> {
+async function fetchInitialCities(): Promise<{ addressLocality: string; addressCountry: string }[]> {
   try {
     if (!API_URL) return [];
     const res = await fetch(`${API_URL}/api/cities`, {

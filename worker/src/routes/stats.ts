@@ -74,8 +74,36 @@ stats.get("/stats", async (c) => {
   const venueParams = city ? [city] : [];
   const venuesResult = await c.env.DB.prepare(venueQuery).bind(...venueParams).all();
 
+  // Calculate peak time from actual event data
+  interface PeakRow {
+    day_of_week: number;
+    hour: number;
+    event_count: number;
+  }
+
+  const peakQuery = `
+    SELECT
+      CAST(strftime('%w', start_date) AS INTEGER) as day_of_week,
+      CAST(strftime('%H', start_date) AS INTEGER) as hour,
+      COUNT(*) as event_count
+    FROM events
+    WHERE is_published = TRUE
+    ${city ? "AND location_locality = ?" : ""}
+    GROUP BY day_of_week, hour
+    ORDER BY event_count DESC
+    LIMIT 1
+  `;
+
+  const peakParams = city ? [city] : [];
+  const peakResult = await c.env.DB.prepare(peakQuery).bind(...peakParams).first() as PeakRow | null;
+
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const peakTime = peakResult
+    ? `${dayNames[peakResult.day_of_week]} ${peakResult.hour}:00-${peakResult.hour + 2}:00`
+    : "No data yet";
+
   const communityStats: CommunityStats = {
-    city: city || undefined,
+    addressLocality: city || undefined,
     totalEvents: statsResult?.total_events || 0,
     totalAttendees: statsResult?.total_attendees || 0,
     activeHosts: statsResult?.active_hosts || 0,
@@ -84,7 +112,7 @@ stats.get("/stats", async (c) => {
       change: row.last_week > 0 ? Math.round(((row.count - row.last_week) / row.last_week) * 100) : 100,
       events: row.count,
     })),
-    peakTime: "Wed 6-8pm",
+    peakTime,
     popularVenues: (venuesResult.results as VenueRow[]).map((row) => ({
       venue: row.venue,
       events: row.count,

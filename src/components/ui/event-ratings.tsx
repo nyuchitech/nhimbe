@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
 import { Rating } from "@/components/ui/rating";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
 
@@ -11,7 +12,7 @@ interface Review {
   userName: string;
   userInitials: string;
   rating: number;
-  comment: string;
+  reviewBody: string;
   date: string;
   helpful: number;
 }
@@ -59,8 +60,8 @@ export function EventRatings({
           userName: r.userName,
           userInitials: r.userInitials,
           rating: r.rating,
-          comment: r.comment || "",
-          date: formatRelativeDate(r.createdAt),
+          reviewBody: r.reviewBody || "",
+          date: formatRelativeDate(r.dateCreated),
           helpful: r.helpfulCount,
         }));
         setReviews(transformedReviews);
@@ -155,9 +156,9 @@ export function EventRatings({
         <MessageSquare className="w-5 h-5 text-primary" />
         <h3 className="font-bold text-lg">Community Feedback</h3>
         {isPastEvent && (
-          <span className="ml-auto px-2 py-1 bg-elevated text-text-secondary text-xs rounded-full">
+          <Badge variant="secondary" className="ml-auto">
             Past Event
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -211,7 +212,7 @@ export function EventRatings({
                 <Rating value={review.rating} readOnly size="sm" />
               </div>
             </div>
-            <p className="text-sm text-text-secondary mb-3">{review.comment}</p>
+            <p className="text-sm text-text-secondary mb-3">{review.reviewBody}</p>
             <Button
               variant="ghost"
               size="sm"

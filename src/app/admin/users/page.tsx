@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Loader2,
@@ -25,13 +26,13 @@ interface User {
   id: string;
   email: string;
   name: string;
-  handle?: string;
-  avatar_url?: string;
-  city?: string;
-  country?: string;
-  events_attended: number;
-  events_hosted: number;
-  created_at: string;
+  alternateName?: string;
+  image?: string;
+  addressLocality?: string;
+  addressCountry?: string;
+  eventsAttended: number;
+  eventsHosted: number;
+  dateCreated: string;
   status: "active" | "suspended" | "pending";
 }
 
@@ -180,11 +181,11 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4 hidden md:table-cell">
-                          {user.city || user.country ? (
+                          {user.addressLocality || user.addressCountry ? (
                             <div className="flex items-center gap-1 text-text-secondary">
                               <MapPin className="w-3 h-3" />
                               <span className="text-sm">
-                                {[user.city, user.country]
+                                {[user.addressLocality, user.addressCountry]
                                   .filter(Boolean)
                                   .join(", ")}
                               </span>
@@ -197,25 +198,25 @@ export default function UsersPage() {
                         </td>
                         <td className="py-3 pr-4 hidden lg:table-cell">
                           <div className="flex items-center gap-4 text-sm text-text-secondary">
-                            <span>{user.events_hosted} hosted</span>
-                            <span>{user.events_attended} attended</span>
+                            <span>{user.eventsHosted} hosted</span>
+                            <span>{user.eventsAttended} attended</span>
                           </div>
                         </td>
                         <td className="py-3 pr-4">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          <Badge
+                            variant={
                               user.status === "active"
-                                ? "bg-green-500/20 text-green-400"
+                                ? "success"
                                 : user.status === "suspended"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-accent/20 text-accent"
-                            }`}
+                                ? "error"
+                                : "warning"
+                            }
                           >
                             {user.status}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="py-3 pr-4 text-sm text-text-tertiary">
-                          {formatDate(user.created_at)}
+                          {formatDate(user.dateCreated)}
                         </td>
                         <td className="py-3 relative">
                           <Button
@@ -334,8 +335,8 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">{selectedUser.name}</h2>
-                  {selectedUser.handle && (
-                    <p className="text-text-secondary">@{selectedUser.handle}</p>
+                  {selectedUser.alternateName && (
+                    <p className="text-text-secondary">@{selectedUser.alternateName}</p>
                   )}
                 </div>
               </div>
@@ -353,13 +354,13 @@ export default function UsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-elevated rounded-xl">
                   <div className="text-2xl font-bold">
-                    {selectedUser.events_hosted}
+                    {selectedUser.eventsHosted}
                   </div>
                   <div className="text-sm text-text-tertiary">Events Hosted</div>
                 </div>
                 <div className="p-4 bg-elevated rounded-xl">
                   <div className="text-2xl font-bold">
-                    {selectedUser.events_attended}
+                    {selectedUser.eventsAttended}
                   </div>
                   <div className="text-sm text-text-tertiary">
                     Events Attended
@@ -372,11 +373,11 @@ export default function UsersPage() {
                   <Mail className="w-4 h-4" />
                   <span>{selectedUser.email}</span>
                 </div>
-                {(selectedUser.city || selectedUser.country) && (
+                {(selectedUser.addressLocality || selectedUser.addressCountry) && (
                   <div className="flex items-center gap-3 text-text-secondary">
                     <MapPin className="w-4 h-4" />
                     <span>
-                      {[selectedUser.city, selectedUser.country]
+                      {[selectedUser.addressLocality, selectedUser.addressCountry]
                         .filter(Boolean)
                         .join(", ")}
                     </span>
@@ -384,7 +385,7 @@ export default function UsersPage() {
                 )}
                 <div className="flex items-center gap-3 text-text-secondary">
                   <Calendar className="w-4 h-4" />
-                  <span>Joined {formatDate(selectedUser.created_at)}</span>
+                  <span>Joined {formatDate(selectedUser.dateCreated)}</span>
                 </div>
               </div>
 

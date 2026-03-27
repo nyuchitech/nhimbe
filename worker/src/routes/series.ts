@@ -11,7 +11,7 @@ series.use("*", writeAuth);
 // POST /api/series — Create a new event series
 series.post("/", async (c) => {
   const body = await c.req.json() as {
-    title: string;
+    name: string;
     recurrenceRule: string;
     hostId: string;
     templateEventId?: string;
@@ -19,18 +19,18 @@ series.post("/", async (c) => {
     endsAt?: string;
   };
 
-  if (!body.title || !body.recurrenceRule || !body.hostId) {
-    return c.json({ error: "title, recurrenceRule, and hostId are required" }, 400);
+  if (!body.name || !body.recurrenceRule || !body.hostId) {
+    return c.json({ error: "name, recurrenceRule, and hostId are required" }, 400);
   }
 
   const id = generateId();
 
   await c.env.DB.prepare(`
-    INSERT INTO event_series (id, title, recurrence_rule, host_id, template_event_id, max_occurrences, ends_at)
+    INSERT INTO event_series (id, name, recurrence_rule, host_id, template_event_id, max_occurrences, ends_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
-    body.title,
+    body.name,
     body.recurrenceRule,
     body.hostId,
     body.templateEventId || null,
@@ -47,14 +47,14 @@ series.get("/:id", async (c) => {
 
   interface SeriesRow {
     id: string;
-    title: string;
+    name: string;
     recurrence_rule: string;
     host_id: string;
     template_event_id: string | null;
     max_occurrences: number;
     ends_at: string | null;
-    created_at: string;
-    updated_at: string;
+    date_created: string;
+    date_modified: string;
   }
 
   const row = await c.env.DB.prepare(
@@ -67,14 +67,14 @@ series.get("/:id", async (c) => {
 
   return c.json({
     id: row.id,
-    title: row.title,
+    name: row.name,
     recurrenceRule: row.recurrence_rule,
     hostId: row.host_id,
     templateEventId: row.template_event_id,
     maxOccurrences: row.max_occurrences,
     endsAt: row.ends_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    dateCreated: row.date_created,
+    dateModified: row.date_modified,
   });
 });
 
@@ -82,7 +82,7 @@ series.get("/:id", async (c) => {
 series.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json() as {
-    title?: string;
+    name?: string;
     recurrenceRule?: string;
     maxOccurrences?: number;
     endsAt?: string;
@@ -103,9 +103,9 @@ series.put("/:id", async (c) => {
   const updates: string[] = [];
   const values: (string | number)[] = [];
 
-  if (body.title !== undefined) {
-    updates.push("title = ?");
-    values.push(body.title);
+  if (body.name !== undefined) {
+    updates.push("name = ?");
+    values.push(body.name);
   }
   if (body.recurrenceRule !== undefined) {
     updates.push("recurrence_rule = ?");
@@ -124,7 +124,7 @@ series.put("/:id", async (c) => {
     return c.json({ error: "No fields to update" }, 400);
   }
 
-  updates.push("updated_at = datetime('now')");
+  updates.push("date_modified = datetime('now')");
   values.push(id);
 
   await c.env.DB.prepare(
@@ -153,7 +153,7 @@ series.delete("/:id", async (c) => {
   // Cancel all future events in the series
   const now = new Date().toISOString();
   await c.env.DB.prepare(`
-    UPDATE events SET status = 'EventCancelled', updated_at = datetime('now')
+    UPDATE events SET event_status = 'EventCancelled', date_modified = datetime('now')
     WHERE series_id = ? AND start_date > ?
   `).bind(id, now).run();
 
@@ -173,15 +173,15 @@ series.get("/:id/events", async (c) => {
 
   interface EventRow {
     _id: string;
-    title: string;
+    name: string;
     start_date: string;
     end_date: string | null;
-    status: string;
+    event_status: string;
     series_index: number | null;
   }
 
   const { results } = await c.env.DB.prepare(`
-    SELECT _id, title, start_date, end_date, status, series_index
+    SELECT _id, name, start_date, end_date, event_status, series_index
     FROM events
     WHERE series_id = ?
     ORDER BY series_index ASC, start_date ASC
@@ -191,10 +191,10 @@ series.get("/:id/events", async (c) => {
   return c.json({
     events: results.map((row) => ({
       id: row._id,
-      title: row.title,
+      name: row.name,
       startDate: row.start_date,
       endDate: row.end_date,
-      status: row.status,
+      status: row.event_status,
       seriesIndex: row.series_index,
     })),
     pagination: { limit, offset, count: results.length },

@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, TrendingUp, Flame, Zap, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface PopularityBadgeProps {
   views?: number;
@@ -60,16 +61,16 @@ export function PopularityBadge({
         <span className="text-xs font-medium">{formatViews(views)} views</span>
       </div>
       {trend > 10 && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
+        <Badge variant="success" className="flex items-center gap-1">
           <TrendingUp className="w-3 h-3" />
-          <span className="text-xs font-semibold">+{trend}%</span>
-        </div>
+          +{trend}%
+        </Badge>
       )}
       {isHot && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-accent/20 text-accent rounded-full">
+        <Badge variant="warning" className="flex items-center gap-1">
           <Flame className="w-3 h-3" />
-          <span className="text-xs font-semibold">Hot</span>
-        </div>
+          Hot
+        </Badge>
       )}
     </div>
   );
@@ -126,16 +127,16 @@ export function MomentumBadge({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {hasRecentActivity && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary rounded-full">
+        <Badge variant="default" className="flex items-center gap-1">
           <Zap className="w-3 h-3" />
-          <span className="text-xs font-medium">+{recentRSVPs} this week</span>
-        </div>
+          +{recentRSVPs} this week
+        </Badge>
       )}
       {isAlmostFull && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full">
+        <Badge variant="error" className="flex items-center gap-1">
           <Users className="w-3 h-3" />
-          <span className="text-xs font-medium">Only {spotsLeft} left</span>
-        </div>
+          Only {spotsLeft} left
+        </Badge>
       )}
     </div>
   );

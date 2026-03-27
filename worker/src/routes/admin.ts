@@ -95,16 +95,46 @@ admin.get("/stats", async (c) => {
     // Table doesn't exist yet
   }
 
+  // Calculate growth percentages (30-day vs previous 30-day)
+  const [prevUsersResult, prevEventsResult, prevViewsResult] = await Promise.all([
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM users WHERE date_created >= datetime('now', '-60 days') AND date_created < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM events WHERE date_created >= datetime('now', '-60 days') AND date_created < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+    c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM event_views WHERE viewed_at >= datetime('now', '-60 days') AND viewed_at < datetime('now', '-30 days')"
+    ).first() as Promise<{ count: number } | null>,
+  ]);
+
+  const recentUsersCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as count FROM users WHERE date_created >= datetime('now', '-30 days')"
+  ).first() as { count: number } | null;
+
+  const recentEventsCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as count FROM events WHERE date_created >= datetime('now', '-30 days')"
+  ).first() as { count: number } | null;
+
+  function calcGrowth(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  }
+
+  const userGrowth = calcGrowth(recentUsersCount?.count || 0, prevUsersResult?.count || 0);
+  const eventGrowth = calcGrowth(recentEventsCount?.count || 0, prevEventsResult?.count || 0);
+  const viewsGrowth = calcGrowth(viewsResult?.count || 0, prevViewsResult?.count || 0);
+
   return c.json({
     stats: {
       totalUsers: usersResult?.count || 0,
       totalEvents: eventsResult?.count || 0,
       totalRegistrations: registrationsResult?.count || 0,
       activeEvents: activeEventsResult?.count || 0,
-      userGrowth: 0,
-      eventGrowth: 0,
+      userGrowth,
+      eventGrowth,
       recentViews: viewsResult?.count || 0,
-      viewsGrowth: 0,
+      viewsGrowth,
     },
     recentEvents,
     recentUsers,
@@ -158,15 +188,15 @@ admin.get("/users", async (c) => {
     id: u._id,
     email: u.email,
     name: u.name,
-    handle: u.alternate_name,
-    avatar_url: u.image,
-    city: u.address_locality,
-    country: u.address_country,
-    events_attended: u.events_attended || 0,
-    events_hosted: u.events_hosted || 0,
+    alternateName: u.alternate_name,
+    image: u.image,
+    addressLocality: u.address_locality,
+    addressCountry: u.address_country,
+    eventsAttended: u.events_attended || 0,
+    eventsHosted: u.events_hosted || 0,
     role: u.role || 'user',
     status: 'active' as const,
-    date_created: u.date_created,
+    dateCreated: u.date_created,
   }));
 
   return c.json({
@@ -205,12 +235,29 @@ async function handleAdminUserAction(
     return c.json({ error: "Cannot modify your own account" }, 400);
   }
 
-  switch (action) {
-    case 'suspend':
-      return c.json({ message: "User suspended" });
+  // Verify target user exists
+  const targetUser = await c.env.DB.prepare(
+    "SELECT _id FROM users WHERE _id = ?"
+  ).bind(userId).first();
 
-    case 'activate':
+  if (!targetUser) {
+    return c.json({ error: "User not found" }, 404);
+  }
+
+  switch (action) {
+    case 'suspend': {
+      await c.env.DB.prepare(
+        "UPDATE users SET deleted_at = datetime('now'), date_modified = datetime('now') WHERE _id = ?"
+      ).bind(userId).run();
+      return c.json({ message: "User suspended" });
+    }
+
+    case 'activate': {
+      await c.env.DB.prepare(
+        "UPDATE users SET deleted_at = NULL, date_modified = datetime('now') WHERE _id = ?"
+      ).bind(userId).run();
       return c.json({ message: "User activated" });
+    }
 
     case 'role': {
       const body = await c.req.json() as { role?: string };

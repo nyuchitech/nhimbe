@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, MapPin, Clock, ArrowRight, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { getEvents, getCategories, type Event, type Category } from "@/lib/api";
 
 export default function SearchPage() {
@@ -233,9 +234,9 @@ export default function SearchPage() {
                       {event.date.month} {event.date.day} · {event.location.addressLocality}
                     </p>
                   </div>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary/20 text-primary">
+                  <Badge variant="default" className="bg-primary/20 text-primary border-0">
                     {event.category}
-                  </span>
+                  </Badge>
                 </Link>
               ))}
             </div>

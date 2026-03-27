@@ -166,9 +166,9 @@ describe('getCategories', () => {
 
 describe('getCities', () => {
   it('returns cities array', async () => {
-    mockFetch({ cities: [{ city: 'Harare', country: 'Zimbabwe' }] });
+    mockFetch({ cities: [{ addressLocality: 'Harare', addressCountry: 'Zimbabwe' }] });
     const result = await getCities();
-    expect(result).toEqual([{ city: 'Harare', country: 'Zimbabwe' }]);
+    expect(result).toEqual([{ addressLocality: 'Harare', addressCountry: 'Zimbabwe' }]);
   });
 });
 
@@ -228,27 +228,27 @@ describe('deleteEvent', () => {
 // ============================================
 
 describe('Registrations', () => {
-  it('getEventRegistrations fetches by event_id', async () => {
+  it('getEventRegistrations fetches by eventId', async () => {
     mockFetch({ registrations: [] });
     await getEventRegistrations('evt-1');
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('event_id=evt-1'),
+      expect.stringContaining('eventId=evt-1'),
       expect.anything()
     );
   });
 
-  it('getUserRegistrations fetches by user_id', async () => {
+  it('getUserRegistrations fetches by userId', async () => {
     mockFetch({ registrations: [] });
     await getUserRegistrations('usr-1');
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('user_id=usr-1'),
+      expect.stringContaining('userId=usr-1'),
       expect.anything()
     );
   });
 
   it('registerForEvent sends POST', async () => {
     mockFetch({ id: 'reg-1', message: 'Registered' });
-    await registerForEvent({ event_id: 'evt-1', user_id: 'usr-1' });
+    await registerForEvent({ eventId: 'evt-1', userId: 'usr-1' });
     expect(global.fetch).toHaveBeenCalledWith(
       `${API_URL}/api/registrations`,
       expect.objectContaining({ method: 'POST' })
@@ -359,7 +359,7 @@ describe('Reviews', () => {
 
   it('submitEventReview sends POST', async () => {
     mockFetch({ id: 'rev-1', message: 'Submitted' });
-    await submitEventReview('evt-1', { userId: 'usr-1', rating: 5, comment: 'Great!' });
+    await submitEventReview('evt-1', { userId: 'usr-1', rating: 5, reviewBody: 'Great!' });
     expect(global.fetch).toHaveBeenCalledWith(
       `${API_URL}/api/events/evt-1/reviews`,
       expect.objectContaining({ method: 'POST' })

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Users, MapPin, Clock, Flame, Loader2 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Badge } from "@/components/ui/badge";
 import { getCommunityStats, type CommunityStats } from "@/lib/api";
 
 interface TrendingCategory {
@@ -183,9 +184,9 @@ export function CommunityInsights({
               className="flex items-center justify-between py-2 px-3 bg-elevated rounded-lg"
             >
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                <Badge variant="default" className="w-5 h-5 flex items-center justify-center text-xs font-bold">
                   {i + 1}
-                </span>
+                </Badge>
                 <div>
                   <div className="font-medium text-sm">{venue.name}</div>
                   <div className="text-xs text-text-tertiary">{venue.city}</div>

@@ -23,9 +23,9 @@ interface LocationModalProps {
   setVenue: (value: string) => void;
   address: string;
   setAddress: (value: string) => void;
-  selectedCity: { city: string; country: string } | null;
-  setSelectedCity: (value: { city: string; country: string } | null) => void;
-  cities: { city: string; country: string }[];
+  selectedCity: { addressLocality: string; addressCountry: string } | null;
+  setSelectedCity: (value: { addressLocality: string; addressCountry: string } | null) => void;
+  cities: { addressLocality: string; addressCountry: string }[];
 }
 
 export function LocationModal({
@@ -121,7 +121,7 @@ export function LocationModal({
                   setVenue(components.venue);
                   setAddress(components.address);
                   if (components.city && components.country) {
-                    setSelectedCity({ city: components.city, country: components.country });
+                    setSelectedCity({ addressLocality: components.city, addressCountry: components.country });
                   }
                 }}
                 placeholder="Search for a venue or address..."
@@ -160,18 +160,18 @@ export function LocationModal({
               <div className="grid grid-cols-2 gap-2">
                 {cities.map((c) => (
                   <Button
-                    key={`${c.city}-${c.country}`}
+                    key={`${c.addressLocality}-${c.addressCountry}`}
                     variant="ghost"
                     onClick={() => setSelectedCity(c)}
                     className={`px-4 py-3 rounded-xl text-left justify-start h-auto ${
-                      selectedCity?.city === c.city
+                      selectedCity?.addressLocality === c.addressLocality
                         ? "bg-primary text-primary-foreground"
                         : "bg-surface hover:bg-elevated"
                     }`}
                   >
                     <div className="flex flex-col items-start">
-                      <div className="font-medium">{c.city}</div>
-                      <div className="text-sm opacity-70">{c.country}</div>
+                      <div className="font-medium">{c.addressLocality}</div>
+                      <div className="text-sm opacity-70">{c.addressCountry}</div>
                     </div>
                   </Button>
                 ))}

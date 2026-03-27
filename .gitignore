@@ -43,6 +43,7 @@ next-env.d.ts
 # Cloudflare Workers
 worker/node_modules
 worker/.wrangler
+worker/.next
 worker/.dev.vars
 worker/worker-configuration.d.ts
 .env*.local

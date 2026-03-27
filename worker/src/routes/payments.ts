@@ -115,12 +115,12 @@ payments.post("/webhook", async (c) => {
   return c.json({ received: true });
 });
 
-// GET /api/payments/:id/status — Check payment status
-payments.get("/:id/status", async (c) => {
+// GET /api/payments/:id/status — Check payment status (requires writeAuth)
+payments.get("/:id/status", writeAuth, async (c) => {
   const paymentId = c.req.param("id");
 
   const payment = await c.env.DB.prepare(
-    "SELECT id, status, amount_cents, currency, provider, created_at, completed_at FROM payments WHERE id = ?"
+    "SELECT id, status, amount_cents, currency, provider, date_created, completed_at FROM payments WHERE id = ?"
   ).bind(paymentId).first();
 
   if (!payment) {

@@ -24,6 +24,7 @@ import { useTheme } from "@/components/theme-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/auth/auth-context";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type MenuItem = {
@@ -134,10 +135,10 @@ function ProfileContent() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">{user?.name || "User"}</h1>
           <p className="text-text-secondary">{user?.email}</p>
-          {(user?.city || user?.country) && (
+          {(user?.addressLocality || user?.addressCountry) && (
             <div className="flex items-center gap-1 text-sm text-text-tertiary mt-1">
               <MapPin className="w-3.5 h-3.5" />
-              {[user?.city, user?.country].filter(Boolean).join(", ")}
+              {[user?.addressLocality, user?.addressCountry].filter(Boolean).join(", ")}
             </div>
           )}
         </div>
@@ -151,12 +152,9 @@ function ProfileContent() {
           </h2>
           <div className="flex flex-wrap gap-2">
             {user.interests.map((interest) => (
-              <span
-                key={interest}
-                className="px-3 py-1.5 bg-surface rounded-xl text-sm font-medium"
-              >
+              <Badge key={interest} variant="secondary">
                 {interest}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -166,9 +164,9 @@ function ProfileContent() {
       {!profileCompleteness.complete && (() => {
         const missing: string[] = [];
         if (!profileCompleteness.name) missing.push("your name");
-        if (!profileCompleteness.city) missing.push("your location");
+        if (!profileCompleteness.addressLocality) missing.push("your location");
         if (!profileCompleteness.interests) missing.push("your interests");
-        const completionPercent = [profileCompleteness.name, profileCompleteness.city, profileCompleteness.interests].filter(Boolean).length / 3 * 100;
+        const completionPercent = [profileCompleteness.name, profileCompleteness.addressLocality, profileCompleteness.interests].filter(Boolean).length / 3 * 100;
         const nudgeText = `Add ${missing.join(" and ")} for a better experience`;
 
         return (
@@ -254,9 +252,9 @@ function ProfileContent() {
                     <Icon className="w-5 h-5 text-text-secondary" />
                     <span className="flex-1 font-medium">{item.label}</span>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="px-2 py-0.5 bg-primary/20 text-primary text-sm rounded-full">
+                      <Badge variant="default">
                         {item.badge}
-                      </span>
+                      </Badge>
                     )}
                     <ChevronRight className="w-5 h-5 text-text-tertiary" />
                   </Link>

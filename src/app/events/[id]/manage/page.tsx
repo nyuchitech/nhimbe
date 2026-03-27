@@ -44,6 +44,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -55,6 +56,7 @@ import {
   type Registration as APIRegistration,
 } from "@/lib/api";
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { PairKiosk } from "../kiosk/pair-kiosk";
 import { useAuth } from "@/components/auth/auth-context";
 
 interface Registration {
@@ -114,15 +116,15 @@ function ManageEventContent() {
             const regs = await getEventRegistrations(eventData.id);
             const formattedRegs: Registration[] = regs.map((r: APIRegistration) => ({
               id: r.id,
-              name: r.user_name || "Unknown User",
-              email: r.user_email || r.user_id,
+              name: r.userName || "Unknown User",
+              email: r.userEmail || r.userId,
               status: r.status,
-              date: new Date(r.registered_at).toLocaleDateString("en-US", {
+              date: new Date(r.registeredAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
               }),
-              avatar: (r.user_name || "U")
+              avatar: (r.userName || "U")
                 .split(" ")
                 .map((n: string) => n[0])
                 .join("")
@@ -323,9 +325,9 @@ function ManageEventContent() {
           <TabsTrigger value="guests">
             Guests
             {stats.pending > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-accent text-background">
+              <Badge variant="warning" className="ml-1.5">
                 {stats.pending}
-              </span>
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="registration">Registration</TabsTrigger>
@@ -513,9 +515,11 @@ function ManageEventContent() {
               <UserPlus className="w-4 h-4" />
               Invite Guests
             </Button>
-            <Button variant="secondary" className="gap-2">
-              <QrCode className="w-4 h-4" />
-              Check In Guests
+            <Button asChild variant="secondary" className="gap-2">
+              <Link href={`/events/${event.id}/kiosk/host`}>
+                <QrCode className="w-4 h-4" />
+                Check In Guests
+              </Link>
             </Button>
             <Button variant="secondary" className="gap-2">
               <Users className="w-4 h-4" />
@@ -523,17 +527,20 @@ function ManageEventContent() {
             </Button>
           </div>
 
+          {/* Kiosk Pairing */}
+          <PairKiosk eventId={event.id} />
+
           {/* Guest List */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Guest List</CardTitle>
               <div className="flex gap-2">
-                <button className="w-9 h-9 rounded-lg bg-elevated flex items-center justify-center hover:bg-surface transition-colors">
+                <Button variant="ghost" size="icon" className="w-9 h-9">
                   <Filter className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 rounded-lg bg-elevated flex items-center justify-center hover:bg-surface transition-colors">
+                </Button>
+                <Button variant="ghost" size="icon" className="w-9 h-9">
                   <Download className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -548,24 +555,18 @@ function ManageEventContent() {
                     className="pl-9"
                   />
                 </div>
-                <div className="flex gap-2 overflow-x-auto">
-                  {(["all", "pending", "approved", "rejected"] as const).map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setRegistrationFilter(filter)}
-                      className={`px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                        registrationFilter === filter
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-elevated text-text-secondary hover:bg-surface"
-                      }`}
-                    >
-                      {filter === "all" ? `All (${registrations.length})` :
-                       filter === "pending" ? `Pending (${stats.pending})` :
-                       filter === "approved" ? `Approved (${stats.approved})` :
-                       `Rejected (${registrations.filter(r => r.status === "rejected").length})`}
-                    </button>
-                  ))}
-                </div>
+                <FilterBar
+                  options={[
+                    { id: "all", label: `All (${registrations.length})` },
+                    { id: "pending", label: `Pending (${stats.pending})` },
+                    { id: "approved", label: `Approved (${stats.approved})` },
+                    { id: "rejected", label: `Rejected (${registrations.filter(r => r.status === "rejected").length})` },
+                  ]}
+                  selected={registrationFilter === "all" ? [] : [registrationFilter]}
+                  onChange={(sel) => setRegistrationFilter(sel.length > 0 ? sel[0] as "all" | "pending" | "approved" | "rejected" : "all")}
+                  mode="single"
+                  showAll={false}
+                />
               </div>
 
               {/* Guest List */}

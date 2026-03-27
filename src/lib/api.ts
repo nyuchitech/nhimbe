@@ -88,7 +88,7 @@ export interface CategoriesResponse {
 }
 
 export interface CitiesResponse {
-  cities: { city: string; country: string }[];
+  cities: { addressLocality: string; addressCountry: string }[];
 }
 
 // Get session JWT from Stytch (when available in browser)
@@ -174,7 +174,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 // Cities API
-export async function getCities(): Promise<{ city: string; country: string }[]> {
+export async function getCities(): Promise<{ addressLocality: string; addressCountry: string }[]> {
   const response = await apiFetch<CitiesResponse>("/api/cities");
   return response.cities;
 }
@@ -235,18 +235,19 @@ export async function deleteEvent(id: string, sessionJwt?: string): Promise<{ me
 
 export interface Registration {
   id: string;
-  event_id: string;
-  user_id: string;
+  eventId: string;
+  userId: string;
   status: "pending" | "registered" | "approved" | "rejected" | "cancelled" | "attended";
-  ticket_type?: string;
-  ticket_price?: number;
-  ticket_currency?: string;
-  registered_at: string;
-  cancelled_at?: string;
+  ticketType?: string;
+  ticketPrice?: number;
+  ticketCurrency?: string;
+  registeredAt: string;
+  cancelledAt?: string;
+  checkedInAt?: string;
   // Joined user data (when available)
-  user_name?: string;
-  user_email?: string;
-  user_avatar?: string;
+  userName?: string;
+  userEmail?: string;
+  userAvatar?: string;
 }
 
 export interface RegistrationsResponse {
@@ -255,23 +256,23 @@ export interface RegistrationsResponse {
 
 // Get registrations for an event
 export async function getEventRegistrations(eventId: string): Promise<Registration[]> {
-  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?event_id=${eventId}`);
+  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?eventId=${eventId}`);
   return response.registrations;
 }
 
 // Get registrations for a user
 export async function getUserRegistrations(userId: string): Promise<Registration[]> {
-  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?user_id=${userId}`);
+  const response = await apiFetch<RegistrationsResponse>(`/api/registrations?userId=${userId}`);
   return response.registrations;
 }
 
 // Register for an event (RSVP)
 export async function registerForEvent(data: {
-  event_id: string;
-  user_id: string;
-  ticket_type?: string;
-  ticket_price?: number;
-  ticket_currency?: string;
+  eventId: string;
+  userId: string;
+  ticketType?: string;
+  ticketPrice?: number;
+  ticketCurrency?: string;
 }, sessionJwt?: string): Promise<{ id: string; message: string }> {
   return apiFetch<{ id: string; message: string }>("/api/registrations", {
     method: "POST",
@@ -305,15 +306,15 @@ export interface User {
   _id: string;
   email: string;
   name: string;
-  alternate_name?: string;
+  alternateName?: string;
   image?: string;
   description?: string;
-  address_locality?: string;
-  address_country?: string;
+  addressLocality?: string;
+  addressCountry?: string;
   interests?: string[];
-  events_attended: number;
-  events_hosted: number;
-  date_created: string;
+  eventsAttended: number;
+  eventsHosted: number;
+  dateCreated: string;
 }
 
 // Get user by ID or handle
@@ -330,9 +331,9 @@ export async function getUser(idOrHandle: string): Promise<User | null> {
 export async function createUser(data: {
   email: string;
   name: string;
-  alternate_name?: string;
-  address_locality?: string;
-  address_country?: string;
+  alternateName?: string;
+  addressLocality?: string;
+  addressCountry?: string;
   interests?: string[];
 }): Promise<{ id: string; message: string }> {
   return apiFetch<{ id: string; message: string }>("/api/users", {
@@ -344,7 +345,7 @@ export async function createUser(data: {
 // Update authenticated user's profile
 export async function updateProfile(
   sessionJwt: string,
-  fields: Partial<{ name: string; city: string; country: string; interests: string[] }>
+  fields: Partial<{ name: string; addressLocality: string; addressCountry: string; interests: string[] }>
 ): Promise<{ user: User }> {
   const response = await fetch(`${API_URL}/api/auth/profile`, {
     method: "PATCH",
@@ -372,7 +373,7 @@ export async function trackEventView(eventId: string, userId?: string): Promise<
   try {
     await apiFetch("/api/events/" + eventId + "/view", {
       method: "POST",
-      body: JSON.stringify({ user_id: userId }),
+      body: JSON.stringify({ userId }),
     });
   } catch {
     // Silently fail - analytics shouldn't break the UI
@@ -513,10 +514,10 @@ export interface EventReview {
   userName: string;
   userInitials: string;
   rating: number;
-  comment?: string;
+  reviewBody?: string;
   helpfulCount: number;
   isVerifiedAttendee: boolean;
-  createdAt: string;
+  dateCreated: string;
 }
 
 export interface ReviewStats {
@@ -544,7 +545,7 @@ export async function getEventReviews(eventId: string): Promise<EventReviewsResp
 // Submit a review for an event
 export async function submitEventReview(
   eventId: string,
-  data: { userId: string; rating: number; comment?: string }
+  data: { userId: string; rating: number; reviewBody?: string }
 ): Promise<{ id: string; message: string }> {
   return apiFetch<{ id: string; message: string }>(`/api/events/${eventId}/reviews`, {
     method: "POST",
@@ -583,6 +584,90 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
   const response = await apiFetch<{ stats: EventStats }>(`/api/events/${eventId}/stats`);
   return response.stats;
 }
+
+// Check-in Types
+export interface CheckinStats {
+  eventId: string;
+  total: number;
+  attended: number;
+  remaining: number;
+  rate: number;
+}
+
+// Check in a registration at an event
+export async function checkinRegistration(
+  eventId: string,
+  registrationId: string
+): Promise<{ message: string; registrationId: string }> {
+  return apiFetch<{ message: string; registrationId: string }>(
+    `/api/events/${eventId}/checkin`,
+    { method: "POST", body: JSON.stringify({ registrationId }) }
+  );
+}
+
+// Get check-in stats for an event
+export async function getCheckinStats(eventId: string): Promise<CheckinStats> {
+  return apiFetch<CheckinStats>(`/api/events/${eventId}/checkin/stats`);
+}
+
+// Kiosk Pairing Types
+export type ScreenType = "kiosk" | "signage-host" | "signage-admin";
+
+export interface KioskPairingStatus {
+  status: "pending" | "confirmed" | "expired";
+  screenType?: ScreenType;
+  eventId?: string;
+  eventName?: string;
+  hostName?: string;
+  sessionToken?: string;
+}
+
+export interface KioskSession {
+  eventId: string;
+  eventName: string;
+  screenType: ScreenType;
+  hostId: string | null;
+  pairedAt: string;
+}
+
+// Request a pairing code for kiosk or signage screen
+export async function requestKioskPairing(
+  screenType: ScreenType = "kiosk"
+): Promise<{ code: string; expiresIn: number; screenType: ScreenType }> {
+  return apiFetch<{ code: string; expiresIn: number; screenType: ScreenType }>(
+    "/api/kiosk/pair/request",
+    { method: "POST", body: JSON.stringify({ screenType }) }
+  );
+}
+
+// Poll for pairing status
+export async function getKioskPairingStatus(code: string): Promise<KioskPairingStatus> {
+  return apiFetch<KioskPairingStatus>(`/api/kiosk/pair/${code}/status`);
+}
+
+// Host confirms pairing
+export async function confirmKioskPairing(
+  code: string,
+  eventId: string
+): Promise<{ message: string; eventName: string; screenType: string; sessionToken: string }> {
+  return apiFetch<{ message: string; eventName: string; screenType: string; sessionToken: string }>(
+    `/api/kiosk/pair/${code}/confirm`,
+    { method: "POST", body: JSON.stringify({ eventId }) }
+  );
+}
+
+// Validate a session
+export async function getKioskSession(token: string): Promise<{ session: KioskSession }> {
+  return apiFetch<{ session: KioskSession }>(`/api/kiosk/session/${token}`);
+}
+
+// End a session
+export async function endKioskSession(token: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/kiosk/session/${token}`, {
+    method: "DELETE",
+  });
+}
+
 
 // Referral Types
 export interface ReferralLeaderboardEntry {
@@ -663,7 +748,7 @@ export async function getHostReputation(userId: string): Promise<HostStats | nul
 
 // Community Stats Types
 export interface CommunityStats {
-  city?: string;
+  addressLocality?: string;
   totalEvents: number;
   totalAttendees: number;
   activeHosts: number;

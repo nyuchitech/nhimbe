@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getEvents, type Event } from "@/lib/api";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -14,7 +16,7 @@ const MONTHS = [
 export default function CalendarPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 11, 1)); // December 2025
+  const [currentDate, setCurrentDate] = useState(() => new Date()); // Current month
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -96,34 +98,36 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={goToToday}
-            className="px-4 py-2 text-sm font-medium bg-surface border border-elevated rounded-lg hover:bg-elevated transition-colors"
           >
             Today
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between mb-6">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={goToPreviousMonth}
-          className="p-2 hover:bg-surface rounded-lg transition-colors"
           aria-label="Previous month"
         >
           <ChevronLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <h2 className="text-xl font-semibold">
           {MONTHS[month]} {year}
         </h2>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={goToNextMonth}
-          className="p-2 hover:bg-surface rounded-lg transition-colors"
           aria-label="Next month"
         >
           <ChevronRight className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -168,13 +172,11 @@ export default function CalendarPage() {
                       </div>
                       <div className="space-y-1">
                         {eventsByDay[day]?.slice(0, 2).map((event) => (
-                          <Link
-                            key={event.id}
-                            href={`/events/${event.id}`}
-                            className="block px-2 py-1 text-xs rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors truncate"
-                          >
-                            {event.name}
-                          </Link>
+                          <Badge key={event.id} variant="default" asChild className="block bg-primary/20 text-primary hover:bg-primary/30 truncate rounded border-0">
+                            <Link href={`/events/${event.id}`}>
+                              {event.name}
+                            </Link>
+                          </Badge>
                         ))}
                         {eventsByDay[day]?.length > 2 && (
                           <span className="text-xs text-text-tertiary px-2">
@@ -224,9 +226,9 @@ export default function CalendarPage() {
                         </span>
                       </div>
                     </div>
-                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-primary/20 text-primary">
+                    <Badge variant="default" className="bg-primary/20 text-primary border-0">
                       {event.category}
-                    </span>
+                    </Badge>
                   </Link>
                 ))}
             </div>
