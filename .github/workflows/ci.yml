@@ -151,6 +151,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -161,7 +162,6 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          review_type: code_review
           direct_prompt: |
             Review this PR for:
             1. Security vulnerabilities (XSS, injection, auth bypass, insecure randomness)
