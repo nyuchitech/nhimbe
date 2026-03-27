@@ -48,7 +48,7 @@ All frontend API calls go through `src/lib/api.ts` (centralized client) → Clou
 
 ### Backend Routing (Hono)
 
-`worker/src/index.ts` (~142 lines) is the entry point using the **Hono** framework with modular route mounting:
+`worker/src/index.ts` (~186 lines) is the entry point using the **Hono** framework with modular route mounting:
 ```ts
 app.route("/api/events", events);
 app.route("/api/auth", auth);
@@ -57,7 +57,7 @@ app.route("/api/payments", payments);
 
 Global middleware applied in `index.ts`: CORS (restricted to trusted origins), environment validation (logs missing bindings on first request), security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), observability (request IDs + structured logging), rate limiting (all API endpoints), error handling (generic messages — no error details leaked), 404 handler, and queue consumer.
 
-**17 route modules** in `worker/src/routes/`:
+**18 route modules** in `worker/src/routes/`:
 
 | Route Module | Endpoints |
 |-------------|-----------|
@@ -77,6 +77,7 @@ Global middleware applied in `index.ts`: CORS (restricted to trusted origins), e
 | `series.ts` | Recurring event series CRUD (RRULE support) |
 | `waitlist.ts` | Waitlist join/leave/list (auth-protected) |
 | `checkin.ts` | QR-based check-in and attendance stats |
+| `kiosk.ts` | TV-style kiosk pairing (6-char codes), session management for on-site check-in and digital signage |
 | `payments.ts` | Payment intents, Paynow webhooks (HMAC-SHA512 verified), status checks |
 
 ### Middleware (`worker/src/middleware/`)
@@ -85,6 +86,7 @@ Global middleware applied in `index.ts`: CORS (restricted to trusted origins), e
 - `observability.ts` — Request ID generation and structured logging
 - `rate-limit.ts` — Rate limiting for all API endpoints (100 req/min)
 - `ai-safety.ts` — Prompt injection detection, input sanitization, max length enforcement
+- `index.ts` — Barrel export for auth middleware (`writeAuth`, `apiKeyRequired`, `getAdminUser`, `isAllowedOrigin`, `validateApiKey`)
 
 ### Utils (`worker/src/utils/`)
 
@@ -98,6 +100,11 @@ Global middleware applied in `index.ts`: CORS (restricted to trusted origins), e
 - `observability.ts` — Backend structured logging with `[mukoko]` prefix
 - `audit.ts` — Audit logging to `audit_logs` table
 - `export.ts` — CSV export with proper escaping
+- `index.ts` — Barrel export for common utilities
+
+### Queues (`worker/src/queues/`)
+
+- `handlers.ts` — Queue message processors for analytics and email background jobs (consumed in `index.ts`)
 
 ### Email (`worker/src/email/`)
 
@@ -147,10 +154,13 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 ## Frontend Structure
 
 ### Pages (`src/app/`)
-- Home, events (create/detail/manage), my-events, profile, admin (events/users/settings/support)
-- Auth: `/authenticate`, `/signin`, `/error`
+- Home, events (create/detail/manage), my-events, profile, admin (events/users/settings/signage/support)
+- Auth: `/authenticate`, `/auth/signin`, `/auth/error`
 - Info: search, calendar, about, help, privacy, terms
 - Short links: `/e/[shortCode]`
+- Signage: `/signage` (TV/kiosk display mode)
+- Event sub-pages: `/events/[id]/kiosk` (on-site check-in), `/events/[id]/signage` (digital signage display)
+- SEO: `robots.ts`, `sitemap.ts` for search engine optimization
 
 ### UI Component Architecture (Mukoko Registry)
 
@@ -160,7 +170,9 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 
 **Mukoko-exclusive components** (`src/components/ui/`): rating (interactive star rating with mineral gold accent), stats-card (metric display with trend indicators), filter-bar (horizontal chip filter with single/multi mode), status-indicator (status dot with pulse animation), timeline (composable vertical timeline with mineral dot colors), copy-button (clipboard with copied state), file-upload (drag-and-drop with validation), share-dialog (WhatsApp/X/Email sharing modal), lazy-section (TikTok-style FIFO mount queue with IntersectionObserver), detail-layout (shared detail page layout with hero/sidebar/back nav)
 
-**Composite components**: responsive-modal (Drawer on mobile / Dialog on desktop), share-button, invite-friends, event-ratings, host-reputation, referral-leaderboard, AI description wizard, address-autocomplete, QR code, popularity-badge
+**Composite components**: responsive-modal (Drawer on mobile / Dialog on desktop), share-button, invite-friends, event-ratings, host-reputation, referral-leaderboard, AI description wizard, address-autocomplete, QR code, popularity-badge, community-insights, city-dropdown, animated-background, gradient-background, live-region (ARIA live announcements), theme-toggle
+
+**Total**: 63 component files in `src/components/ui/` (including barrel `index.ts`)
 
 **Config**: `components.json` at root — shadcn new-york style, RSC, Tailwind v4, Lucide icons
 
@@ -174,16 +186,36 @@ Trusted domains are hardcoded in the worker: `nyuchi.com`, `mukoko.com`, `nhimbe
 - `pwa/` — Service worker registration
 
 ### Event Form Decomposition (`src/app/events/create/`)
-- `create-event-form.tsx` — Main form (~270 lines, down from 639)
+- `create-event-form.tsx` — Main form (~377 lines)
 - `cover-image-upload.tsx` — Cover image upload with preview
 - `theme-selector.tsx` — Mineral theme picker with carousel
 - `event-options-card.tsx` — Ticketing, approval, capacity settings
 - `form-field-row.tsx` — Reusable field row component
 
 ### Event Detail Decomposition (`src/app/events/[id]/`)
-- `event-detail-content.tsx` — Main layout (~200 lines, down from 512)
+- `event-detail-content.tsx` — Main layout (~208 lines)
 - `event-cover.tsx` — Cover image with badges, stats overlay
 - `event-sidebar.tsx` — Ticket card, insights, QR code, friends, host reputation
+- `event-actions.tsx` — Event action buttons
+- `event-map.tsx` — Map integration
+- `event-qr-code.tsx` — QR code display
+- `event-theme-wrapper.tsx` — Theme-aware wrapper
+- `event-weather.tsx` — Weather display for event location
+- `rsvp-button.tsx` — RSVP/registration button
+- `kiosk/` — On-site kiosk check-in sub-page (host pairing flow)
+- `signage/` — Digital signage display sub-page
+- `manage/` — Event management page
+
+### Frontend Libraries (`src/lib/`)
+
+- `api.ts` — Centralized API client for all backend calls
+- `calendar.ts` — Calendar/date utilities (with `calendar.test.ts`)
+- `timezone.ts` — Timezone handling utilities (with `timezone.test.ts`)
+- `fallback-chain.ts` — Fallback chain pattern for resilient data loading
+- `use-focus-trap.ts` — Focus trap hook for modal accessibility
+- `themes.ts` — Mineral theme definitions
+- `observability.ts` — Frontend structured logging (`[mukoko]` prefix)
+- `utils.ts` — Shared utilities including `cn()` class merger (with `utils.test.ts`)
 
 ### i18n (`src/lib/i18n/`)
 
@@ -201,7 +233,16 @@ Service worker at `public/sw.js` — cache-first for static assets, network-firs
 
 ### Frontend Tests (8 files, 160 tests)
 
-Tests colocate with modules (e.g., `src/lib/api.test.ts`) or live in `src/__tests__/`. Config: `vitest.config.ts` with jsdom and React plugin.
+Tests colocate with modules (e.g., `src/lib/api.test.ts`) or live in `src/__tests__/`. Config: `vitest.config.ts` with jsdom and React plugin. Test setup: `src/__tests__/setup.ts`.
+
+- `src/lib/api.test.ts` — API client tests
+- `src/lib/utils.test.ts` — Utility function tests
+- `src/lib/calendar.test.ts` — Calendar utility tests (32 tests)
+- `src/lib/timezone.test.ts` — Timezone handling tests
+- `src/components/auth/auth-context.test.tsx` — Auth context tests (9 tests)
+- `src/components/auth/auth-guard.test.tsx` — Auth guard tests (4 tests)
+- `src/__tests__/seo.test.ts` — SEO metadata tests (25 tests)
+- `src/__tests__/accessibility.test.ts` — Accessibility compliance tests (18 tests)
 
 ### Backend Tests (10 files, 283 tests)
 
@@ -241,8 +282,11 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 ### Analytics Tables
 `event_views`, `search_queries`, `ai_conversations`, `audit_logs`
 
-### Migrations (8 files)
-`add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`, `005_backend_hardening.sql` (soft deletes, audit logs, categories table, FTS5), `006_event_series.sql`, `007_waitlists_payments.sql`, `008_seed_categories.sql` (seeds 32 categories into DB)
+### Kiosk/Signage Tables
+`kiosk_pairings` (TV-style pairing codes for on-site devices)
+
+### Migrations (11 files)
+`add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`, `005_backend_hardening.sql` (soft deletes, audit logs, categories table, FTS5), `006_event_series.sql`, `007_waitlists_payments.sql`, `008_seed_categories.sql` (seeds 32 categories into DB), `009_schema_org_alignment.sql` (renames columns to match schema.org vocabulary — `review_body`, `date_created`/`date_modified`, `address_locality`/`address_country`), `010_kiosk_sessions.sql` (kiosk pairing codes and session tables)
 
 ## Key Files
 
@@ -265,7 +309,15 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 | `src/components/auth/auth-context.tsx` | Auth state management, Stytch sync |
 | `src/components/error/section-error-boundary.tsx` | Mukoko 3-layer error boundary |
 | `src/components/ui/share-button.tsx` | WhatsApp-first social sharing |
+| `worker/src/routes/kiosk.ts` | Kiosk pairing, session management |
+| `worker/src/queues/handlers.ts` | Queue message processors (analytics, email) |
 | `worker/wrangler.toml` | Cloudflare bindings and env config |
+| `src/lib/calendar.ts` | Calendar/date utilities |
+| `src/lib/timezone.ts` | Timezone handling |
+| `src/lib/fallback-chain.ts` | Fallback chain pattern for resilient loading |
+| `CONTRIBUTING.md` | Contribution guidelines |
+| `SECURITY.md` | Security policy and reporting |
+| `RELEASES.md` | Release notes |
 
 ## Code Conventions
 
