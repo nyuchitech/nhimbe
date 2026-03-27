@@ -141,6 +141,36 @@ jobs:
           echo "=== Migration validation complete ==="
 
   # ============================================
+  # CODE REVIEW — Claude on pull requests
+  # ============================================
+
+  claude-code-review:
+    name: Claude Code Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          review_type: code_review
+          direct_prompt: |
+            Review this PR for:
+            1. Security vulnerabilities (XSS, injection, auth bypass, insecure randomness)
+            2. Performance issues
+            3. Code quality and adherence to project conventions (see CLAUDE.md)
+            4. Potential bugs or edge cases
+            Be concise. Only flag real issues, not style preferences.
+
+  # ============================================
   # DEPLOYMENT JOBS — only on push to main
   # ============================================
 
