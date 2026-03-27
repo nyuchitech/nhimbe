@@ -14,6 +14,7 @@ import {
   createMockR2,
   createRequest,
   createApiKeyRequest,
+  createAuthenticatedRequest,
 } from './mocks';
 
 // Mock Stytch auth for admin route tests
@@ -759,6 +760,251 @@ describe('POST /api/events/:eventId/waitlist', () => {
     expect(response.status).toBe(400);
     const data = await response.json() as { error: string };
     expect(data.error).toContain('no capacity limit');
+  });
+});
+
+// ============================================
+// Stats Routes
+// ============================================
+describe('GET /api/community/stats', () => {
+  it('returns community stats with proper structure', async () => {
+    const statsRow = { total_events: 42, total_attendees: 1250, active_hosts: 15 };
+    const trendingRows = [
+      { category: 'Music', count: 12, last_week: 8 },
+      { category: 'Tech', count: 9, last_week: 5 },
+    ];
+    const venueRows = [
+      { venue: 'Harare Gardens', count: 7 },
+      { venue: 'HICC', count: 5 },
+    ];
+    const peakRow = { day_of_week: 6, hour: 14, event_count: 18 };
+
+    const db = createMockD1();
+    let callCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // stats query — uses .first()
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(statsRow) });
+      } else if (callCount === 2) {
+        // trending query — uses .all()
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: trendingRows }) });
+      } else if (callCount === 3) {
+        // venues query — uses .all()
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: venueRows }) });
+      } else {
+        // peak time query — uses .first()
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(peakRow) });
+      }
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+
+    const data = await response.json() as {
+      stats: {
+        totalEvents: number;
+        totalAttendees: number;
+        activeHosts: number;
+        trendingCategories: Array<{ category: string; change: number; events: number }>;
+        peakTime: string;
+        popularVenues: Array<{ venue: string; events: number }>;
+        city?: string;
+      };
+    };
+
+    expect(data.stats).toBeDefined();
+    expect(data.stats.totalEvents).toBe(42);
+    expect(data.stats.totalAttendees).toBe(1250);
+    expect(data.stats.activeHosts).toBe(15);
+    expect(data.stats.trendingCategories).toHaveLength(2);
+    expect(data.stats.trendingCategories[0].category).toBe('Music');
+    expect(data.stats.trendingCategories[0].events).toBe(12);
+    expect(data.stats.popularVenues).toHaveLength(2);
+    expect(data.stats.popularVenues[0].venue).toBe('Harare Gardens');
+    expect(data.stats.city).toBeUndefined();
+  });
+
+  it('filters by city when query param provided', async () => {
+    const statsRow = { total_events: 10, total_attendees: 300, active_hosts: 5 };
+    const peakRow = { day_of_week: 3, hour: 18, event_count: 6 };
+
+    const db = createMockD1();
+    let callCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(statsRow) });
+      } else if (callCount === 2) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: [] }) });
+      } else if (callCount === 3) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: [] }) });
+      } else {
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(peakRow) });
+      }
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/stats?city=Harare');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+
+    const data = await response.json() as {
+      stats: { city?: string; totalEvents: number; peakTime: string };
+    };
+    expect(data.stats.city).toBe('Harare');
+    expect(data.stats.totalEvents).toBe(10);
+    // Verify that all 4 DB queries were executed
+    expect(callCount).toBe(4);
+  });
+
+  it('calculates peakTime from DB data (not hardcoded)', async () => {
+    // Saturday at 14:00 should produce "Sat 14:00-16:00"
+    const peakRow = { day_of_week: 6, hour: 14, event_count: 18 };
+    const db = createMockD1();
+    let callCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ total_events: 1, total_attendees: 10, active_hosts: 1 }),
+        });
+      } else if (callCount === 2 || callCount === 3) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: [] }) });
+      } else {
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(peakRow) });
+      }
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    const data = await response.json() as { stats: { peakTime: string } };
+    expect(data.stats.peakTime).toBe('Sat 14:00-16:00');
+  });
+
+  it('returns "No data yet" when no peak time data exists', async () => {
+    const db = createMockD1();
+    let callCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ total_events: 0, total_attendees: 0, active_hosts: 0 }),
+        });
+      } else if (callCount === 2 || callCount === 3) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: [] }) });
+      } else {
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(null) });
+      }
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    const data = await response.json() as { stats: { peakTime: string } };
+    expect(data.stats.peakTime).toBe('No data yet');
+  });
+
+  it('calculates trending category change percentage correctly', async () => {
+    // category with 10 this week and 5 last week = 100% change
+    const trendingRows = [{ category: 'Art', count: 10, last_week: 5 }];
+    const db = createMockD1();
+    let callCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ total_events: 10, total_attendees: 50, active_hosts: 3 }),
+        });
+      } else if (callCount === 2) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: trendingRows }) });
+      } else if (callCount === 3) {
+        return createMockD1Statement({ all: vi.fn().mockResolvedValue({ results: [] }) });
+      } else {
+        return createMockD1Statement({ first: vi.fn().mockResolvedValue(null) });
+      }
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    const data = await response.json() as {
+      stats: { trendingCategories: Array<{ category: string; change: number; events: number }> };
+    };
+    // (10 - 5) / 5 * 100 = 100
+    expect(data.stats.trendingCategories[0].change).toBe(100);
+    expect(data.stats.trendingCategories[0].events).toBe(10);
+  });
+});
+
+describe('GET /api/community/events/:eventId/analytics', () => {
+  it('returns analytics for an event', async () => {
+    const analyticsRow = { views: 150, registrations: 30, referrals: 8 };
+    const statement = createMockD1Statement({
+      first: vi.fn().mockResolvedValue(analyticsRow),
+    });
+    const db = createMockD1({ prepare: vi.fn().mockReturnValue(statement) });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/events/evt-1/analytics');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+
+    const data = await response.json() as {
+      eventId: string;
+      views: number;
+      registrations: number;
+      conversionRate: number;
+      referrals: number;
+    };
+    expect(data.eventId).toBe('evt-1');
+    expect(data.views).toBe(150);
+    expect(data.registrations).toBe(30);
+    expect(data.referrals).toBe(8);
+    // conversionRate = (30 / 150) * 10000 / 100 = 20
+    expect(data.conversionRate).toBe(20);
+  });
+
+  it('returns zero conversion rate when no views', async () => {
+    const analyticsRow = { views: 0, registrations: 0, referrals: 0 };
+    const statement = createMockD1Statement({
+      first: vi.fn().mockResolvedValue(analyticsRow),
+    });
+    const db = createMockD1({ prepare: vi.fn().mockReturnValue(statement) });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/events/evt-2/analytics');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+
+    const data = await response.json() as { conversionRate: number };
+    expect(data.conversionRate).toBe(0);
+  });
+
+  it('handles null analytics result gracefully', async () => {
+    const statement = createMockD1Statement({
+      first: vi.fn().mockResolvedValue(null),
+    });
+    const db = createMockD1({ prepare: vi.fn().mockReturnValue(statement) });
+    env = createMockEnv({ DB: db });
+
+    const request = createRequest('http://localhost:8787/api/community/events/evt-missing/analytics');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+
+    const data = await response.json() as {
+      views: number;
+      registrations: number;
+      conversionRate: number;
+      referrals: number;
+    };
+    expect(data.views).toBe(0);
+    expect(data.registrations).toBe(0);
+    expect(data.conversionRate).toBe(0);
+    expect(data.referrals).toBe(0);
   });
 });
 
