@@ -1,0 +1,18 @@
+# Default owners for everything
+* @nyuchitech/core
+
+# Backend
+/worker/ @nyuchitech/core
+
+# Frontend
+/src/ @nyuchitech/core
+
+# Infrastructure
+/.github/ @nyuchitech/core
+/worker/wrangler.toml @nyuchitech/core
+
+# Security-sensitive files
+/SECURITY.md @nyuchitech/core
+/worker/src/auth/ @nyuchitech/core
+/worker/src/middleware/auth.ts @nyuchitech/core
+/worker/src/payments/ @nyuchitech/core
