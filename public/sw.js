@@ -1,24 +1,23 @@
-const CACHE_VERSION = "nhimbe-v1";
-const STATIC_ASSETS = ["/", "/events", "/search"];
+const CACHE_VERSION = "nhimbe-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
-  self.skipWaiting();
+  // Skip waiting to activate immediately
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  // Only handle GET requests
+  if (event.request.method !== "GET") return;
 
   // Network-first for API calls
   if (url.pathname.startsWith("/api/")) {
@@ -28,8 +27,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Cache-first for immutable hashed assets (_next/static)
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Network-first for HTML pages and everything else
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_VERSION).then((cache) => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
