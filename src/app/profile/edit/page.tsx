@@ -27,7 +27,7 @@ function ProfileEditContent() {
   const [country, setCountry] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
 
-  const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
+  const [cities, setCities] = useState<{ addressLocality: string; addressCountry: string }[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +37,8 @@ function ProfileEditContent() {
   useEffect(() => {
     if (user && !dataLoaded) {
       setName(user.name || "");
-      setCity(user.city || "");
-      setCountry(user.country || "");
+      setCity(user.addressLocality || "");
+      setCountry(user.addressCountry || "");
       setInterests(user.interests || []);
       setDataLoaded(true);
     }
@@ -81,8 +81,8 @@ function ProfileEditContent() {
       // Only send fields that changed
       const changedFields: Record<string, string | string[]> = {};
       if (name !== (user?.name || "")) changedFields.name = name;
-      if (city !== (user?.city || "")) changedFields.city = city;
-      if (country !== (user?.country || "")) changedFields.country = country;
+      if (city !== (user?.addressLocality || "")) changedFields.addressLocality = city;
+      if (country !== (user?.addressCountry || "")) changedFields.addressCountry = country;
       if (JSON.stringify(interests) !== JSON.stringify(user?.interests || [])) {
         changedFields.interests = interests;
       }
@@ -148,12 +148,12 @@ function ProfileEditContent() {
         </Label>
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {cities.map((loc) => {
-            const isSelected = city === loc.city && country === loc.country;
+            const isSelected = city === loc.addressLocality && country === loc.addressCountry;
             return (
               <Button
-                key={`${loc.city}-${loc.country}`}
+                key={`${loc.addressLocality}-${loc.addressCountry}`}
                 variant="ghost"
-                onClick={() => selectCity(loc.city, loc.country)}
+                onClick={() => selectCity(loc.addressLocality, loc.addressCountry)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors h-auto ${
                   isSelected
                     ? "bg-primary/20 border border-primary"
@@ -163,8 +163,8 @@ function ProfileEditContent() {
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-text-secondary" />
                   <div className="text-left">
-                    <div className="font-medium">{loc.city}</div>
-                    <div className="text-sm text-text-secondary">{loc.country}</div>
+                    <div className="font-medium">{loc.addressLocality}</div>
+                    <div className="text-sm text-text-secondary">{loc.addressCountry}</div>
                   </div>
                 </div>
                 {isSelected && <Check className="w-5 h-5 text-primary" />}

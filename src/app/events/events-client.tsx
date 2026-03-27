@@ -15,13 +15,13 @@ import { InterestsPrompt } from "@/components/prompts/interests-prompt";
 interface EventsClientProps {
   initialEvents: Event[];
   initialCategories: Category[];
-  initialCities: { city: string; country: string }[];
+  initialCities: { addressLocality: string; addressCountry: string }[];
 }
 
 export function EventsClient({ initialEvents, initialCategories, initialCities }: EventsClientProps) {
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [cities, setCities] = useState<{ city: string; country: string }[]>(initialCities);
+  const [cities, setCities] = useState<{ addressLocality: string; addressCountry: string }[]>(initialCities);
   const [loading, setLoading] = useState(false);
 
   // Filters
@@ -132,8 +132,8 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
           value={activeCity}
           onChange={setActiveCity}
           cities={cities.map((c) => ({
-            value: `${c.city}, ${c.country}`,
-            label: `${c.city}, ${c.country}`,
+            value: `${c.addressLocality}, ${c.addressCountry}`,
+            label: `${c.addressLocality}, ${c.addressCountry}`,
           }))}
           allOption={{ value: "All Cities", label: "All Cities" }}
           variant="filled"

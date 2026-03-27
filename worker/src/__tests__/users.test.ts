@@ -36,9 +36,9 @@ describe('GET /api/users/:id', () => {
     const response = await worker.fetch(request, env, {} as ExecutionContext);
 
     expect(response.status).toBe(200);
-    const data = await response.json() as { user: { _id: string; name: string } };
+    const data = await response.json() as { user: { id: string; name: string } };
     expect(data.user).toBeDefined();
-    expect(data.user._id).toBe('usr-123');
+    expect(data.user.id).toBe('usr-123');
     expect(data.user.name).toBe('Jane Doe');
   });
 
@@ -92,9 +92,9 @@ describe('POST /api/users', () => {
     const userBody = {
       email: 'newuser@example.com',
       name: 'New User',
-      alternate_name: 'newuser',
-      address_locality: 'Harare',
-      address_country: 'Zimbabwe',
+      alternateName: 'newuser',
+      addressLocality: 'Harare',
+      addressCountry: 'Zimbabwe',
       interests: ['Tech', 'Music'],
     };
 

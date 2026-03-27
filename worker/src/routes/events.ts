@@ -318,10 +318,10 @@ events.get("/:id/reviews", async (c) => {
     userName: row.user_name || "Anonymous",
     userInitials: getInitials(row.user_name || "Anonymous"),
     rating: row.rating,
-    comment: row.comment || undefined,
+    reviewBody: row.comment || undefined,
     helpfulCount: row.helpful_count,
     isVerifiedAttendee: !!row.is_verified_attendee,
-    createdAt: row.date_created,
+    dateCreated: row.date_created,
   }));
 
   interface StatsRow {

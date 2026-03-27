@@ -18,13 +18,37 @@ users.get("/:id", async (c) => {
     `SELECT _id, name, alternate_name, image, address_locality, address_country,
             interests, onboarding_completed, role, created_at
      FROM users WHERE _id = ? OR alternate_name = ?`
-  ).bind(userId, userId).first();
+  ).bind(userId, userId).first() as {
+    _id: string;
+    name: string | null;
+    alternate_name: string | null;
+    image: string | null;
+    address_locality: string | null;
+    address_country: string | null;
+    interests: string | null;
+    onboarding_completed: number | null;
+    role: string | null;
+    created_at: string | null;
+  } | null;
 
   if (!result) {
     return c.json({ error: "User not found" }, 404);
   }
 
-  return c.json({ user: result });
+  const user = {
+    id: result._id,
+    name: result.name,
+    alternateName: result.alternate_name,
+    image: result.image,
+    addressLocality: result.address_locality,
+    addressCountry: result.address_country,
+    interests: result.interests,
+    onboardingCompleted: result.onboarding_completed,
+    role: result.role,
+    dateCreated: result.created_at,
+  };
+
+  return c.json({ user });
 });
 
 // POST /api/users
@@ -39,9 +63,9 @@ users.post("/", async (c) => {
     id,
     body.email,
     body.name,
-    body.alternate_name || null,
-    body.address_locality || null,
-    body.address_country || null,
+    body.alternateName || null,
+    body.addressLocality || null,
+    body.addressCountry || null,
     JSON.stringify(body.interests || [])
   ).run();
 

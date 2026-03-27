@@ -134,10 +134,10 @@ function ProfileContent() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">{user?.name || "User"}</h1>
           <p className="text-text-secondary">{user?.email}</p>
-          {(user?.city || user?.country) && (
+          {(user?.addressLocality || user?.addressCountry) && (
             <div className="flex items-center gap-1 text-sm text-text-tertiary mt-1">
               <MapPin className="w-3.5 h-3.5" />
-              {[user?.city, user?.country].filter(Boolean).join(", ")}
+              {[user?.addressLocality, user?.addressCountry].filter(Boolean).join(", ")}
             </div>
           )}
         </div>
@@ -166,9 +166,9 @@ function ProfileContent() {
       {!profileCompleteness.complete && (() => {
         const missing: string[] = [];
         if (!profileCompleteness.name) missing.push("your name");
-        if (!profileCompleteness.city) missing.push("your location");
+        if (!profileCompleteness.addressLocality) missing.push("your location");
         if (!profileCompleteness.interests) missing.push("your interests");
-        const completionPercent = [profileCompleteness.name, profileCompleteness.city, profileCompleteness.interests].filter(Boolean).length / 3 * 100;
+        const completionPercent = [profileCompleteness.name, profileCompleteness.addressLocality, profileCompleteness.interests].filter(Boolean).length / 3 * 100;
         const nudgeText = `Add ${missing.join(" and ")} for a better experience`;
 
         return (

@@ -13,8 +13,8 @@ const DISMISS_KEY = "nhimbe_location_prompt_dismissed";
 export function LocationPrompt() {
   const { user, isAuthenticated, refreshUser } = useAuth();
   const stytch = useStytch();
-  const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
-  const [selected, setSelected] = useState<{ city: string; country: string } | null>(null);
+  const [cities, setCities] = useState<{ addressLocality: string; addressCountry: string }[]>([]);
+  const [selected, setSelected] = useState<{ addressLocality: string; addressCountry: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -28,7 +28,7 @@ export function LocationPrompt() {
     getCities().then(setCities).catch(() => {});
   }, []);
 
-  if (!isAuthenticated || user?.city || dismissed) return null;
+  if (!isAuthenticated || user?.addressLocality || dismissed) return null;
 
   const handleSave = async () => {
     if (!selected) return;
@@ -37,7 +37,7 @@ export function LocationPrompt() {
       const tokens = stytch.session.getTokens();
       const sessionJwt = tokens?.session_jwt;
       if (!sessionJwt) return;
-      await updateProfile(sessionJwt, { city: selected.city, country: selected.country });
+      await updateProfile(sessionJwt, { addressLocality: selected.addressLocality, addressCountry: selected.addressCountry });
       await refreshUser();
     } catch {
       // Silently fail — non-blocking prompt
@@ -60,16 +60,16 @@ export function LocationPrompt() {
         <p className="text-sm font-medium">Where are you based?</p>
         <select
           className="mt-1 w-full bg-elevated rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          value={selected ? `${selected.city}|${selected.country}` : ""}
+          value={selected ? `${selected.addressLocality}|${selected.addressCountry}` : ""}
           onChange={(e) => {
-            const [city, country] = e.target.value.split("|");
-            setSelected({ city, country });
+            const [addressLocality, addressCountry] = e.target.value.split("|");
+            setSelected({ addressLocality, addressCountry });
           }}
         >
           <option value="">Select a city</option>
           {cities.map((c) => (
-            <option key={`${c.city}-${c.country}`} value={`${c.city}|${c.country}`}>
-              {c.city}, {c.country}
+            <option key={`${c.addressLocality}-${c.addressCountry}`} value={`${c.addressLocality}|${c.addressCountry}`}>
+              {c.addressLocality}, {c.addressCountry}
             </option>
           ))}
         </select>

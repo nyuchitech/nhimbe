@@ -42,11 +42,11 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
 
     try {
       await registerForEvent({
-        event_id: eventId,
-        user_id: user.id,
-        ticket_type: price?.price ? "paid" : "free",
-        ticket_price: price?.price,
-        ticket_currency: price?.priceCurrency,
+        eventId: eventId,
+        userId: user.id,
+        ticketType: price?.price ? "paid" : "free",
+        ticketPrice: price?.price,
+        ticketCurrency: price?.priceCurrency,
       });
       setRegistered(true);
     } catch (err) {

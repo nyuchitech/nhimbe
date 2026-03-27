@@ -121,7 +121,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-1', user_id: 'usr-1' }),
+        body: JSON.stringify({ eventId: 'evt-1', userId: 'usr-1' }),
       }
     );
 
@@ -161,7 +161,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-1', user_id: 'usr-1' }),
+        body: JSON.stringify({ eventId: 'evt-1', userId: 'usr-1' }),
       }
     );
 
@@ -191,7 +191,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-full', user_id: 'usr-1' }),
+        body: JSON.stringify({ eventId: 'evt-full', userId: 'usr-1' }),
       }
     );
 
@@ -215,7 +215,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-nope', user_id: 'usr-1' }),
+        body: JSON.stringify({ eventId: 'evt-nope', userId: 'usr-1' }),
       }
     );
 
@@ -231,7 +231,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-1' }),  // missing user_id
+        body: JSON.stringify({ eventId: 'evt-1' }),  // missing userId
       }
     );
 
@@ -247,7 +247,7 @@ describe('POST /api/registrations', () => {
       'http://localhost:8787/api/registrations',
       {
         method: 'POST',
-        body: JSON.stringify({ event_id: 'evt-1', user_id: 'usr-1' }),
+        body: JSON.stringify({ eventId: 'evt-1', userId: 'usr-1' }),
         origin: 'https://evil.com',
       }
     );

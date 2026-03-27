@@ -17,9 +17,7 @@ interface EventCardHorizontalProps {
     name?: string;
     venue?: string;
     addressLocality?: string;
-    city?: string;
     addressCountry?: string;
-    country?: string;
   };
   coverImage?: string;
   coverGradient?: string;
@@ -40,7 +38,7 @@ export function EventCardHorizontal({
 
   const venueDisplay = (location.name || location.venue)
     ? `${location.name ?? location.venue}`
-    : `${location.addressLocality ?? location.city}, ${location.addressCountry ?? location.country}`;
+    : `${location.addressLocality}, ${location.addressCountry}`;
 
   return (
     <Link href={`/events/${id}`} className="block group">

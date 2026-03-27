@@ -50,7 +50,7 @@ function MyEventsContent() {
   const registeredEventIds = new Set(
     userRegistrations
       .filter((r) => r.status === "registered" || r.status === "approved" || r.status === "pending")
-      .map((r) => r.event_id)
+      .map((r) => r.eventId)
   );
 
   // Filter events the user is hosting (their name matches organizer name)

@@ -56,9 +56,9 @@ auth.post("/sync", async (c) => {
       id: existingUser._id,
       email: existingUser.email,
       name: existingUser.name || body.name,
-      avatarUrl: existingUser.image,
-      city: existingUser.address_locality,
-      country: existingUser.address_country,
+      image: existingUser.image,
+      addressLocality: existingUser.address_locality,
+      addressCountry: existingUser.address_country,
       interests: safeParseJSON(existingUser.interests, []) as string[],
       onboardingCompleted: !!(existingUser.onboarding_completed),
       stytchUserId: stytchUser.userId,
@@ -79,9 +79,9 @@ auth.post("/sync", async (c) => {
     id: newId,
     email: body.email,
     name: body.name || "",
-    avatarUrl: null,
-    city: null,
-    country: null,
+    image: null,
+    addressLocality: null,
+    addressCountry: null,
     interests: [],
     onboardingCompleted: false,
     stytchUserId: stytchUser.userId,
@@ -129,9 +129,9 @@ auth.get("/me", async (c) => {
     id: result._id,
     email: result.email,
     name: result.name,
-    avatarUrl: result.image,
-    city: result.address_locality,
-    country: result.address_country,
+    image: result.image,
+    addressLocality: result.address_locality,
+    addressCountry: result.address_country,
     interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: !!(result.onboarding_completed),
     stytchUserId: result.stytch_user_id,
@@ -153,13 +153,13 @@ auth.patch("/profile", async (c) => {
   const body = await c.req.json() as {
     name?: string;
     email?: string;
-    city?: string;
-    country?: string;
+    addressLocality?: string;
+    addressCountry?: string;
     interests?: string[];
   };
 
   // At least one field must be provided
-  if (!body.name && !body.city && !body.country && !body.interests) {
+  if (!body.name && !body.addressLocality && !body.addressCountry && !body.interests) {
     return c.json({ error: "At least one field is required" }, 400);
   }
 
@@ -189,8 +189,8 @@ auth.patch("/profile", async (c) => {
   const values: (string | number)[] = [];
 
   if (body.name !== undefined) { setClauses.push("name = ?"); values.push(body.name); }
-  if (body.city !== undefined) { setClauses.push("address_locality = ?"); values.push(body.city); }
-  if (body.country !== undefined) { setClauses.push("address_country = ?"); values.push(body.country); }
+  if (body.addressLocality !== undefined) { setClauses.push("address_locality = ?"); values.push(body.addressLocality); }
+  if (body.addressCountry !== undefined) { setClauses.push("address_country = ?"); values.push(body.addressCountry); }
   if (body.interests !== undefined) { setClauses.push("interests = ?"); values.push(JSON.stringify(body.interests)); }
   setClauses.push("date_modified = datetime('now')");
 
@@ -206,9 +206,9 @@ auth.patch("/profile", async (c) => {
     id: result._id,
     email: result.email,
     name: result.name,
-    avatarUrl: result.image,
-    city: result.address_locality,
-    country: result.address_country,
+    image: result.image,
+    addressLocality: result.address_locality,
+    addressCountry: result.address_country,
     interests: safeParseJSON(result.interests, []) as string[],
     onboardingCompleted: !!(result.onboarding_completed),
     stytchUserId: result.stytch_user_id,

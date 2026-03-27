@@ -11,7 +11,7 @@ interface Review {
   userName: string;
   userInitials: string;
   rating: number;
-  comment: string;
+  reviewBody: string;
   date: string;
   helpful: number;
 }
@@ -59,8 +59,8 @@ export function EventRatings({
           userName: r.userName,
           userInitials: r.userInitials,
           rating: r.rating,
-          comment: r.comment || "",
-          date: formatRelativeDate(r.createdAt),
+          reviewBody: r.reviewBody || "",
+          date: formatRelativeDate(r.dateCreated),
           helpful: r.helpfulCount,
         }));
         setReviews(transformedReviews);
@@ -211,7 +211,7 @@ export function EventRatings({
                 <Rating value={review.rating} readOnly size="sm" />
               </div>
             </div>
-            <p className="text-sm text-text-secondary mb-3">{review.comment}</p>
+            <p className="text-sm text-text-secondary mb-3">{review.reviewBody}</p>
             <Button
               variant="ghost"
               size="sm"

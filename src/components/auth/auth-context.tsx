@@ -17,9 +17,9 @@ export interface NhimbeUser {
   id: string;
   email: string;
   name: string;
-  avatarUrl?: string;
-  city?: string;
-  country?: string;
+  image?: string;
+  addressLocality?: string;
+  addressCountry?: string;
   interests?: string[];
   stytchUserId: string;
   role: UserRole;
@@ -27,7 +27,7 @@ export interface NhimbeUser {
 
 export interface ProfileCompleteness {
   name: boolean;
-  city: boolean;
+  addressLocality: boolean;
   interests: boolean;
   complete: boolean;
 }
@@ -166,14 +166,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!stytchUser && !!session && !!nhimbeUser;
 
   const hasName = !!nhimbeUser?.name && nhimbeUser.name !== "" && nhimbeUser.name !== "User";
-  const hasCity = !!nhimbeUser?.city;
+  const hasAddressLocality = !!nhimbeUser?.addressLocality;
   const hasInterests = !!nhimbeUser?.interests && nhimbeUser.interests.length > 0;
 
   const profileCompleteness: ProfileCompleteness = {
     name: hasName,
-    city: hasCity,
+    addressLocality: hasAddressLocality,
     interests: hasInterests,
-    complete: hasName && hasCity && hasInterests,
+    complete: hasName && hasAddressLocality && hasInterests,
   };
 
   return (

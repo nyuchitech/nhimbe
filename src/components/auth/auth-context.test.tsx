@@ -36,7 +36,7 @@ function TestConsumer() {
       <div data-testid="authenticated">{isAuthenticated ? 'yes' : 'no'}</div>
       <div data-testid="profile-complete">{profileCompleteness.complete ? 'yes' : 'no'}</div>
       <div data-testid="profile-name">{profileCompleteness.name ? 'yes' : 'no'}</div>
-      <div data-testid="profile-city">{profileCompleteness.city ? 'yes' : 'no'}</div>
+      <div data-testid="profile-city">{profileCompleteness.addressLocality ? 'yes' : 'no'}</div>
       <div data-testid="profile-interests">{profileCompleteness.interests ? 'yes' : 'no'}</div>
       <div data-testid="user-name">{user?.name || 'no-user'}</div>
       <button onClick={() => signIn('/dashboard')}>Sign In</button>
@@ -99,7 +99,7 @@ describe('AuthContext', () => {
       id: 'usr-backend-1',
       email: 'test@example.com',
       name: 'Backend User',
-      city: 'Harare',
+      addressLocality: 'Harare',
       interests: ['music', 'tech'],
       stytchUserId: 'stytch-123',
       role: 'user',
@@ -167,7 +167,7 @@ describe('AuthContext', () => {
       id: 'usr-complete',
       email: 'complete@example.com',
       name: 'Complete User',
-      city: 'Harare',
+      addressLocality: 'Harare',
       interests: ['music'],
       stytchUserId: 'stytch-789',
       role: 'user',
@@ -259,7 +259,7 @@ describe('AuthContext', () => {
       id: 'usr-123',
       email: 'test@example.com',
       name: 'Test',
-      city: 'Harare',
+      addressLocality: 'Harare',
       interests: ['music', 'tech'],
       stytchUserId: 'stytch-123',
       role: 'user',

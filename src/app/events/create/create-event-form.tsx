@@ -43,12 +43,12 @@ const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 const DEFAULT_CITIES = [
-  { city: "Harare", country: "Zimbabwe" },
-  { city: "Bulawayo", country: "Zimbabwe" },
-  { city: "Cape Town", country: "South Africa" },
-  { city: "Johannesburg", country: "South Africa" },
-  { city: "Nairobi", country: "Kenya" },
-  { city: "Lagos", country: "Nigeria" },
+  { addressLocality: "Harare", addressCountry: "Zimbabwe" },
+  { addressLocality: "Bulawayo", addressCountry: "Zimbabwe" },
+  { addressLocality: "Cape Town", addressCountry: "South Africa" },
+  { addressLocality: "Johannesburg", addressCountry: "South Africa" },
+  { addressLocality: "Nairobi", addressCountry: "Kenya" },
+  { addressLocality: "Lagos", addressCountry: "Nigeria" },
 ];
 
 const mineralThemeList = mineralThemeIds.map((id) => {
@@ -84,7 +84,7 @@ export default function CreateEventForm() {
   const [venue, setVenue] = useState("");
   const [address, setAddress] = useState("");
   const [addressSearch, setAddressSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState<{ city: string; country: string } | null>(null);
+  const [selectedCity, setSelectedCity] = useState<{ addressLocality: string; addressCountry: string } | null>(null);
   const [isOnline, setIsOnline] = useState(false);
   const [meetingUrl, setMeetingUrl] = useState("");
   const [meetingPlatform, setMeetingPlatform] = useState<"zoom" | "google_meet" | "teams" | "other">("zoom");
@@ -106,7 +106,7 @@ export default function CreateEventForm() {
 
   // Data from API
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cities, setCities] = useState<{ city: string; country: string }[]>([]);
+  const [cities, setCities] = useState<{ addressLocality: string; addressCountry: string }[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -208,7 +208,7 @@ export default function CreateEventForm() {
         },
         location: isOnline
           ? { name: "Online Event", streetAddress: "", addressLocality: "Online", addressCountry: "" }
-          : { name: venue.trim(), streetAddress: address.trim(), addressLocality: selectedCity?.city || "", addressCountry: selectedCity?.country || "" },
+          : { name: venue.trim(), streetAddress: address.trim(), addressLocality: selectedCity?.addressLocality || "", addressCountry: selectedCity?.addressCountry || "" },
         category,
         keywords: tags,
         image: uploadedCoverImageUrl,
@@ -295,7 +295,7 @@ export default function CreateEventForm() {
           <>
             <div className="font-medium">{isOnline ? "Online Event" : venue}</div>
             <div className="text-sm text-text-tertiary">
-              {isOnline ? "Virtual event" : selectedCity ? `${selectedCity.city}, ${selectedCity.country}` : address}
+              {isOnline ? "Virtual event" : selectedCity ? `${selectedCity.addressLocality}, ${selectedCity.addressCountry}` : address}
             </div>
           </>
         ) : (

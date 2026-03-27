@@ -114,15 +114,15 @@ function ManageEventContent() {
             const regs = await getEventRegistrations(eventData.id);
             const formattedRegs: Registration[] = regs.map((r: APIRegistration) => ({
               id: r.id,
-              name: r.user_name || "Unknown User",
-              email: r.user_email || r.user_id,
+              name: r.userName || "Unknown User",
+              email: r.userEmail || r.userId,
               status: r.status,
-              date: new Date(r.registered_at).toLocaleDateString("en-US", {
+              date: new Date(r.registeredAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
               }),
-              avatar: (r.user_name || "U")
+              avatar: (r.userName || "U")
                 .split(" ")
                 .map((n: string) => n[0])
                 .join("")
