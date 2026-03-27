@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Users,
   Calendar,
@@ -223,17 +224,17 @@ export default function AdminDashboard() {
                       <span className="text-sm text-text-secondary">
                         {event.attendeeCount} RSVPs
                       </span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <Badge
+                        variant={
                           event.status === "upcoming"
-                            ? "bg-primary/20 text-primary"
+                            ? "default"
                             : event.status === "ongoing"
-                            ? "bg-accent/20 text-accent"
-                            : "bg-elevated text-text-tertiary"
-                        }`}
+                            ? "warning"
+                            : "secondary"
+                        }
                       >
                         {event.status}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -319,14 +320,14 @@ export default function AdminDashboard() {
                         <span className="font-medium">{ticket.subject}</span>
                       </td>
                       <td className="py-3 pr-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                        <Badge
+                          variant={
                             ticket.status === "open"
-                              ? "bg-red-500/20 text-red-400"
+                              ? "error"
                               : ticket.status === "pending"
-                              ? "bg-accent/20 text-accent"
-                              : "bg-green-500/20 text-green-400"
-                          }`}
+                              ? "warning"
+                              : "success"
+                          }
                         >
                           {ticket.status === "open" && (
                             <AlertCircle className="w-3 h-3" />
@@ -338,7 +339,7 @@ export default function AdminDashboard() {
                             <CheckCircle className="w-3 h-3" />
                           )}
                           {ticket.status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="py-3 text-text-tertiary text-sm">
                         {ticket.createdAt}

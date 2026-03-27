@@ -88,9 +88,9 @@ export function EventCover({ event, stats, reviewStats }: EventCoverProps) {
       {event.keywords && event.keywords.length > 0 && (
         <div className="absolute bottom-6 left-6 flex gap-2 flex-wrap max-w-[80%] z-10">
           {event.keywords.slice(0, 5).map((tag) => (
-            <span key={tag} className="bg-black/50 backdrop-blur-sm text-white/80 px-2.5 py-1 rounded-full text-[11px]">
+            <Badge key={tag} variant="ghost" className="bg-black/50 backdrop-blur-sm text-white/80 border-0">
               #{tag}
-            </span>
+            </Badge>
           ))}
         </div>
       )}

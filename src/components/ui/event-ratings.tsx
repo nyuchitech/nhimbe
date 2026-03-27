@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
 import { Rating } from "@/components/ui/rating";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getEventReviews, markReviewHelpful, type EventReview as ApiReview, type ReviewStats } from "@/lib/api";
 
@@ -155,9 +156,9 @@ export function EventRatings({
         <MessageSquare className="w-5 h-5 text-primary" />
         <h3 className="font-bold text-lg">Community Feedback</h3>
         {isPastEvent && (
-          <span className="ml-auto px-2 py-1 bg-elevated text-text-secondary text-xs rounded-full">
+          <Badge variant="secondary" className="ml-auto">
             Past Event
-          </span>
+          </Badge>
         )}
       </div>
 

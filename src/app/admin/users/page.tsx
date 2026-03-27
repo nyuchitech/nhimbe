@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Loader2,
@@ -202,17 +203,17 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          <Badge
+                            variant={
                               user.status === "active"
-                                ? "bg-green-500/20 text-green-400"
+                                ? "success"
                                 : user.status === "suspended"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-accent/20 text-accent"
-                            }`}
+                                ? "error"
+                                : "warning"
+                            }
                           >
                             {user.status}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="py-3 pr-4 text-sm text-text-tertiary">
                           {formatDate(user.dateCreated)}

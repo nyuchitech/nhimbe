@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CalendarPlus, Ticket, Users, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { EventCard } from "@/components/ui/event-card";
 import { getEvents, getUserRegistrations, type Event, type Registration } from "@/lib/api";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -125,13 +126,9 @@ function MyEventsContent() {
           >
             {tab.icon}
             {tab.label}
-            <span className={`px-2 py-0.5 rounded-full text-xs ${
-              activeTab === tab.id
-                ? "bg-primary/20 text-primary"
-                : "bg-surface text-text-tertiary"
-            }`}>
+            <Badge variant={activeTab === tab.id ? "default" : "secondary"}>
               {tab.count}
-            </span>
+            </Badge>
           </Button>
         ))}
       </div>

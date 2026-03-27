@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Loader2,
@@ -164,16 +165,16 @@ export default function SupportPage() {
     }
   }
 
-  function getStatusColor(status: string) {
+  function getStatusVariant(status: string): "error" | "warning" | "success" | "secondary" {
     switch (status) {
       case "open":
-        return "bg-red-500/20 text-red-400";
+        return "error";
       case "pending":
-        return "bg-accent/20 text-accent";
+        return "warning";
       case "resolved":
-        return "bg-green-500/20 text-green-400";
+        return "success";
       default:
-        return "bg-elevated text-text-tertiary";
+        return "secondary";
     }
   }
 
@@ -312,14 +313,10 @@ export default function SupportPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                              ticket.status
-                            )}`}
-                          >
+                          <Badge variant={getStatusVariant(ticket.status)}>
                             {getStatusIcon(ticket.status)}
                             {ticket.status}
-                          </span>
+                          </Badge>
                           <span
                             className={`text-xs font-medium ${getPriorityColor(
                               ticket.priority
@@ -390,14 +387,10 @@ export default function SupportPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        selectedTicket.status
-                      )}`}
-                    >
+                    <Badge variant={getStatusVariant(selectedTicket.status)}>
                       {getStatusIcon(selectedTicket.status)}
                       {selectedTicket.status}
-                    </span>
+                    </Badge>
                     <span className="text-xs text-text-tertiary">
                       #{selectedTicket.id.slice(0, 8)}
                     </span>

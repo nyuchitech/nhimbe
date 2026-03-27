@@ -8,6 +8,8 @@ import { EventCardHorizontal } from "@/components/ui/event-card-horizontal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CityDropdown } from "@/components/ui/city-dropdown";
 import { Button } from "@/components/ui/button";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { useAuth } from "@/components/auth/auth-context";
 
 const CommunityInsightsCompact = dynamic(
   () => import("@/components/ui/community-insights").then(m => ({ default: m.CommunityInsightsCompact })),
@@ -105,6 +107,7 @@ interface HomeClientProps {
 }
 
 export function HomeClient({ initialEvents, initialCategories }: HomeClientProps) {
+  const { isAuthenticated } = useAuth();
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [loading, setLoading] = useState(false);
@@ -217,29 +220,30 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="py-16 md:py-24">
-        <div className="max-w-300 mx-auto px-6">
-          <p className="font-serif italic text-lg text-text-secondary mb-4">
-            &ldquo;Together we gather, together we grow&rdquo;
-          </p>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
-            Discover <span className="text-primary">gatherings</span>
-            <br />
-            that move you
-          </h1>
-          <p className="text-lg text-text-secondary max-w-150 mb-8">
-            From tech meetups to cultural celebrations, find events that bring your community together. Powered by Ubuntu philosophy.
-          </p>
-          <Link
-            href="/events/create"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity text-sm"
-          >
-            Create Your First Event
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
+      {/* Hero Section — public only */}
+      {!isAuthenticated && (
+        <section className="py-16 md:py-24">
+          <div className="max-w-300 mx-auto px-6">
+            <p className="font-serif italic text-lg text-text-secondary mb-4">
+              &ldquo;Together we gather, together we grow&rdquo;
+            </p>
+            <h1 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
+              Discover <span className="text-primary">gatherings</span>
+              <br />
+              that move you
+            </h1>
+            <p className="text-lg text-text-secondary max-w-150 mb-8">
+              From tech meetups to cultural celebrations, find events that bring your community together. Powered by Ubuntu philosophy.
+            </p>
+            <Button asChild className="rounded-full">
+              <Link href="/events/create">
+                Create Your First Event
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Popular Events Section */}
       <section className="pb-16">
@@ -271,36 +275,15 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
             </Link>
           </div>
 
-          {/* Category Pills */}
-          <div className="flex gap-2 flex-wrap mb-8">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveCategory("All")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                activeCategory === "All"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-surface text-foreground hover:bg-elevated"
-              }`}
-            >
-              All
-            </Button>
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveCategory(category.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeCategory === category.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-surface text-foreground hover:bg-elevated"
-                }`}
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
+          {/* Category Filter — horizontal scroll */}
+          <FilterBar
+            options={categories.map((c) => ({ id: c.id, label: c.name }))}
+            selected={activeCategory === "All" ? [] : [activeCategory]}
+            onChange={(sel) => setActiveCategory(sel.length > 0 ? sel[0] : "All")}
+            mode="single"
+            showAll
+            className="mb-8"
+          />
 
           {/* Events Grid - Two Columns like Luma */}
           {loading ? (
@@ -388,28 +371,29 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 border-t border-elevated">
-        <div className="max-w-300 mx-auto px-6 text-center">
-          <p className="font-serif italic text-lg text-text-secondary mb-4">
-            &ldquo;Together we gather, together we grow&rdquo;
-          </p>
-          <h2 className="text-2xl font-bold mb-3">Bring people together</h2>
-          <p className="text-text-secondary mb-6 max-w-md mx-auto">
-            Whether it&apos;s a birthday, a workshop, or a community gathering - create something meaningful.
-          </p>
-          <Link
-            href="/events/create"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-full font-semibold hover:opacity-90 transition-opacity"
-          >
-            Create Your First Event
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <p className="text-sm text-text-tertiary mt-8">
-            A <span className="text-secondary font-semibold">Mukoko</span> Product
-          </p>
-        </div>
-      </section>
+      {/* CTA Section — public only */}
+      {!isAuthenticated && (
+        <section className="py-16 border-t border-elevated">
+          <div className="max-w-300 mx-auto px-6 text-center">
+            <p className="font-serif italic text-lg text-text-secondary mb-4">
+              &ldquo;Together we gather, together we grow&rdquo;
+            </p>
+            <h2 className="text-2xl font-bold mb-3">Bring people together</h2>
+            <p className="text-text-secondary mb-6 max-w-md mx-auto">
+              Whether it&apos;s a birthday, a workshop, or a community gathering - create something meaningful.
+            </p>
+            <Button asChild size="lg" className="rounded-full">
+              <Link href="/events/create">
+                Create Your First Event
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </Button>
+            <p className="text-sm text-text-tertiary mt-8">
+              A <span className="text-secondary font-semibold">Mukoko</span> Product
+            </p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

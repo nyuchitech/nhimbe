@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Settings, Eye, TrendingUp, Flame, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface EventCardProps {
   id: string;
@@ -75,24 +76,22 @@ export function EventCard({
           {/* Top Right Badges */}
           <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
             {/* Category Badge */}
-            <div className="bg-secondary text-background px-3 py-1.5 rounded-full text-[11px] font-bold uppercase">
+            <Badge variant="secondary" className="text-[11px] font-bold uppercase">
               {category}
-            </div>
+            </Badge>
 
             {/* Hot Badge */}
             {isHot && (
-              <div className="flex items-center gap-1 bg-accent/90 text-background px-2.5 py-1 rounded-full">
-                <Flame className="w-3 h-3" />
-                <span className="text-[10px] font-bold">HOT</span>
-              </div>
+              <Badge variant="warning" className="bg-accent/90 text-background border-0">
+                <Flame className="w-3 h-3" /> HOT
+              </Badge>
             )}
 
             {/* Trending Badge */}
             {trend && trend > 15 && !isHot && (
-              <div className="flex items-center gap-1 bg-green-500/90 text-white px-2.5 py-1 rounded-full">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-[10px] font-bold">+{trend}%</span>
-              </div>
+              <Badge variant="success" className="bg-green-500/90 text-white border-0">
+                <TrendingUp className="w-3 h-3" /> +{trend}%
+              </Badge>
             )}
           </div>
 
@@ -115,9 +114,9 @@ export function EventCard({
 
           {/* Almost Full Warning */}
           {isAlmostFull && (
-            <div className="absolute bottom-4 right-4 bg-red-500/90 text-white px-2.5 py-1 rounded-full">
-              <span className="text-[10px] font-bold">Only {spotsLeft} left!</span>
-            </div>
+            <Badge variant="error" className="absolute bottom-4 right-4 bg-red-500/90 text-white border-0">
+              Only {spotsLeft} left!
+            </Badge>
           )}
         </div>
 
@@ -144,9 +143,9 @@ export function EventCard({
             </div>
 
             {friendsCount && friendsCount > 0 && (
-              <span className="bg-primary/15 text-primary px-3 py-1.5 rounded-full text-xs font-semibold">
+              <Badge variant="default" className="bg-primary/15 text-primary border-0">
                 {friendsCount} friend{friendsCount > 1 ? "s" : ""}
-              </span>
+              </Badge>
             )}
 
             {isHosting && (

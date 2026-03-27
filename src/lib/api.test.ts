@@ -359,7 +359,7 @@ describe('Reviews', () => {
 
   it('submitEventReview sends POST', async () => {
     mockFetch({ id: 'rev-1', message: 'Submitted' });
-    await submitEventReview('evt-1', { userId: 'usr-1', rating: 5, comment: 'Great!' });
+    await submitEventReview('evt-1', { userId: 'usr-1', rating: 5, reviewBody: 'Great!' });
     expect(global.fetch).toHaveBeenCalledWith(
       `${API_URL}/api/events/evt-1/reviews`,
       expect.objectContaining({ method: 'POST' })

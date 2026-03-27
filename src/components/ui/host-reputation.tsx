@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star, Award, Users, Calendar, TrendingUp, CheckCircle, Shield, Loader2 } from "lucide-react";
 import { Rating } from "@/components/ui/rating";
+import { Badge } from "@/components/ui/badge";
 import { getHostReputation, type HostStats as ApiHostStats } from "@/lib/api";
 
 interface HostStats {
@@ -57,9 +58,9 @@ export function HostReputation({
             </div>
           )}
           {host.eventsHosted > 5 && (
-            <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full">
+            <Badge variant="default">
               Trusted Host
-            </span>
+            </Badge>
           )}
         </div>
       </div>
@@ -191,10 +192,10 @@ export function HostReputation({
 // Simple badge display for event cards
 export function TrustedHostBadge({ className = "" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary rounded-full ${className}`}>
+    <Badge variant="default" className={`flex items-center gap-1 ${className}`}>
       <Shield className="w-3 h-3" />
-      <span className="text-xs font-medium">Trusted</span>
-    </div>
+      Trusted
+    </Badge>
   );
 }
 

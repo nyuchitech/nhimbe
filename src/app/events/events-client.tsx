@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Search, Loader2, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CategoryChip } from "@/components/ui/category-chip";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Badge } from "@/components/ui/badge";
 import { EventCard } from "@/components/ui/event-card";
 import { CityDropdown } from "@/components/ui/city-dropdown";
 import { getEvents, getCategories, getCities, type Event, type Category } from "@/lib/api";
@@ -92,12 +93,11 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
             Find gatherings that bring your community together
           </p>
         </div>
-        <Link
-          href="/events/create"
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-opacity"
-        >
-          Create Event
-        </Link>
+        <Button asChild>
+          <Link href="/events/create">
+            Create Event
+          </Link>
+        </Button>
       </div>
 
       {/* Search Bar */}
@@ -148,9 +148,7 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
           <SlidersHorizontal className="w-4 h-4" />
           Filters
           {activeFiltersCount > 0 && (
-            <span className="px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
-              {activeFiltersCount}
-            </span>
+            <Badge>{activeFiltersCount}</Badge>
           )}
         </Button>
 
@@ -167,21 +165,15 @@ export function EventsClient({ initialEvents, initialCategories, initialCities }
         )}
       </div>
 
-      {/* Category Chips */}
-      <div className={`flex flex-wrap gap-2 mb-8 ${showFilters ? "block" : "hidden md:flex"}`}>
-        <CategoryChip
-          label="All"
-          active={activeCategory === "All"}
-          onClick={() => setActiveCategory("All")}
+      {/* Category Filter — horizontal scroll */}
+      <div className={`mb-8 ${showFilters ? "block" : "hidden md:block"}`}>
+        <FilterBar
+          options={categories.map((c) => ({ id: c.id, label: c.name }))}
+          selected={activeCategory === "All" ? [] : [activeCategory]}
+          onChange={(sel) => setActiveCategory(sel.length > 0 ? sel[0] : "All")}
+          mode="single"
+          showAll
         />
-        {categories.map((cat) => (
-          <CategoryChip
-            key={cat.id}
-            label={cat.name}
-            active={activeCategory === cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-          />
-        ))}
       </div>
 
       {/* Interests Prompt */}

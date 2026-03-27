@@ -24,6 +24,7 @@ import { useTheme } from "@/components/theme-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/auth/auth-context";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type MenuItem = {
@@ -151,12 +152,9 @@ function ProfileContent() {
           </h2>
           <div className="flex flex-wrap gap-2">
             {user.interests.map((interest) => (
-              <span
-                key={interest}
-                className="px-3 py-1.5 bg-surface rounded-xl text-sm font-medium"
-              >
+              <Badge key={interest} variant="secondary">
                 {interest}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -254,9 +252,9 @@ function ProfileContent() {
                     <Icon className="w-5 h-5 text-text-secondary" />
                     <span className="flex-1 font-medium">{item.label}</span>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="px-2 py-0.5 bg-primary/20 text-primary text-sm rounded-full">
+                      <Badge variant="default">
                         {item.badge}
-                      </span>
+                      </Badge>
                     )}
                     <ChevronRight className="w-5 h-5 text-text-tertiary" />
                   </Link>

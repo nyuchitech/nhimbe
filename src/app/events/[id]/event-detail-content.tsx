@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ArrowLeft, CalendarDays, MapPin, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Rating } from "@/components/ui/rating";
@@ -91,9 +92,9 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold">{event.organizer.name}</h4>
                   {event.organizer.eventCount > 5 && (
-                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full">
+                    <Badge variant="success">
                       Trusted Host
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-foreground/60">

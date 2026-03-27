@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Loader2,
@@ -106,18 +107,17 @@ export default function EventsPage() {
     setActionMenuOpen(null);
   }
 
-  function getStatusColor(status: string) {
+  function getStatusVariant(status: string): "default" | "warning" | "secondary" | "error" {
     switch (status) {
       case "upcoming":
-        return "bg-primary/20 text-primary";
+        return "default";
       case "ongoing":
-        return "bg-accent/20 text-accent";
-      case "past":
-        return "bg-elevated text-text-tertiary";
+        return "warning";
       case "cancelled":
-        return "bg-red-500/20 text-red-400";
+        return "error";
+      case "past":
       default:
-        return "bg-elevated text-text-tertiary";
+        return "secondary";
     }
   }
 
@@ -238,13 +238,9 @@ export default function EventsPage() {
                           </div>
                         </td>
                         <td className="py-3 pr-4">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              event.status
-                            )}`}
-                          >
+                          <Badge variant={getStatusVariant(event.status)}>
                             {event.status}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="py-3 relative">
                           <Button
