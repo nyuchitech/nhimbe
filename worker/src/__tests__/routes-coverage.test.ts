@@ -1009,6 +1009,390 @@ describe('GET /api/community/events/:eventId/analytics', () => {
 });
 
 // ============================================
+// Admin Routes
+// ============================================
+
+/**
+ * Helper: configure mockGetAuth so getAdminUser succeeds.
+ * Returns the admin DB row that should be returned by the first DB.prepare() call.
+ */
+function setupAdminAuth(
+  role: string = 'admin',
+  adminId: string = 'usr-admin-001',
+) {
+  mockGetAuth.mockResolvedValue({
+    user: { userId: 'stytch-admin-001', emails: [{ email: 'admin@nhimbe.com' }] },
+    failureReason: null,
+    detail: null,
+  });
+
+  return {
+    _id: adminId,
+    email: 'admin@nhimbe.com',
+    name: 'Admin User',
+    role,
+  };
+}
+
+describe('GET /api/admin/stats', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset();
+    mockGetAuth.mockResolvedValue({
+      user: null,
+      failureReason: 'no_token',
+      detail: 'No bearer token',
+    });
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const request = createRequest('http://localhost:8787/api/admin/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(401);
+  });
+
+  it('returns dashboard stats when authenticated as moderator', async () => {
+    const adminRow = setupAdminAuth('moderator');
+
+    // Build a DB mock that handles multiple prepare() calls in sequence
+    const db = createMockD1();
+    let callIndex = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callIndex++;
+      // Call 1: getAdminUser looks up user by stytch_user_id
+      if (callIndex === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue(adminRow),
+        });
+      }
+      // Calls 2-4: totalUsers, totalEvents, totalRegistrations (Promise.all)
+      if (callIndex >= 2 && callIndex <= 4) {
+        const counts: Record<number, number> = { 2: 150, 3: 45, 4: 320 };
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: counts[callIndex] }),
+        });
+      }
+      // Call 5: activeEvents
+      if (callIndex === 5) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 12 }),
+        });
+      }
+      // Call 6: recentViews (30 days)
+      if (callIndex === 6) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 500 }),
+        });
+      }
+      // Call 7: recentEvents (all with results)
+      if (callIndex === 7) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({
+            results: [
+              { _id: 'evt-1', name: 'Test Event', date_display_full: 'March 1', attendee_count: 10, start_date: '2026-04-01T10:00:00Z' },
+            ],
+          }),
+        });
+      }
+      // Call 8: recentUsers
+      if (callIndex === 8) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({
+            results: [
+              { _id: 'usr-1', name: 'Jane Doe', email: 'jane@example.com', date_created: '2026-03-01T00:00:00Z' },
+            ],
+          }),
+        });
+      }
+      // Call 9: support_tickets (may throw — table doesn't exist)
+      if (callIndex === 9) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({ results: [] }),
+        });
+      }
+      // Calls 10-12: prevUsers, prevEvents, prevViews (growth calculations)
+      if (callIndex >= 10 && callIndex <= 12) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 5 }),
+        });
+      }
+      // Calls 13-14: recentUsersCount, recentEventsCount (last 30 days)
+      if (callIndex >= 13 && callIndex <= 14) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 20 }),
+        });
+      }
+      // Fallback
+      return createMockD1Statement();
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createAuthenticatedRequest('http://localhost:8787/api/admin/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+    const data = await response.json() as {
+      stats: {
+        totalUsers: number;
+        totalEvents: number;
+        totalRegistrations: number;
+        activeEvents: number;
+        userGrowth: number;
+        eventGrowth: number;
+        recentViews: number;
+        viewsGrowth: number;
+      };
+      recentEvents: unknown[];
+      recentUsers: unknown[];
+    };
+    expect(data.stats.totalUsers).toBe(150);
+    expect(data.stats.totalEvents).toBe(45);
+    expect(data.stats.totalRegistrations).toBe(320);
+    expect(data.stats.activeEvents).toBe(12);
+    expect(data.recentEvents).toHaveLength(1);
+    expect(data.recentUsers).toHaveLength(1);
+  });
+
+  it('growth metrics are calculated (not hardcoded 0)', async () => {
+    const adminRow = setupAdminAuth('admin');
+
+    const db = createMockD1();
+    let callIndex = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callIndex++;
+      // Call 1: getAdminUser role lookup
+      if (callIndex === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue(adminRow),
+        });
+      }
+      // Calls 2-4: totalUsers, totalEvents, totalRegistrations
+      if (callIndex >= 2 && callIndex <= 4) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 100 }),
+        });
+      }
+      // Call 5: activeEvents
+      if (callIndex === 5) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 10 }),
+        });
+      }
+      // Call 6: recentViews (30 days) — 80 views
+      if (callIndex === 6) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 80 }),
+        });
+      }
+      // Call 7: recentEvents
+      if (callIndex === 7) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({ results: [] }),
+        });
+      }
+      // Call 8: recentUsers
+      if (callIndex === 8) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({ results: [] }),
+        });
+      }
+      // Call 9: support_tickets
+      if (callIndex === 9) {
+        return createMockD1Statement({
+          all: vi.fn().mockResolvedValue({ results: [] }),
+        });
+      }
+      // Calls 10-12: prevUsers=10, prevEvents=5, prevViews=40
+      if (callIndex === 10) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 10 }),
+        });
+      }
+      if (callIndex === 11) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 5 }),
+        });
+      }
+      if (callIndex === 12) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 40 }),
+        });
+      }
+      // Call 13: recentUsersCount=30 (last 30 days)
+      if (callIndex === 13) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 30 }),
+        });
+      }
+      // Call 14: recentEventsCount=15
+      if (callIndex === 14) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ count: 15 }),
+        });
+      }
+      return createMockD1Statement();
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createAuthenticatedRequest('http://localhost:8787/api/admin/stats');
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+    const data = await response.json() as {
+      stats: {
+        userGrowth: number;
+        eventGrowth: number;
+        viewsGrowth: number;
+      };
+    };
+    // userGrowth = ((30-10)/10)*100 = 200
+    expect(data.stats.userGrowth).toBe(200);
+    // eventGrowth = ((15-5)/5)*100 = 200
+    expect(data.stats.eventGrowth).toBe(200);
+    // viewsGrowth = ((80-40)/40)*100 = 100
+    expect(data.stats.viewsGrowth).toBe(100);
+  });
+});
+
+describe('POST /api/admin/users/:id/suspend', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset();
+    mockGetAuth.mockResolvedValue({
+      user: null,
+      failureReason: 'no_token',
+      detail: 'No bearer token',
+    });
+  });
+
+  it('returns 401 without admin auth', async () => {
+    const request = createRequest(
+      'http://localhost:8787/api/admin/users/usr-target/suspend',
+      { method: 'POST' }
+    );
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(401);
+  });
+
+  it('suspends a user (sets deleted_at)', async () => {
+    const adminRow = setupAdminAuth('admin', 'usr-admin-001');
+
+    const db = createMockD1();
+    let callIndex = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callIndex++;
+      // Call 1: getAdminUser role lookup
+      if (callIndex === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue(adminRow),
+        });
+      }
+      // Call 2: verify target user exists
+      if (callIndex === 2) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ _id: 'usr-target' }),
+        });
+      }
+      // Call 3: UPDATE users SET deleted_at
+      return createMockD1Statement();
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createAuthenticatedRequest(
+      'http://localhost:8787/api/admin/users/usr-target/suspend',
+      'valid-jwt-token',
+      { method: 'POST' }
+    );
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+    const data = await response.json() as { message: string };
+    expect(data.message).toBe('User suspended');
+  });
+
+  it('returns 404 for non-existent user', async () => {
+    const adminRow = setupAdminAuth('admin');
+
+    const db = createMockD1();
+    let callIndex = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callIndex++;
+      // Call 1: getAdminUser role lookup
+      if (callIndex === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue(adminRow),
+        });
+      }
+      // Call 2: verify target user — not found
+      return createMockD1Statement({
+        first: vi.fn().mockResolvedValue(null),
+      });
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createAuthenticatedRequest(
+      'http://localhost:8787/api/admin/users/usr-nonexistent/suspend',
+      'valid-jwt-token',
+      { method: 'POST' }
+    );
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(404);
+    const data = await response.json() as { error: string };
+    expect(data.error).toBe('User not found');
+  });
+});
+
+describe('POST /api/admin/users/:id/activate', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset();
+    mockGetAuth.mockResolvedValue({
+      user: null,
+      failureReason: 'no_token',
+      detail: 'No bearer token',
+    });
+  });
+
+  it('returns 401 without admin auth', async () => {
+    const request = createRequest(
+      'http://localhost:8787/api/admin/users/usr-target/activate',
+      { method: 'POST' }
+    );
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(401);
+  });
+
+  it('activates a user (clears deleted_at)', async () => {
+    const adminRow = setupAdminAuth('admin', 'usr-admin-001');
+
+    const db = createMockD1();
+    let callIndex = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callIndex++;
+      // Call 1: getAdminUser role lookup
+      if (callIndex === 1) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue(adminRow),
+        });
+      }
+      // Call 2: verify target user exists
+      if (callIndex === 2) {
+        return createMockD1Statement({
+          first: vi.fn().mockResolvedValue({ _id: 'usr-target' }),
+        });
+      }
+      // Call 3: UPDATE users SET deleted_at = NULL
+      return createMockD1Statement();
+    });
+    env = createMockEnv({ DB: db });
+
+    const request = createAuthenticatedRequest(
+      'http://localhost:8787/api/admin/users/usr-target/activate',
+      'valid-jwt-token',
+      { method: 'POST' }
+    );
+    const response = await worker.fetch(request, env, {} as ExecutionContext);
+    expect(response.status).toBe(200);
+    const data = await response.json() as { message: string };
+    expect(data.message).toBe('User activated');
+  });
+});
+
+// ============================================
 // Paynow Webhook HMAC Validation
 // ============================================
 describe('PaynowProvider webhook HMAC', () => {

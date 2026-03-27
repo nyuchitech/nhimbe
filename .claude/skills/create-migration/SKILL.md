@@ -14,14 +14,14 @@ Create a database migration for: $ARGUMENTS
 
 ## Determine Database Target
 
-nhimbe uses **two databases**:
-- **MongoDB Atlas** — primary database, source of truth (via `MONGODB_URI` secret)
-- **D1 (SQLite)** — edge processing, fast reads, caching
+nhimbe currently uses **Cloudflare D1 (SQLite)** as the primary database. A future migration is planned:
 
-Infer the target from $ARGUMENTS:
-- If the migration involves core data (events, users, registrations, reviews, referrals, analytics) → **MongoDB**
-- If the migration involves edge caching, denormalized read views, or Worker-local data → **D1**
-- If unclear, **default to MongoDB** and ask for clarification
+- **D1 (SQLite)** — current primary database, will become edge caching layer
+- **Supabase (PostgreSQL)** — future primary for all relational queries (part of larger Mukoko platform)
+- **ScyllaDB** — future document storage
+- **MongoDB Atlas** — deprecated, not active
+
+**Default to D1** for all migrations unless explicitly told otherwise.
 
 ## Steps — D1 (SQLite) Migration
 

@@ -55,36 +55,35 @@ app.route("/api/auth", auth);
 app.route("/api/payments", payments);
 ```
 
-Global middleware applied in `index.ts`: CORS (restricted to trusted origins), observability (request IDs + structured logging), rate limiting, error handling (generic messages — no error details leaked), 404 handler, and queue consumer.
+Global middleware applied in `index.ts`: CORS (restricted to trusted origins), environment validation (logs missing bindings on first request), security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), observability (request IDs + structured logging), rate limiting (all API endpoints), error handling (generic messages — no error details leaked), 404 handler, and queue consumer.
 
-**18 route modules** in `worker/src/routes/`:
+**17 route modules** in `worker/src/routes/`:
 
 | Route Module | Endpoints |
 |-------------|-----------|
 | `events.ts` | Event CRUD, list, filtering, cancel, CSV export |
-| `admin.ts` | Admin operations (events, users, content moderation) |
+| `admin.ts` | Admin dashboard, user suspend/activate, growth metrics |
 | `health.ts` | Health checks, system probes for D1/Vectorize/R2/KV |
-| `seed.ts` | Database seeding with sample data |
-| `auth.ts` | `/api/auth/sync` JWT validation, user sync |
+| `auth.ts` | `/api/auth/sync` JWT validation, user sync, suspended user enforcement |
 | `users.ts` | Profile management, onboarding, account deletion (soft delete) |
-| `registrations.ts` | Event registrations |
-| `stats.ts` | Community insights, host analytics |
+| `registrations.ts` | Event registrations (atomic capacity checks, race condition prevention) |
+| `stats.ts` | Community stats, peak time calculation, event analytics |
 | `media.ts` | Image upload to R2 (10MB limit) |
 | `search.ts` | RAG search via Vectorize |
-| `categories.ts` | Category listing (DB-first, hardcoded fallback) |
+| `categories.ts` | Category listing (DB-only), cities (derived from published events) |
 | `ai.ts` | AI routes (assistant, description generator) with prompt injection detection |
 | `referrals.ts` | Referral tracking (writeAuth protected) |
 | `reviews.ts` | Event reviews (writeAuth protected) |
 | `series.ts` | Recurring event series CRUD (RRULE support) |
-| `waitlist.ts` | Waitlist join/leave/list |
+| `waitlist.ts` | Waitlist join/leave/list (auth-protected) |
 | `checkin.ts` | QR-based check-in and attendance stats |
-| `payments.ts` | Payment intents, Paynow webhooks, status checks |
+| `payments.ts` | Payment intents, Paynow webhooks (HMAC-SHA512 verified), status checks |
 
 ### Middleware (`worker/src/middleware/`)
 
 - `auth.ts` — JWT extraction, validation, timing-safe API key comparison
 - `observability.ts` — Request ID generation and structured logging
-- `rate-limit.ts` — Rate limiting for AI/auth/search/payments (100 req/min)
+- `rate-limit.ts` — Rate limiting for all API endpoints (100 req/min)
 - `ai-safety.ts` — Prompt injection detection, input sanitization, max length enforcement
 
 ### Utils (`worker/src/utils/`)
@@ -109,7 +108,7 @@ Global middleware applied in `index.ts`: CORS (restricted to trusted origins), o
 ### Payments (`worker/src/payments/`)
 
 - `types.ts` — PaymentProvider interface abstraction
-- `paynow.ts` — Paynow provider for Zimbabwean mobile money (EcoCash, OneMoney, Telecash)
+- `paynow.ts` — Paynow provider for Zimbabwean mobile money (EcoCash, OneMoney, Telecash) with HMAC-SHA512 webhook signature validation (timing-safe comparison)
 
 ### Authentication Flow
 
@@ -118,6 +117,7 @@ Global middleware applied in `index.ts`: CORS (restricted to trusted origins), o
 3. Backend validates JWT locally using Stytch's JWKS endpoint (`worker/src/auth/stytch.ts`) — no Stytch API secret needed
 4. `getAuthenticatedUser()` returns `AuthResult` with structured `failureReason` (e.g., `token_expired`, `issuer_mismatch`, `jwks_fetch_failed`, `invalid_signature`)
 5. If `/api/auth/sync` fails, user stays logged out (no fallback user creation)
+6. **Suspended user enforcement**: `/api/auth/sync` and `/api/auth/me` check `deleted_at` — suspended users get 403 with `reason: "account_suspended"`
 
 Authentication page: `src/app/authenticate/page.tsx`. Stytch theme overrides: `src/app/stytch-overrides.css`.
 
@@ -203,19 +203,20 @@ Service worker at `public/sw.js` — cache-first for static assets, network-firs
 
 Tests colocate with modules (e.g., `src/lib/api.test.ts`) or live in `src/__tests__/`. Config: `vitest.config.ts` with jsdom and React plugin.
 
-### Backend Tests (9 files, 210 tests)
+### Backend Tests (10 files, 283 tests)
 
 All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config.ts` with `globals: true`.
 
 - `auth.test.ts` — JWT validation, JWKS caching, failure reasons
 - `auth-profile.test.ts` — User sync and profile management
 - `events.test.ts` — Event CRUD, pagination, cancellation, CSV export
-- `registrations.test.ts` — Registration flow, waitlist auto-promotion
+- `registrations.test.ts` — Registration flow, atomic capacity checks, waitlist auto-promotion
 - `users.test.ts` — User management, soft delete, PII anonymization
 - `validation.test.ts` — Input validation, security checks
 - `ai-layers.test.ts` — AI feature testing
 - `security.test.ts` — Authorization, origin checks, API key validation
 - `observability.test.ts` — Logging, request IDs
+- `routes-coverage.test.ts` — Health, categories, cities, checkin, media, payments, referrals, reviews, series, waitlist, admin, stats, security headers, AI safety, Paynow HMAC
 
 **Mock architecture** (`worker/src/__tests__/mocks.ts`) — 4 layers:
 - **L1: Primitives** — `createMockD1()`, `createMockKV()`, `createMockR2()`, `createMockVectorize()`, `createMockAI()`
@@ -240,8 +241,8 @@ All backend tests live in `worker/src/__tests__/`. Config: `worker/vitest.config
 ### Analytics Tables
 `event_views`, `search_queries`, `ai_conversations`, `audit_logs`
 
-### Migrations (7 files)
-`add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`, `005_backend_hardening.sql` (soft deletes, audit logs, categories, FTS5), `006_event_series.sql`, `007_waitlists_payments.sql`
+### Migrations (8 files)
+`add_stytch_auth.sql`, `add_meeting_fields.sql`, `add_ticketing_fields.sql`, `add_reviews_referrals.sql`, `004_add_user_roles.sql`, `005_backend_hardening.sql` (soft deletes, audit logs, categories table, FTS5), `006_event_series.sql`, `007_waitlists_payments.sql`, `008_seed_categories.sql` (seeds 32 categories into DB)
 
 ## Key Files
 

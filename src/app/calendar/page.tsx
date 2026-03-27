@@ -14,7 +14,7 @@ const MONTHS = [
 export default function CalendarPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 11, 1)); // December 2025
+  const [currentDate, setCurrentDate] = useState(() => new Date()); // Current month
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
