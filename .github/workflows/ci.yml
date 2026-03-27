@@ -6,6 +6,9 @@ on:
   push:
     branches: ['**']
 
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: '20'
 
@@ -13,6 +16,8 @@ jobs:
   lint-and-build:
     name: Lint & Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +44,8 @@ jobs:
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +65,8 @@ jobs:
   worker-tests:
     name: Worker Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,6 +87,8 @@ jobs:
   worker-typecheck:
     name: Worker Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,6 +109,8 @@ jobs:
   validate-migrations:
     name: Validate Migrations
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -134,6 +147,8 @@ jobs:
   run-migrations:
     name: Run D1 Migrations
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: [lint-and-build, frontend-tests, worker-tests, worker-typecheck, validate-migrations]
     steps:
