@@ -128,7 +128,7 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
     if (tz.city) {
       setDetectedCity(tz.city);
       // Fetch weather for the detected city
-      getWeather(tz.city).then(setWeather);
+      getWeather(tz.city).then(setWeather).catch(() => {});
     }
   }, []);
 

@@ -34,7 +34,7 @@ function escapeICS(text: string): string {
  * Generate an ICS file content string
  */
 export function generateICS(event: CalendarEvent): string {
-  const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@nhimbe.com`;
+  const uid = `${Date.now()}-${crypto.randomUUID().slice(0, 9)}@nhimbe.com`;
 
   const icsContent = [
     "BEGIN:VCALENDAR",

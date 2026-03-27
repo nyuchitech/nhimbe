@@ -27,7 +27,7 @@ describe('extractBearerToken', () => {
 
   it('returns null for non-Bearer auth scheme', () => {
     const request = new Request('https://api.test.com', {
-      headers: { Authorization: 'Basic dXNlcjpwYXNz' },
+      headers: { Authorization: 'Basic bm90LWEtcmVhbC10b2tlbg==' },
     });
     expect(extractBearerToken(request)).toBeNull();
   });

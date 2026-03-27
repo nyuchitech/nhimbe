@@ -3,6 +3,7 @@ import type { Env } from "../types";
 
 export const rateLimit = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   if (!c.env.RATE_LIMITER) {
+    console.warn("[mukoko:rate-limit] RATE_LIMITER binding is missing — requests are not rate limited");
     await next();
     return;
   }

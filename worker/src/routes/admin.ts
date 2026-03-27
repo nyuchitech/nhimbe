@@ -5,6 +5,7 @@ import { getAdminUser } from "../middleware/auth";
 import { safeParseInt } from "../utils/validation";
 import { dbRowToEvent } from "../utils/db";
 import { removeEventFromIndex } from "../ai/embeddings";
+import { logAudit } from "../utils/audit";
 
 export const admin = new Hono<{ Bindings: Env }>();
 
@@ -224,7 +225,7 @@ async function handleAdminUserAction(
   c: Context<{ Bindings: Env }>,
   action: string
 ) {
-  const userId = c.req.param("id");
+  const userId = c.req.param("id") || "";
   const requiredRole: UserRole = action === 'role' ? 'super_admin' : 'admin';
   const adminUser = await getAdminUser(c.req.raw, c.env, requiredRole);
   if (!adminUser) {
@@ -249,6 +250,7 @@ async function handleAdminUserAction(
       await c.env.DB.prepare(
         "UPDATE users SET deleted_at = datetime('now'), date_modified = datetime('now') WHERE _id = ?"
       ).bind(userId).run();
+      await logAudit(c.env, { actorId: adminUser.id, action: "user.suspended", resourceType: "user", resourceId: userId });
       return c.json({ message: "User suspended" });
     }
 
@@ -256,6 +258,7 @@ async function handleAdminUserAction(
       await c.env.DB.prepare(
         "UPDATE users SET deleted_at = NULL, date_modified = datetime('now') WHERE _id = ?"
       ).bind(userId).run();
+      await logAudit(c.env, { actorId: adminUser.id, action: "user.activated", resourceType: "user", resourceId: userId });
       return c.json({ message: "User activated" });
     }
 
@@ -275,6 +278,7 @@ async function handleAdminUserAction(
         "UPDATE users SET role = ?, date_modified = datetime('now') WHERE _id = ?"
       ).bind(newRole, userId).run();
 
+      await logAudit(c.env, { actorId: adminUser.id, action: "user.role_changed", resourceType: "user", resourceId: userId, details: { newRole } });
       return c.json({ message: `User role updated to ${newRole}` });
     }
 

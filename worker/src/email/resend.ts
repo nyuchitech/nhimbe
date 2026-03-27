@@ -27,6 +27,9 @@ export async function sendEmail(
   params: SendEmailParams
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -41,7 +44,10 @@ export async function sendEmail(
         text: params.text,
         reply_to: params.replyTo,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json() as ResendError;

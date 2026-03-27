@@ -74,6 +74,14 @@ function FileUpload({
             : "border-foreground/10 hover:border-foreground/20",
           disabled && "pointer-events-none opacity-50"
         )}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={(e) => {

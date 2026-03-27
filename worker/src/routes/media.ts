@@ -14,8 +14,9 @@ const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
 media.post("/upload", async (c) => {
   const contentType = c.req.header("Content-Type") || "";
 
-  if (!contentType.startsWith("image/")) {
-    return c.json({ error: "Content-Type must be an image type" }, 400);
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+    return c.json({ error: "Content-Type must be one of: image/jpeg, image/png, image/webp, image/gif" }, 400);
   }
 
   // Check Content-Length before reading body to prevent DoS

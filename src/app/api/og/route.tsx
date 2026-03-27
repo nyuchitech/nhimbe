@@ -16,12 +16,19 @@ const GRADIENTS = {
 function sanitizeText(input: string | null, maxLength: number = 200): string {
   if (!input) return "";
 
-  // Remove any HTML tags and dangerous characters
-  const sanitized = input
-    .replace(/<[^>]*>/g, "") // Remove HTML tags
-    .replace(/[<>'"&]/g, "") // Remove potentially dangerous chars
-    .trim()
-    .slice(0, maxLength); // Limit length
+  // Limit length first to bound processing time, then strip dangerous chars.
+  // Use character-class-only replacement (no nested quantifiers) to avoid ReDoS.
+  let sanitized = input.slice(0, maxLength);
+
+  // Iteratively strip tags until stable to handle nested/malformed tags like "<<script>"
+  let previous = "";
+  while (previous !== sanitized) {
+    previous = sanitized;
+    sanitized = sanitized.replace(/<[^>]*>/g, "");
+  }
+
+  // Remove remaining dangerous characters
+  sanitized = sanitized.replace(/[<>'"&]/g, "").trim();
 
   return sanitized;
 }

@@ -43,11 +43,19 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   const isInPerson = !isOnline && event.location.addressLocality !== "Online";
 
   useEffect(() => {
-    getEventStats(event.id).then(setStats).catch(() => {});
+    const controller = new AbortController();
+    getEventStats(event.id).then(data => {
+      if (!controller.signal.aborted) setStats(data);
+    }).catch(() => {});
+    return () => controller.abort();
   }, [event.id]);
 
   useEffect(() => {
-    getEventReviews(event.id).then(r => setReviewStats(r.stats)).catch(() => {});
+    const controller = new AbortController();
+    getEventReviews(event.id).then(r => {
+      if (!controller.signal.aborted) setReviewStats(r.stats);
+    }).catch(() => {});
+    return () => controller.abort();
   }, [event.id]);
 
   useEffect(() => {

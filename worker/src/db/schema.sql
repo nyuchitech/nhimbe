@@ -323,6 +323,7 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_registration ON payments(registration_id);
 CREATE INDEX IF NOT EXISTS idx_payments_event ON payments(event_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 
 -- ============================================================================
 -- HOST REPUTATION

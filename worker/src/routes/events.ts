@@ -4,6 +4,7 @@ import { safeParseInt, slugify, getInitials } from "../utils/validation";
 import { generateId, generateShortCode } from "../utils/ids";
 import { dbRowToEvent } from "../utils/db";
 import { writeAuth } from "../middleware/auth";
+import { getAuthenticatedUser } from "../auth/stytch";
 import { indexEvent, removeEventFromIndex } from "../ai/embeddings";
 import { toCsv } from "../utils/export";
 import { logAudit } from "../utils/audit";
@@ -458,6 +459,23 @@ events.get("/:id/registrations/export", async (c) => {
 
   if (format !== "csv") {
     return c.json({ error: "Only CSV format is currently supported" }, 400);
+  }
+
+  const authResult = await getAuthenticatedUser(c.req.raw, c.env);
+  if (!authResult.user) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const event = await c.env.DB.prepare(
+    "SELECT organizer_identifier FROM events WHERE _id = ?"
+  ).bind(eventId).first() as { organizer_identifier: string } | null;
+
+  if (!event) {
+    return c.json({ error: "Event not found" }, 404);
+  }
+
+  if (event.organizer_identifier !== authResult.user.userId) {
+    return c.json({ error: "Only the event host can export registrations" }, 403);
   }
 
   const result = await c.env.DB.prepare(`
