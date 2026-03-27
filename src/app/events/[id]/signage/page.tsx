@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
 import { Loader2, Users, UserCheck, Clock, TrendingUp, RotateCcw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -79,10 +78,12 @@ function CoverBackground({
 
 // ─── Countdown Timer ─────────────────────────────────────────────────────────
 function CountdownTimer({ startDate }: { startDate: string }) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -139,6 +140,7 @@ function PairingScreen({ onPaired }: { onPaired: (session: KioskSession, token: 
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
   useEffect(() => { requestCode(); }, [requestCode]);
 
   useEffect(() => {
@@ -281,6 +283,7 @@ function HostSignageContent({ session }: { session: KioskSession }) {
     setRecentCheckins(attended);
   }, [session.eventId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {

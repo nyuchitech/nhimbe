@@ -82,6 +82,7 @@ function PairingScreen({ onPaired }: { onPaired: (session: KioskSession) => void
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
   useEffect(() => { requestCode(); }, [requestCode]);
 
   useEffect(() => {
