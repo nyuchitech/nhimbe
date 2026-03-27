@@ -158,7 +158,7 @@ kiosk.post("/pair/:code/confirm", writeAuth, async (c) => {
 });
 
 // GET /api/kiosk/session/:token — Validate a kiosk/signage session
-kiosk.get("/session/:token", async (c) => {
+kiosk.get("/session/:token", writeAuth, async (c) => {
   const token = c.req.param("token");
   const now = new Date().toISOString();
 

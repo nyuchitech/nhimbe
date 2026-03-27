@@ -56,7 +56,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://events-api.mukoko.com";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [nhimbeUser, setNhimbeUser] = useState<NhimbeUser | null>(null);

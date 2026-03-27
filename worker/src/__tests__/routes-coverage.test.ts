@@ -483,7 +483,7 @@ describe('POST /api/payments/create', () => {
         method: 'POST',
         body: JSON.stringify({
           registrationId: 'reg-1', eventId: 'evt-1',
-          amount: 10, returnUrl: 'http://example.com',
+          amount: 10, returnUrl: 'https://nhimbe.com/events/evt-1',
         }),
       }
     );

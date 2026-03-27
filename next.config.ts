@@ -1,6 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "events-api.mukoko.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.mukoko.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.nhimbe.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.r2.dev",
+      },
+    ],
+  },
   // Security headers
   async headers() {
     return [

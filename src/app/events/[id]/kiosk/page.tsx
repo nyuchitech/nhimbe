@@ -79,7 +79,7 @@ function PairingScreen({ onPaired }: { onPaired: (session: KioskSession, token: 
         if (status.status === "confirmed" && status.sessionToken) {
           if (pollRef.current) clearInterval(pollRef.current);
           const { session } = await getKioskSession(status.sessionToken);
-          localStorage.setItem("nhimbe_kiosk_token", status.sessionToken);
+          if (typeof window !== "undefined") localStorage.setItem("nhimbe_kiosk_token", status.sessionToken);
           onPaired(session, status.sessionToken);
         }
       } catch {
@@ -430,14 +430,14 @@ export default function KioskPage() {
   // Check for existing kiosk session on mount
   useEffect(() => {
     async function checkExisting() {
-      const token = localStorage.getItem("nhimbe_kiosk_token");
+      const token = typeof window !== "undefined" ? localStorage.getItem("nhimbe_kiosk_token") : null;
       if (token) {
         try {
           const { session: existing } = await getKioskSession(token);
           setSession(existing);
           setSessionToken(token);
         } catch {
-          localStorage.removeItem("nhimbe_kiosk_token");
+          if (typeof window !== "undefined") localStorage.removeItem("nhimbe_kiosk_token");
         }
       }
       setChecking(false);

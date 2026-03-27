@@ -24,6 +24,20 @@ payments.post("/create", writeAuth, async (c) => {
     return c.json({ error: "Invalid amount" }, 400);
   }
 
+  try {
+    const returnUrlObj = new URL(body.returnUrl);
+    const hostname = returnUrlObj.hostname;
+    const allowedDomains = ["nhimbe.com", "nyuchi.com", "mukoko.com"];
+    const isAllowed =
+      hostname === "localhost" ||
+      allowedDomains.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
+    if (!isAllowed) {
+      return c.json({ error: "Invalid returnUrl domain" }, 400);
+    }
+  } catch {
+    return c.json({ error: "Invalid returnUrl" }, 400);
+  }
+
   // Verify the registration exists
   const registration = await c.env.DB.prepare(
     "SELECT id, user_id FROM registrations WHERE id = ? AND event_id = ?"

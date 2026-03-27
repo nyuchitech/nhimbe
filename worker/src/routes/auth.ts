@@ -200,7 +200,11 @@ auth.patch("/profile", async (c) => {
 
   const result = await c.env.DB.prepare(
     "SELECT * FROM users WHERE _id = ?"
-  ).bind(userId).first() as DbUser;
+  ).bind(userId).first() as DbUser | null;
+
+  if (!result) {
+    return c.json({ error: "User not found" }, 404);
+  }
 
   const user = {
     id: result._id,

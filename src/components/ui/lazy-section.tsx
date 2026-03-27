@@ -10,10 +10,14 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 
 const MOUNT_BUDGET = 3;
-const mountQueue: Array<() => void> = [];
+const mountQueue: Array<() => void> = typeof window !== "undefined" ? [] : [];
 let activeCount = 0;
 
 function requestMount(cb: () => void) {
+  if (typeof window === "undefined") {
+    cb();
+    return;
+  }
   if (activeCount < MOUNT_BUDGET) {
     activeCount++;
     cb();
@@ -23,6 +27,7 @@ function requestMount(cb: () => void) {
 }
 
 function releaseMount() {
+  if (typeof window === "undefined") return;
   activeCount = Math.max(0, activeCount - 1);
   const next = mountQueue.shift();
   if (next) {

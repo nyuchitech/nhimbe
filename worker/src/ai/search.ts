@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import { generateEmbedding } from "./embeddings";
 import { withTimeout } from "../utils/timeout";
+import { withCircuitBreaker } from "../utils/circuit-breaker";
 
 // LLM model for generating summaries
 const LLM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
@@ -38,14 +39,18 @@ export async function searchEvents(
     filter.category = query.filters.category;
   }
 
-  // Search Vectorize for similar events
-  const vectorResults = await vectorize.query(queryEmbedding, {
-    topK: query.limit || 10,
-    filter: Object.keys(filter).length > 0 ? filter : undefined,
-    returnMetadata: true,
-  });
+  // Search Vectorize for similar events (with circuit breaker)
+  const topK = Math.min(query.limit || 10, 100);
+  const vectorResults = await withCircuitBreaker(
+    "vectorize",
+    () => vectorize.query(queryEmbedding, {
+      topK,
+      filter: Object.keys(filter).length > 0 ? filter : undefined,
+      returnMetadata: true,
+    }),
+  );
 
-  if (vectorResults.matches.length === 0) {
+  if (!vectorResults || vectorResults.matches.length === 0) {
     return {
       events: [],
       query: query.query,
@@ -70,13 +75,17 @@ export async function searchEvents(
     return scoreB - scoreA;
   });
 
-  // Generate AI summary of results
-  const aiSummary = await generateSearchSummary(ai, query.query, sortedEvents);
+  // Generate AI summary of results (with circuit breaker)
+  const aiSummary = await withCircuitBreaker(
+    "ai",
+    () => generateSearchSummary(ai, query.query, sortedEvents),
+    `Found ${sortedEvents.length} events matching your search.`,
+  );
 
   return {
     events: sortedEvents,
     query: query.query,
-    aiSummary,
+    aiSummary: aiSummary || `Found ${sortedEvents.length} events matching your search.`,
     totalResults: sortedEvents.length,
   };
 }

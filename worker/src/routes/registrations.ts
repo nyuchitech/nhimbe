@@ -155,18 +155,20 @@ registrations.put("/:id", async (c) => {
 
   // Extract user identity from JWT — never trust body.user_id for authorization
   const authResult = await getAuthenticatedUser(c.req.raw, c.env);
-  if (authResult.user) {
-    const requestingUser = authResult.user.userId;
-    const isHost = reg.organizer_identifier === requestingUser;
-    const isRegistrant = reg.user_id === requestingUser;
+  if (!authResult.user) {
+    return c.json({ error: "Authentication required" }, 401);
+  }
 
-    if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {
-      return c.json({ error: "Only the event host can approve, reject, or mark attendance" }, 403);
-    }
+  const requestingUser = authResult.user.userId;
+  const isHost = reg.organizer_identifier === requestingUser;
+  const isRegistrant = reg.user_id === requestingUser;
 
-    if (!isHost && !isRegistrant) {
-      return c.json({ error: "Not authorized to update this registration" }, 403);
-    }
+  if (!isHost && ["approved", "rejected", "attended"].includes(body.status)) {
+    return c.json({ error: "Only the event host can approve, reject, or mark attendance" }, 403);
+  }
+
+  if (!isHost && !isRegistrant) {
+    return c.json({ error: "Not authorized to update this registration" }, 403);
   }
 
   await c.env.DB.prepare(

@@ -25,6 +25,13 @@ function CopyButton({
   className,
 }: CopyButtonProps) {
   const [copied, setCopied] = React.useState(false);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   async function handleCopy() {
     try {
@@ -41,7 +48,8 @@ function CopyButton({
       document.body.removeChild(textarea);
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), duration);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setCopied(false), duration);
   }
 
   const isIconOnly = size === "icon" || size === "icon-sm";
