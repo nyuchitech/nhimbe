@@ -100,8 +100,8 @@ waitlist.get("/events/:eventId/waitlist", async (c) => {
 
   // Include email only when the requester is the event host
   const selectFields = isHost
-    ? "w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name, u.email as user_email"
-    : "w.id, w.event_id, w.user_id, w.position, w.created_at, u.name as user_name";
+    ? "w.id, w.event_id, w.user_id, w.position, w.date_created, u.name as user_name, u.email as user_email"
+    : "w.id, w.event_id, w.user_id, w.position, w.date_created, u.name as user_name";
 
   const result = await c.env.DB.prepare(
     `SELECT ${selectFields} FROM waitlists w LEFT JOIN users u ON w.user_id = u._id WHERE w.event_id = ? ORDER BY w.position ASC`
@@ -112,7 +112,7 @@ waitlist.get("/events/:eventId/waitlist", async (c) => {
     event_id: string;
     user_id: string;
     position: number;
-    created_at: string;
+    date_created: string;
     user_name: string | null;
     user_email?: string;
   }
@@ -124,7 +124,7 @@ waitlist.get("/events/:eventId/waitlist", async (c) => {
     position: row.position,
     userName: row.user_name,
     ...(isHost && row.user_email ? { userEmail: row.user_email } : {}),
-    createdAt: row.created_at,
+    dateCreated: row.date_created,
   }));
 
   return c.json({

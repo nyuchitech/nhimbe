@@ -646,7 +646,7 @@ describe('POST /api/series', () => {
       {
         method: 'POST',
         body: JSON.stringify({
-          title: 'Weekly Meetup',
+          name: 'Weekly Meetup',
           recurrenceRule: 'FREQ=WEEKLY;BYDAY=WE',
           hostId: 'usr-1',
         }),
@@ -669,9 +669,9 @@ describe('GET /api/series/:id', () => {
 
   it('returns series details', async () => {
     const seriesRow = {
-      id: 'ser-1', title: 'Weekly', recurrence_rule: 'FREQ=WEEKLY',
+      id: 'ser-1', name: 'Weekly', recurrence_rule: 'FREQ=WEEKLY',
       host_id: 'usr-1', template_event_id: null, max_occurrences: 52,
-      ends_at: null, created_at: '2026-01-01', updated_at: '2026-01-01',
+      ends_at: null, date_created: '2026-01-01', date_modified: '2026-01-01',
     };
     const statement = createMockD1Statement({
       first: vi.fn().mockResolvedValue(seriesRow),
@@ -682,9 +682,9 @@ describe('GET /api/series/:id', () => {
     const request = createRequest('http://localhost:8787/api/series/ser-1');
     const response = await worker.fetch(request, env, {} as ExecutionContext);
     expect(response.status).toBe(200);
-    const data = await response.json() as { id: string; title: string; recurrenceRule: string };
+    const data = await response.json() as { id: string; name: string; recurrenceRule: string };
     expect(data.id).toBe('ser-1');
-    expect(data.title).toBe('Weekly');
+    expect(data.name).toBe('Weekly');
     expect(data.recurrenceRule).toBe('FREQ=WEEKLY');
   });
 });
@@ -824,7 +824,7 @@ describe('GET /api/community/stats', () => {
     expect(data.stats.trendingCategories[0].events).toBe(12);
     expect(data.stats.popularVenues).toHaveLength(2);
     expect(data.stats.popularVenues[0].venue).toBe('Harare Gardens');
-    expect(data.stats.city).toBeUndefined();
+    expect(data.stats.addressLocality).toBeUndefined();
   });
 
   it('filters by city when query param provided', async () => {
@@ -854,7 +854,7 @@ describe('GET /api/community/stats', () => {
     const data = await response.json() as {
       stats: { city?: string; totalEvents: number; peakTime: string };
     };
-    expect(data.stats.city).toBe('Harare');
+    expect(data.stats.addressLocality).toBe('Harare');
     expect(data.stats.totalEvents).toBe(10);
     // Verify that all 4 DB queries were executed
     expect(callCount).toBe(4);

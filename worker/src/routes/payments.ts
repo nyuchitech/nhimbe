@@ -120,7 +120,7 @@ payments.get("/:id/status", writeAuth, async (c) => {
   const paymentId = c.req.param("id");
 
   const payment = await c.env.DB.prepare(
-    "SELECT id, status, amount_cents, currency, provider, created_at, completed_at FROM payments WHERE id = ?"
+    "SELECT id, status, amount_cents, currency, provider, date_created, completed_at FROM payments WHERE id = ?"
   ).bind(paymentId).first();
 
   if (!payment) {

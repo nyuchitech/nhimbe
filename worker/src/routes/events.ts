@@ -295,7 +295,7 @@ events.get("/:id/reviews", async (c) => {
     event_id: string;
     user_id: string;
     rating: number;
-    comment: string | null;
+    review_body: string | null;
     helpful_count: number;
     is_verified_attendee: number;
     date_created: string;
@@ -318,7 +318,7 @@ events.get("/:id/reviews", async (c) => {
     userName: row.user_name || "Anonymous",
     userInitials: getInitials(row.user_name || "Anonymous"),
     rating: row.rating,
-    reviewBody: row.comment || undefined,
+    reviewBody: row.review_body || undefined,
     helpfulCount: row.helpful_count,
     isVerifiedAttendee: !!row.is_verified_attendee,
     dateCreated: row.date_created,
@@ -368,7 +368,7 @@ events.post("/:id/reviews", async (c) => {
   const body = await c.req.json() as {
     userId: string;
     rating: number;
-    comment?: string;
+    reviewBody?: string;
   };
 
   if (!body.userId || !body.rating || body.rating < 1 || body.rating > 5) {
@@ -383,14 +383,14 @@ events.post("/:id/reviews", async (c) => {
 
   try {
     await c.env.DB.prepare(`
-      INSERT INTO event_reviews (id, event_id, user_id, rating, comment, is_verified_attendee)
+      INSERT INTO event_reviews (id, event_id, user_id, rating, review_body, is_verified_attendee)
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       eventId,
       body.userId,
       body.rating,
-      body.comment || null,
+      body.reviewBody || null,
       registration ? 1 : 0
     ).run();
 
@@ -461,16 +461,16 @@ events.get("/:id/registrations/export", async (c) => {
   }
 
   const result = await c.env.DB.prepare(`
-    SELECT r.id, r.user_id, r.status, r.created_at, r.checked_in_at,
+    SELECT r.id, r.user_id, r.status, r.registered_at, r.checked_in_at,
            u.name as user_name, u.email as user_email
     FROM registrations r
     LEFT JOIN users u ON r.user_id = u._id
     WHERE r.event_id = ?
-    ORDER BY r.created_at ASC
+    ORDER BY r.registered_at ASC
   `).bind(eventId).all();
 
   const rows = result.results as Record<string, unknown>[];
-  const csv = toCsv(rows, ["id", "user_id", "user_name", "user_email", "status", "created_at", "checked_in_at"]);
+  const csv = toCsv(rows, ["id", "user_id", "user_name", "user_email", "status", "registered_at", "checked_in_at"]);
 
   return new Response(csv, {
     headers: {

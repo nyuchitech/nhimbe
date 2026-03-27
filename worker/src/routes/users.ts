@@ -16,7 +16,7 @@ users.get("/:id", async (c) => {
 
   const result = await c.env.DB.prepare(
     `SELECT _id, name, alternate_name, image, address_locality, address_country,
-            interests, onboarding_completed, role, created_at
+            interests, onboarding_completed, role, date_created
      FROM users WHERE _id = ? OR alternate_name = ?`
   ).bind(userId, userId).first() as {
     _id: string;
@@ -28,7 +28,7 @@ users.get("/:id", async (c) => {
     interests: string | null;
     onboarding_completed: number | null;
     role: string | null;
-    created_at: string | null;
+    date_created: string | null;
   } | null;
 
   if (!result) {
@@ -45,7 +45,7 @@ users.get("/:id", async (c) => {
     interests: result.interests,
     onboardingCompleted: result.onboarding_completed,
     role: result.role,
-    dateCreated: result.created_at,
+    dateCreated: result.date_created,
   };
 
   return c.json({ user });

@@ -188,15 +188,15 @@ admin.get("/users", async (c) => {
     id: u._id,
     email: u.email,
     name: u.name,
-    handle: u.alternate_name,
-    avatar_url: u.image,
-    city: u.address_locality,
-    country: u.address_country,
-    events_attended: u.events_attended || 0,
-    events_hosted: u.events_hosted || 0,
+    alternateName: u.alternate_name,
+    image: u.image,
+    addressLocality: u.address_locality,
+    addressCountry: u.address_country,
+    eventsAttended: u.events_attended || 0,
+    eventsHosted: u.events_hosted || 0,
     role: u.role || 'user',
     status: 'active' as const,
-    date_created: u.date_created,
+    dateCreated: u.date_created,
   }));
 
   return c.json({

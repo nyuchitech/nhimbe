@@ -15,7 +15,7 @@ categories.get("/categories", async (c) => {
 // GET /api/cities — derived from actual event data in DB
 categories.get("/cities", async (c) => {
   const dbResult = await c.env.DB.prepare(
-    "SELECT DISTINCT location_locality as city, location_country as country FROM events WHERE location_locality IS NOT NULL AND is_published = TRUE ORDER BY location_country, location_locality"
+    "SELECT DISTINCT location_locality as addressLocality, location_country as addressCountry FROM events WHERE location_locality IS NOT NULL AND is_published = TRUE ORDER BY location_country, location_locality"
   ).all();
 
   return c.json({ cities: dbResult.results || [] });

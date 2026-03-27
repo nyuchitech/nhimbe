@@ -663,7 +663,7 @@ export async function getHostReputation(userId: string): Promise<HostStats | nul
 
 // Community Stats Types
 export interface CommunityStats {
-  city?: string;
+  addressLocality?: string;
   totalEvents: number;
   totalAttendees: number;
   activeHosts: number;

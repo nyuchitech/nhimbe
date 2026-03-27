@@ -103,7 +103,7 @@ stats.get("/stats", async (c) => {
     : "No data yet";
 
   const communityStats: CommunityStats = {
-    city: city || undefined,
+    addressLocality: city || undefined,
     totalEvents: statsResult?.total_events || 0,
     totalAttendees: statsResult?.total_attendees || 0,
     activeHosts: statsResult?.active_hosts || 0,
