@@ -126,3 +126,59 @@ jobs:
 
           echo ""
           echo "=== Migration validation complete ==="
+
+  # ============================================
+  # DEPLOYMENT JOBS — only on push to main
+  # ============================================
+
+  run-migrations:
+    name: Run D1 Migrations
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint-and-build, frontend-tests, worker-tests, worker-typecheck, validate-migrations]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install worker dependencies
+        run: cd worker && npm ci
+
+      - name: Run migrations
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Create migration tracking table if it doesn't exist
+          npx wrangler d1 execute mukoko-nhimbe-db --env production --yes \
+            --command "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')));"
+
+          # Run each migration in order, skipping already-applied ones
+          for file in $(ls src/db/migrations/*.sql | sort); do
+            filename=$(basename "$file")
+            applied=$(npx wrangler d1 execute mukoko-nhimbe-db --env production --yes \
+              --command "SELECT COUNT(*) as c FROM _migrations WHERE name = '$filename';" \
+              --json | grep -o '"c":[0-9]*' | grep -o '[0-9]*')
+
+            if [ "$applied" = "1" ]; then
+              echo "⏭  Skipping (already applied): $filename"
+              continue
+            fi
+
+            echo "▶ Running migration: $filename"
+            npx wrangler d1 execute mukoko-nhimbe-db --env production --file="$file" --yes
+            npx wrangler d1 execute mukoko-nhimbe-db --env production --yes \
+              --command "INSERT INTO _migrations (name) VALUES ('$filename');"
+            echo "  ✓ Applied: $filename"
+          done
+
+          echo ""
+          echo "=== All migrations up to date ==="
+
