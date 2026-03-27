@@ -56,6 +56,7 @@ import {
   type Registration as APIRegistration,
 } from "@/lib/api";
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { PairKiosk } from "../kiosk/pair-kiosk";
 import { useAuth } from "@/components/auth/auth-context";
 
 interface Registration {
@@ -514,15 +515,20 @@ function ManageEventContent() {
               <UserPlus className="w-4 h-4" />
               Invite Guests
             </Button>
-            <Button variant="secondary" className="gap-2">
-              <QrCode className="w-4 h-4" />
-              Check In Guests
+            <Button asChild variant="secondary" className="gap-2">
+              <Link href={`/events/${event.id}/kiosk/host`}>
+                <QrCode className="w-4 h-4" />
+                Check In Guests
+              </Link>
             </Button>
             <Button variant="secondary" className="gap-2">
               <Users className="w-4 h-4" />
               Guests Shown
             </Button>
           </div>
+
+          {/* Kiosk Pairing */}
+          <PairKiosk eventId={event.id} />
 
           {/* Guest List */}
           <Card>

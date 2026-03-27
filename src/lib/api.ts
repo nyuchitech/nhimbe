@@ -243,6 +243,7 @@ export interface Registration {
   ticketCurrency?: string;
   registeredAt: string;
   cancelledAt?: string;
+  checkedInAt?: string;
   // Joined user data (when available)
   userName?: string;
   userEmail?: string;
@@ -583,6 +584,90 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
   const response = await apiFetch<{ stats: EventStats }>(`/api/events/${eventId}/stats`);
   return response.stats;
 }
+
+// Check-in Types
+export interface CheckinStats {
+  eventId: string;
+  total: number;
+  attended: number;
+  remaining: number;
+  rate: number;
+}
+
+// Check in a registration at an event
+export async function checkinRegistration(
+  eventId: string,
+  registrationId: string
+): Promise<{ message: string; registrationId: string }> {
+  return apiFetch<{ message: string; registrationId: string }>(
+    `/api/events/${eventId}/checkin`,
+    { method: "POST", body: JSON.stringify({ registrationId }) }
+  );
+}
+
+// Get check-in stats for an event
+export async function getCheckinStats(eventId: string): Promise<CheckinStats> {
+  return apiFetch<CheckinStats>(`/api/events/${eventId}/checkin/stats`);
+}
+
+// Kiosk Pairing Types
+export type ScreenType = "kiosk" | "signage-host" | "signage-admin";
+
+export interface KioskPairingStatus {
+  status: "pending" | "confirmed" | "expired";
+  screenType?: ScreenType;
+  eventId?: string;
+  eventName?: string;
+  hostName?: string;
+  sessionToken?: string;
+}
+
+export interface KioskSession {
+  eventId: string;
+  eventName: string;
+  screenType: ScreenType;
+  hostId: string | null;
+  pairedAt: string;
+}
+
+// Request a pairing code for kiosk or signage screen
+export async function requestKioskPairing(
+  screenType: ScreenType = "kiosk"
+): Promise<{ code: string; expiresIn: number; screenType: ScreenType }> {
+  return apiFetch<{ code: string; expiresIn: number; screenType: ScreenType }>(
+    "/api/kiosk/pair/request",
+    { method: "POST", body: JSON.stringify({ screenType }) }
+  );
+}
+
+// Poll for pairing status
+export async function getKioskPairingStatus(code: string): Promise<KioskPairingStatus> {
+  return apiFetch<KioskPairingStatus>(`/api/kiosk/pair/${code}/status`);
+}
+
+// Host confirms pairing
+export async function confirmKioskPairing(
+  code: string,
+  eventId: string
+): Promise<{ message: string; eventName: string; screenType: string; sessionToken: string }> {
+  return apiFetch<{ message: string; eventName: string; screenType: string; sessionToken: string }>(
+    `/api/kiosk/pair/${code}/confirm`,
+    { method: "POST", body: JSON.stringify({ eventId }) }
+  );
+}
+
+// Validate a session
+export async function getKioskSession(token: string): Promise<{ session: KioskSession }> {
+  return apiFetch<{ session: KioskSession }>(`/api/kiosk/session/${token}`);
+}
+
+// End a session
+export async function endKioskSession(token: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/kiosk/session/${token}`, {
+    method: "DELETE",
+  });
+}
+
 
 // Referral Types
 export interface ReferralLeaderboardEntry {

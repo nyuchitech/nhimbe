@@ -27,6 +27,7 @@ import { admin } from "./routes/admin";
 import { series } from "./routes/series";
 import { waitlist } from "./routes/waitlist";
 import { checkin } from "./routes/checkin";
+import { kiosk } from "./routes/kiosk";
 import { payments } from "./routes/payments";
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -115,6 +116,7 @@ app.use("/api/events/*", rateLimit);
 app.use("/api/registrations/*", rateLimit);
 app.use("/api/admin/*", rateLimit);
 app.use("/api/series/*", rateLimit);
+app.use("/api/kiosk/*", rateLimit);
 
 // Mount route modules
 app.route("/", health);
@@ -133,6 +135,7 @@ app.route("/api/admin", admin);
 app.route("/api/series", series);
 app.route("/api", waitlist);
 app.route("/api", checkin);
+app.route("/api/kiosk", kiosk);
 app.route("/api/payments", payments);
 
 // Global error handler
