@@ -19,7 +19,7 @@ export function CoverImageUpload({
   return (
     <div
       data-slot="cover-image-upload"
-      className="relative h-50 rounded-2xl overflow-hidden mb-4 group"
+      className="relative h-40 sm:h-50 rounded-2xl overflow-hidden mb-4 group"
       style={{
         background: coverImage
           ? `url(${coverImage}) center/cover`
@@ -28,7 +28,8 @@ export function CoverImageUpload({
     >
       <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
 
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+      {/* Always visible on mobile (active state), hover on desktop */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-black/30 sm:bg-transparent sm:group-hover:bg-black/30">
         {coverImage ? (
           <Button
             variant="destructive"
@@ -39,7 +40,7 @@ export function CoverImageUpload({
             Remove Image
           </Button>
         ) : (
-          <label className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl backdrop-blur-sm cursor-pointer transition-colors">
+          <label className="flex items-center gap-2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white px-4 py-2 rounded-xl backdrop-blur-sm cursor-pointer transition-colors">
             <ImagePlus className="w-4 h-4" />
             Upload Cover Image
             <input
