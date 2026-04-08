@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface DateTimeModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export function DateTimeModal({
   setEndTime,
 }: DateTimeModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Date & Time">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Date & Time">
       <div className="space-y-4">
         <div>
           <Label className="block text-sm text-text-secondary mb-2">Date</Label>
@@ -67,6 +67,6 @@ export function DateTimeModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

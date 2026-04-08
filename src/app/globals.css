@@ -186,6 +186,14 @@ textarea {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/*
+ * Z-index stacking context (intentional layering):
+ *   z-30: Admin sub-headers (below main nav)
+ *   z-40: Sticky bottom bars (RSVP, create button), admin sidebar overlay
+ *   z-50: Header, all modals (dialog/drawer/sheet), overlays, dropdowns
+ * Sticky bars (z-40) sit below modals (z-50) so modals overlay them.
+ */
+
 /* Hide scrollbar for horizontal scroll containers (tabs, carousels) */
 .scrollbar-none {
   -ms-overflow-style: none;
@@ -229,14 +237,27 @@ a {
   background-color: var(--primary-foreground);
 }
 
-/* Event Page Theme System */
-.event-themed-page {
+/* Event Page Theme System - defaults on :root so vars always resolve,
+   even if a component renders outside EventThemeWrapper context.
+   EventThemeWrapper overrides these via inline styles. */
+:root {
   --event-primary: #64FFDA;
   --event-secondary: #00796B;
   --event-accent: #004D40;
   --event-surface: rgba(0, 77, 64, 0.15);
   --event-surface-hover: rgba(0, 77, 64, 0.25);
   --event-gradient: linear-gradient(135deg, #004D40, #00796B);
+  --event-border: rgba(0, 77, 64, 0.2);
+}
+
+.light {
+  --event-primary: #00574B;
+  --event-secondary: #004D40;
+  --event-accent: #003D33;
+  --event-surface: rgba(0, 87, 75, 0.08);
+  --event-surface-hover: rgba(0, 87, 75, 0.15);
+  --event-gradient: linear-gradient(135deg, #003D33, #00574B);
+  --event-border: rgba(0, 87, 75, 0.12);
 }
 
 /* Event theme utilities */

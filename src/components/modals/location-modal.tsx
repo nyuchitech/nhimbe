@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -48,7 +48,7 @@ export function LocationModal({
   cities,
 }: LocationModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Event Location">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Event Location">
       <div className="space-y-4">
         <div className="flex items-center gap-3 p-3 bg-surface rounded-xl">
           <Globe className="w-5 h-5 text-text-secondary" />
@@ -195,6 +195,6 @@ export function LocationModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

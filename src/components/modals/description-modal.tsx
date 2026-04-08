@@ -3,7 +3,7 @@
 import { AIDescriptionBadge } from "@/components/ui/ai-description-wizard";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface DescriptionModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export function DescriptionModal({
   isOnline,
 }: DescriptionModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Description">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Description">
       <div className="flex items-center gap-3 mb-4">
         <AIDescriptionBadge
           eventName={eventName}
@@ -54,6 +54,6 @@ export function DescriptionModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

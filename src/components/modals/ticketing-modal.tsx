@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface TicketingModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export function TicketingModal({
   setTicketUrl,
 }: TicketingModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Ticketing">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Ticketing">
       <div className="space-y-4">
         {/* Free/Paid Toggle */}
         <div className="flex items-center gap-3 p-3 bg-surface rounded-xl">
@@ -74,6 +74,6 @@ export function TicketingModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

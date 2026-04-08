@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 import type { Category } from "@/lib/api";
 
 interface CategoryModalProps {
@@ -33,7 +33,7 @@ export function CategoryModal({
   removeTag,
 }: CategoryModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Category & Tags">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Category & Tags">
       <div className="space-y-4">
         <div>
           <Label className="block text-sm text-text-secondary mb-2">Category</Label>
@@ -113,6 +113,6 @@ export function CategoryModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

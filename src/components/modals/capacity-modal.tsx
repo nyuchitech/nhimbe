@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface CapacityModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export function CapacityModal({
   setCapacity,
 }: CapacityModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Capacity">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Capacity">
       <div className="space-y-4">
         <div>
           <Label className="block text-sm text-text-secondary mb-2">Maximum Attendees</Label>
@@ -43,6 +43,6 @@ export function CapacityModal({
           </Button>
         </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }
