@@ -79,7 +79,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
     <EventThemeWrapper coverGradient={event.coverGradient}>
       {/* Extra bottom padding on mobile for the sticky RSVP bar */}
       <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-10">
-        <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-4 sm:mb-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-foreground/60 hover:text-foreground h-10 px-3 -ml-3 rounded-xl hover:bg-surface transition-colors mb-4 sm:mb-6">
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
         </Link>
@@ -102,7 +102,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               </div>
             )}
 
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-2">{event.name}</h1>
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight mb-2">{event.name}</h1>
 
             {/* Compact host link under title */}
             <Link href="#hosted-by" className="flex items-center gap-2 mb-5 sm:mb-6 group">

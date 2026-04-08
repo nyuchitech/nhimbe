@@ -26,6 +26,8 @@ export function DateTimeModal({
   endTime,
   setEndTime,
 }: DateTimeModalProps) {
+  const timeError = endTime && startTime && endTime <= startTime;
+
   return (
     <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Date & Time">
       <div className="space-y-4">
@@ -35,6 +37,7 @@ export function DateTimeModal({
             type="date"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
+            min={new Date().toISOString().split("T")[0]}
             className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
           />
         </div>
@@ -54,10 +57,13 @@ export function DateTimeModal({
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
+              className={`w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base ${timeError ? "ring-2 ring-red-500/50" : ""}`}
             />
           </div>
         </div>
+        {timeError && (
+          <p className="text-sm text-red-400">End time must be after start time</p>
+        )}
         <div className="pt-2">
           <Button
             onClick={onClose}

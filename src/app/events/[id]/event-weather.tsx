@@ -60,7 +60,7 @@ export function EventWeather({ city, eventDate }: EventWeatherProps) {
   }
 
   if (error || !weather) {
-    return null;
+    return <div className="text-sm text-text-tertiary py-2">Weather information unavailable for this location.</div>;
   }
 
   const WeatherIcon = weatherIcons[weather.icon] || Sun;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock,
@@ -10,6 +10,7 @@ import {
   ChevronDown,
   AlignLeft,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { createEvent, getCategories, getCities, uploadMedia, getMediaUrl, type CreateEventInput, type Category } from "@/lib/api";
 import { mineralThemes, mineralThemeIds, getThemeColors } from "@/lib/themes";
@@ -56,9 +57,37 @@ const mineralThemeList = mineralThemeIds.map((id) => {
   return { id, name: theme.name, gradient: theme.gradient, colors: getThemeColors(id) };
 });
 
+// Get the browser's timezone offset as ±HH:MM
+function getBrowserTimezoneOffset(): string {
+  const offset = -new Date().getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+  const minutes = String(Math.abs(offset) % 60).padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+}
+
+function getBrowserTimezoneName(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+
+// Basic URL validation
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export default function CreateEventForm() {
   const router = useRouter();
   const { user } = useAuth();
+  const errorRef = useRef<HTMLDivElement>(null);
   const [selectedTheme, setSelectedTheme] = useState(0);
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [eventName, setEventName] = useState("");
@@ -108,6 +137,9 @@ export default function CreateEventForm() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<{ addressLocality: string; addressCountry: string }[]>([]);
 
+  // Track if form has been touched for unsaved changes warning
+  const [formTouched, setFormTouched] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -126,15 +158,39 @@ export default function CreateEventForm() {
     loadData();
   }, []);
 
+  // Unsaved changes warning
+  useEffect(() => {
+    if (!formTouched) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [formTouched]);
+
+  // Mark form as touched when any field changes
+  const touchForm = useCallback(() => {
+    if (!formTouched) setFormTouched(true);
+  }, [formTouched]);
+
+  // Scroll to error when it changes
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
+
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim().toLowerCase())) {
       setTags([...tags, tagInput.trim().toLowerCase()]);
       setTagInput("");
+      touchForm();
     }
   };
 
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
+    touchForm();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,6 +208,7 @@ export default function CreateEventForm() {
       const reader = new FileReader();
       reader.onload = (e) => setCoverImage(e.target?.result as string);
       reader.readAsDataURL(file);
+      touchForm();
     }
   };
 
@@ -160,6 +217,10 @@ export default function CreateEventForm() {
     setCoverImageFile(null);
   };
 
+  const tzOffset = getBrowserTimezoneOffset();
+  const tzName = getBrowserTimezoneName();
+  const tzLabel = tzName.replace(/_/g, " ").split("/").pop() || `GMT${tzOffset}`;
+
   const formatDateForDisplay = () => {
     if (!eventDate) return "Select Date & Time";
     const date = new Date(eventDate);
@@ -167,11 +228,16 @@ export default function CreateEventForm() {
   };
 
   const handleSubmit = async () => {
+    // P0-4: Validation with specific error messages
     if (!eventName.trim()) { setError("Event name is required"); return; }
-    if (!eventDate) { setError("Event date is required"); return; }
-    if (!category) { setError("Please select a category"); return; }
+    if (!eventDate) { setError("Please select a date and time for your event"); return; }
+    if (endTime <= startTime) { setError("End time must be after start time"); return; }
+    if (!category) { setError("Please select a category for your event"); return; }
     if (!isOnline && (!venue || !selectedCity)) { setError("Please add a location or mark as online event"); return; }
-    if (isOnline && !meetingUrl.trim()) { setError("Please add a meeting URL for online events"); return; }
+    if (isOnline && !meetingUrl.trim()) { setError("Please add a meeting URL for your online event"); return; }
+    if (isOnline && meetingUrl.trim() && !isValidUrl(meetingUrl.trim())) { setError("Please enter a valid meeting URL (e.g., https://zoom.us/j/...)"); return; }
+    if (capacity !== null && capacity < 1) { setError("Capacity must be at least 1 attendee"); return; }
+    if (!isFree && ticketUrl.trim() && !isValidUrl(ticketUrl.trim())) { setError("Please enter a valid ticket URL"); return; }
 
     setSubmitting(true);
     setError(null);
@@ -184,7 +250,7 @@ export default function CreateEventForm() {
           const uploadResult = await uploadMedia(coverImageFile);
           uploadedCoverImageUrl = getMediaUrl(uploadResult.key);
         } catch (uploadErr) {
-          setError(uploadErr instanceof Error ? uploadErr.message : "Failed to upload cover image");
+          setError(uploadErr instanceof Error ? uploadErr.message : "Failed to upload cover image. Please try again.");
           setSubmitting(false);
           setUploading(false);
           return;
@@ -194,7 +260,8 @@ export default function CreateEventForm() {
 
       const dateObj = new Date(eventDate);
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const isoStart = new Date(`${eventDate}T${startTime}:00+02:00`).toISOString();
+      // P0-5: Use browser timezone instead of hardcoded GMT+2
+      const isoStart = new Date(`${eventDate}T${startTime}:00${tzOffset}`).toISOString();
 
       const eventData: CreateEventInput = {
         name: eventName.trim(),
@@ -204,7 +271,7 @@ export default function CreateEventForm() {
           day: dateObj.getDate().toString(),
           month: months[dateObj.getMonth()],
           full: dateObj.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
-          time: `${startTime} — ${endTime} GMT+2`,
+          time: `${startTime} — ${endTime} ${tzLabel}`,
         },
         location: isOnline
           ? { name: "Online Event", streetAddress: "", addressLocality: "Online", addressCountry: "" }
@@ -229,9 +296,10 @@ export default function CreateEventForm() {
       };
 
       const result = await createEvent(eventData);
+      setFormTouched(false);
       router.push(`/events/${result.event.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create event");
+      setError(err instanceof Error ? err.message : "Failed to create event. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -249,20 +317,15 @@ export default function CreateEventForm() {
       <ThemeSelector
         themes={mineralThemeList}
         selectedIndex={selectedTheme}
-        onSelect={setSelectedTheme}
+        onSelect={(i) => { setSelectedTheme(i); touchForm(); }}
       />
 
-      {/* Calendar & Visibility Row */}
+      {/* Visibility Toggle */}
       <div className="flex gap-2 mb-4">
-        <Button variant="ghost" className="flex-1 bg-surface rounded-xl px-4 py-3 justify-start">
-          <span className="text-lg">📅</span>
-          <span className="text-sm">Personal Calendar</span>
-          <ChevronDown className="w-4 h-4 text-text-tertiary ml-auto" />
-        </Button>
         <Button
           variant="ghost"
           className="bg-surface rounded-xl px-4 py-3"
-          onClick={() => setVisibility(visibility === "public" ? "private" : "public")}
+          onClick={() => { setVisibility(visibility === "public" ? "private" : "public"); touchForm(); }}
         >
           {visibility === "public" ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
           <span className="text-sm">{visibility === "public" ? "Public" : "Private"}</span>
@@ -277,7 +340,7 @@ export default function CreateEventForm() {
         autoCapitalize="words"
         enterKeyHint="next"
         value={eventName}
-        onChange={(e) => setEventName(e.target.value)}
+        onChange={(e) => { setEventName(e.target.value); touchForm(); }}
         placeholder="Event Name"
         className="w-full text-2xl font-semibold bg-transparent border-none shadow-none outline-none placeholder:text-text-tertiary mb-4 h-auto px-0 focus-visible:ring-0"
       />
@@ -288,7 +351,7 @@ export default function CreateEventForm() {
           {formatDateForDisplay()}
         </div>
         <div className="text-sm text-text-tertiary">
-          {eventDate ? `${startTime} — ${endTime} GMT+2` : "Select date and time"}
+          {eventDate ? `${startTime} — ${endTime} ${tzLabel}` : "Select date and time"}
         </div>
       </FormFieldRow>
 
@@ -336,15 +399,16 @@ export default function CreateEventForm() {
         isFree={isFree}
         requireApproval={requireApproval}
         capacity={capacity}
-        onRequireApprovalChange={setRequireApproval}
+        onRequireApprovalChange={(v) => { setRequireApproval(v); touchForm(); }}
         onOpenTicketing={() => setShowPriceModal(true)}
         onOpenCapacity={() => setShowCapacityModal(true)}
       />
 
-      {/* Error Message */}
+      {/* Error Message - with scroll target and icon */}
       {error && (
-        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm" role="alert">
-          {error}
+        <div ref={errorRef} className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3" role="alert">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <p className="text-red-400 text-sm">{error}</p>
         </div>
       )}
 
@@ -369,12 +433,12 @@ export default function CreateEventForm() {
       </div>
 
       {/* Modals */}
-      <DateTimeModal isOpen={showDateModal} onClose={() => setShowDateModal(false)} eventDate={eventDate} setEventDate={setEventDate} startTime={startTime} setStartTime={setStartTime} endTime={endTime} setEndTime={setEndTime} />
-      <LocationModal isOpen={showLocationModal} onClose={() => setShowLocationModal(false)} isOnline={isOnline} setIsOnline={setIsOnline} meetingPlatform={meetingPlatform} setMeetingPlatform={setMeetingPlatform} meetingUrl={meetingUrl} setMeetingUrl={setMeetingUrl} addressSearch={addressSearch} setAddressSearch={setAddressSearch} venue={venue} setVenue={setVenue} address={address} setAddress={setAddress} selectedCity={selectedCity} setSelectedCity={setSelectedCity} cities={cities} />
-      <CategoryModal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} categories={categories} category={category} setCategory={setCategory} tags={tags} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} />
-      <DescriptionModal isOpen={showDescriptionModal} onClose={() => setShowDescriptionModal(false)} description={description} setDescription={setDescription} eventName={eventName} category={category} isOnline={isOnline} />
-      <TicketingModal isOpen={showPriceModal} onClose={() => setShowPriceModal(false)} isFree={isFree} setIsFree={setIsFree} ticketUrl={ticketUrl} setTicketUrl={setTicketUrl} />
-      <CapacityModal isOpen={showCapacityModal} onClose={() => setShowCapacityModal(false)} capacity={capacity} setCapacity={setCapacity} />
+      <DateTimeModal isOpen={showDateModal} onClose={() => { setShowDateModal(false); touchForm(); }} eventDate={eventDate} setEventDate={setEventDate} startTime={startTime} setStartTime={setStartTime} endTime={endTime} setEndTime={setEndTime} />
+      <LocationModal isOpen={showLocationModal} onClose={() => { setShowLocationModal(false); touchForm(); }} isOnline={isOnline} setIsOnline={setIsOnline} meetingPlatform={meetingPlatform} setMeetingPlatform={setMeetingPlatform} meetingUrl={meetingUrl} setMeetingUrl={setMeetingUrl} addressSearch={addressSearch} setAddressSearch={setAddressSearch} venue={venue} setVenue={setVenue} address={address} setAddress={setAddress} selectedCity={selectedCity} setSelectedCity={setSelectedCity} cities={cities} />
+      <CategoryModal isOpen={showCategoryModal} onClose={() => { setShowCategoryModal(false); touchForm(); }} categories={categories} category={category} setCategory={setCategory} tags={tags} tagInput={tagInput} setTagInput={setTagInput} addTag={addTag} removeTag={removeTag} />
+      <DescriptionModal isOpen={showDescriptionModal} onClose={() => { setShowDescriptionModal(false); touchForm(); }} description={description} setDescription={setDescription} eventName={eventName} category={category} isOnline={isOnline} />
+      <TicketingModal isOpen={showPriceModal} onClose={() => { setShowPriceModal(false); touchForm(); }} isFree={isFree} setIsFree={setIsFree} ticketUrl={ticketUrl} setTicketUrl={setTicketUrl} />
+      <CapacityModal isOpen={showCapacityModal} onClose={() => { setShowCapacityModal(false); touchForm(); }} capacity={capacity} setCapacity={setCapacity} />
     </div>
   );
 }

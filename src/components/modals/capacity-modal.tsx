@@ -18,6 +18,16 @@ export function CapacityModal({
   capacity,
   setCapacity,
 }: CapacityModalProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!raw) {
+      setCapacity(null);
+      return;
+    }
+    const num = Math.max(1, Math.floor(Number(raw)));
+    setCapacity(Number.isNaN(num) ? null : num);
+  };
+
   return (
     <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Capacity">
       <div className="space-y-4">
@@ -27,7 +37,7 @@ export function CapacityModal({
             type="number"
             inputMode="numeric"
             value={capacity || ""}
-            onChange={(e) => setCapacity(e.target.value ? Number(e.target.value) : null)}
+            onChange={handleChange}
             placeholder="Leave empty for unlimited"
             min={1}
             className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"

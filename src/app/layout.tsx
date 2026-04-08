@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/error/error-boundary";
 import { WidgetErrorBoundary } from "@/components/error/widget-error-boundary";
 import { LiveRegionProvider } from "@/components/ui/live-region";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -185,7 +186,10 @@ export default function RootLayout({
                   <WidgetErrorBoundary fallback={<MinimalNav />} name="Header">
                     <Header />
                   </WidgetErrorBoundary>
-                  <main id="main-content" className="flex-1 relative z-10">{children}</main>
+                  <main id="main-content" className="flex-1 relative z-10 pb-16 md:pb-0">{children}</main>
+                  <WidgetErrorBoundary fallback={null} name="MobileNav">
+                    <MobileBottomNav />
+                  </WidgetErrorBoundary>
                   <WidgetErrorBoundary fallback={null} name="Footer">
                     <Footer />
                   </WidgetErrorBoundary>

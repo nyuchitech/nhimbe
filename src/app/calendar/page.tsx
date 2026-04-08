@@ -111,9 +111,9 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-6">
         <Button
           variant="ghost"
-          size="icon"
           onClick={goToPreviousMonth}
           aria-label="Previous month"
+          className="w-11 h-11 p-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
@@ -122,9 +122,9 @@ export default function CalendarPage() {
         </h2>
         <Button
           variant="ghost"
-          size="icon"
           onClick={goToNextMonth}
           aria-label="Next month"
+          className="w-11 h-11 p-0"
         >
           <ChevronRight className="w-5 h-5" />
         </Button>

@@ -448,8 +448,8 @@ export default function SupportPage() {
                   key={message.id}
                   className={`p-4 rounded-xl ${
                     message.sender === "admin"
-                      ? "bg-primary/10 ml-8"
-                      : "bg-elevated mr-8"
+                      ? "bg-primary/10 ml-3 sm:ml-8"
+                      : "bg-elevated mr-3 sm:mr-8"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">

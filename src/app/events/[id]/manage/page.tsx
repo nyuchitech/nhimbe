@@ -320,7 +320,7 @@ function ManageEventContent() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="w-full sm:w-auto overflow-x-auto scrollbar-none">
+        <TabsList className="w-full sm:w-auto overflow-x-auto scrollbar-none flex-nowrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="guests">
             Guests
@@ -588,14 +588,12 @@ function ManageEventContent() {
                       <div className="font-medium truncate">{registration.name}</div>
                       <div className="text-sm text-text-secondary truncate">{registration.email}</div>
                     </div>
-                    <div className="hidden sm:block">
-                      <Badge variant={
-                        registration.status === "approved" || registration.status === "registered" ? "success" :
-                        registration.status === "pending" ? "warning" : "error"
-                      }>
-                        {registration.status}
-                      </Badge>
-                    </div>
+                    <Badge variant={
+                      registration.status === "approved" || registration.status === "registered" ? "success" :
+                      registration.status === "pending" ? "warning" : "error"
+                    }>
+                      {registration.status}
+                    </Badge>
                     <div className="hidden md:block text-sm text-text-tertiary">
                       {registration.date}
                     </div>

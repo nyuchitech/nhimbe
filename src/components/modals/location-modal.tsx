@@ -106,9 +106,16 @@ export function LocationModal({
                 }
                 className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
               />
-              <p className="text-xs text-text-tertiary mt-2">
-                Attendees will see this link after registering
-              </p>
+              {meetingUrl.trim() && (() => {
+                try { new URL(meetingUrl.trim()); return null; } catch { return (
+                  <p className="text-xs text-red-400 mt-2">Please enter a valid URL starting with https://</p>
+                ); }
+              })()}
+              {(!meetingUrl.trim() || (() => { try { new URL(meetingUrl.trim()); return true; } catch { return false; } })()) && (
+                <p className="text-xs text-text-tertiary mt-2">
+                  Attendees will see this link after registering
+                </p>
+              )}
             </div>
           </>
         )}
