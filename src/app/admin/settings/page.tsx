@@ -196,6 +196,9 @@ export default function SettingsPage() {
               <div className="text-sm text-text-tertiary">
                 Allow users to RSVP for events
               </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, new registrations will be paused across all events
+              </div>
             </div>
             <Switch
               checked={settings.enableRegistrations}
@@ -210,6 +213,9 @@ export default function SettingsPage() {
               <div className="text-sm text-text-tertiary">
                 Allow users to leave reviews on past events
               </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, users will not be able to submit or view reviews
+              </div>
             </div>
             <Switch
               checked={settings.enableReviews}
@@ -223,6 +229,9 @@ export default function SettingsPage() {
               <div className="font-medium">Referral Program</div>
               <div className="text-sm text-text-tertiary">
                 Enable referral tracking and leaderboards
+              </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, referral codes and leaderboards will be hidden
               </div>
             </div>
             <Switch

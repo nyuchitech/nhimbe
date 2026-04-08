@@ -240,6 +240,15 @@ export default function SearchPage() {
                 </Link>
               ))}
             </div>
+            {events.length > 3 && (
+              <Link
+                href="/events"
+                className="flex items-center justify-center gap-2 mt-4 py-3 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                View all events
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useStytchUser, useStytchSession, StytchLogin } from "@stytch/nextjs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Products, OTPMethods } from "@stytch/vanilla-js";
 import type { StyleConfig } from "@stytch/vanilla-js";
 import Image from "next/image";
@@ -121,16 +122,26 @@ function SignInContent() {
           </p>
         </div>
 
-        <StytchLogin
-          config={{
-            products: [Products.otp],
-            otpOptions: {
-              methods: [OTPMethods.Email],
-              expirationMinutes: 10,
-            },
-          }}
-          styles={stytchStyles}
-        />
+        <Suspense
+          fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+          }
+        >
+          <StytchLogin
+            config={{
+              products: [Products.otp],
+              otpOptions: {
+                methods: [OTPMethods.Email],
+                expirationMinutes: 10,
+              },
+            }}
+            styles={stytchStyles}
+          />
+        </Suspense>
 
         <p className="mt-6 text-center text-sm text-text-secondary">
           By continuing, you agree to our{" "}

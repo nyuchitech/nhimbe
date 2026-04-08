@@ -9,6 +9,29 @@ import Link from "next/link";
 
 const SESSION_DURATION_MINUTES = 10080; // 7 days
 
+function getFriendlyErrorMessage(error: string): string {
+  const lower = error.toLowerCase();
+  if (lower.includes("expired") || lower.includes("token_expired")) {
+    return "Your sign-in link has expired. Please request a new one.";
+  }
+  if (lower.includes("already been used") || lower.includes("already_used") || lower.includes("consumed")) {
+    return "This sign-in link has already been used. Please request a new one.";
+  }
+  if (lower.includes("invalid") || lower.includes("malformed")) {
+    return "This sign-in link is not valid. Please request a new one.";
+  }
+  if (lower.includes("network") || lower.includes("fetch") || lower.includes("failed to fetch")) {
+    return "We could not reach the authentication server. Please check your internet connection and try again.";
+  }
+  if (lower.includes("unsupported authentication method")) {
+    return "This sign-in method is not supported. Please try signing in with email.";
+  }
+  if (lower.includes("no authentication token")) {
+    return error; // Already friendly
+  }
+  return "Something went wrong during sign-in. Please try again.";
+}
+
 function AuthenticateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,7 +137,7 @@ function AuthenticateContent() {
           <h1 className="text-2xl font-semibold mb-3">
             Authentication Failed
           </h1>
-          <p className="text-text-secondary mb-6">{error}</p>
+          <p className="text-text-secondary mb-6">{getFriendlyErrorMessage(error)}</p>
           <div className="flex gap-3 justify-center">
             <Link href="/">
               <Button variant="secondary">Go Home</Button>

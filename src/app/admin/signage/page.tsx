@@ -127,9 +127,9 @@ function PairingScreen({ onPaired }: { onPaired: (session: KioskSession) => void
           <p className="text-red-400">{error}</p>
         ) : code ? (
           <>
-            <div className="flex justify-center gap-3 mb-6">
+            <div className="flex justify-center gap-2 sm:gap-3 mb-6">
               {code.split("").map((char, i) => (
-                <div key={i} className="w-16 h-20 bg-white/10 rounded-xl flex items-center justify-center text-3xl font-mono font-bold border-2 border-white/20">
+                <div key={i} className="w-11 h-14 sm:w-16 sm:h-20 bg-white/10 rounded-xl flex items-center justify-center text-xl sm:text-3xl font-mono font-bold border-2 border-white/20">
                   {char}
                 </div>
               ))}

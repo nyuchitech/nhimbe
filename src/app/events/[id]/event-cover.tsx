@@ -70,7 +70,7 @@ export function EventCover({ event, stats, reviewStats }: EventCoverProps) {
       {/* Top Right Stats */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex flex-col items-end gap-2 z-10">
         {stats?.views !== undefined && stats.views > 0 && (
-          <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full">
+          <div className="hidden sm:flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full">
             <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="text-xs sm:text-sm font-medium">{formatViews(stats.views)} views</span>
           </div>
