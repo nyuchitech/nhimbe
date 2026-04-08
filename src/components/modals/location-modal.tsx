@@ -90,6 +90,9 @@ export function LocationModal({
               <Label className="block text-sm text-text-secondary mb-2">Meeting URL</Label>
               <Input
                 type="url"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={meetingUrl}
                 onChange={(e) => setMeetingUrl(e.target.value)}
                 placeholder={
@@ -101,7 +104,7 @@ export function LocationModal({
                     ? "https://teams.microsoft.com/..."
                     : "https://..."
                 }
-                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
               />
               <p className="text-xs text-text-tertiary mt-2">
                 Attendees will see this link after registering
@@ -139,20 +142,24 @@ export function LocationModal({
               <Label className="block text-sm text-text-secondary mb-2">Venue Name</Label>
               <Input
                 type="text"
+                inputMode="text"
+                autoComplete="organization"
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
                 placeholder="e.g., Rainbow Towers Hotel"
-                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
               />
             </div>
             <div>
               <Label className="block text-sm text-text-secondary mb-2">Address</Label>
               <Input
                 type="text"
+                inputMode="text"
+                autoComplete="street-address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Street address"
-                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+                className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
               />
             </div>
             <div>
@@ -179,12 +186,14 @@ export function LocationModal({
             </div>
           </>
         )}
-        <Button
-          onClick={onClose}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-        >
-          Done
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={onClose}
+            className="w-full py-3 h-12 bg-primary text-primary-foreground rounded-xl font-semibold"
+          >
+            Done
+          </Button>
+        </div>
       </div>
     </BottomSheetModal>
   );

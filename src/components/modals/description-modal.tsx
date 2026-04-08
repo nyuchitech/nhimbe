@@ -26,7 +26,7 @@ export function DescriptionModal({
 }: DescriptionModalProps) {
   return (
     <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Description">
-      <div className="flex items-center gap-3 -mt-4 mb-4">
+      <div className="flex items-center gap-3 mb-4">
         <AIDescriptionBadge
           eventName={eventName}
           category={category}
@@ -40,17 +40,19 @@ export function DescriptionModal({
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe your event..."
           rows={6}
-          className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none resize-none"
+          className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none resize-none text-base"
         />
         <p className="text-xs text-text-tertiary">
           Tip: Click &quot;Ask Shamwari&quot; to let our AI friend help write your description
         </p>
-        <Button
-          onClick={onClose}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-        >
-          Done
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={onClose}
+            className="w-full py-3 h-12 bg-primary text-primary-foreground rounded-xl font-semibold"
+          >
+            Done
+          </Button>
+        </div>
       </div>
     </BottomSheetModal>
   );

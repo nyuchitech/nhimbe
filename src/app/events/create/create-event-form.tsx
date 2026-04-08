@@ -238,7 +238,7 @@ export default function CreateEventForm() {
   };
 
   return (
-    <div className="max-w-150 mx-auto px-4 pb-24">
+    <div className="max-w-150 mx-auto px-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
       <CoverImageUpload
         coverImage={coverImage}
         gradient={mineralThemeList[selectedTheme].gradient}
@@ -273,6 +273,9 @@ export default function CreateEventForm() {
       {/* Event Name */}
       <Input
         type="text"
+        inputMode="text"
+        autoCapitalize="words"
+        enterKeyHint="next"
         value={eventName}
         onChange={(e) => setEventName(e.target.value)}
         placeholder="Event Name"
@@ -345,8 +348,8 @@ export default function CreateEventForm() {
         </div>
       )}
 
-      {/* Create Button - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t border-elevated">
+      {/* Create Button - Fixed at bottom with safe area */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-background/80 backdrop-blur-lg border-t border-elevated z-40">
         <div className="max-w-150 mx-auto">
           <Button
             onClick={handleSubmit}

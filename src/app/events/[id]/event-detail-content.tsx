@@ -75,7 +75,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
 
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
-      <div className="max-w-250 mx-auto px-6 py-10">
+      <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-6">
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
@@ -83,7 +83,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
 
         <EventCover event={event} stats={stats} reviewStats={reviewStats} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12">
           {/* Main Content */}
           <div>
             <h1 className="font-serif text-4xl font-bold leading-tight mb-6">{event.name}</h1>

@@ -108,13 +108,13 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top,0px)] ${
         isScrolled
           ? "bg-background/70 backdrop-blur-xl border-b border-elevated/50 shadow-sm"
           : ""
       }`}
     >
-      <div className="max-w-300 mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-300 mx-auto px-6 py-3 sm:py-4 flex items-center justify-between">
         {/* Logo / Page Title */}
         <Link href="/" className="min-w-0 shrink flex items-center gap-3">
           {/* App Icon */}

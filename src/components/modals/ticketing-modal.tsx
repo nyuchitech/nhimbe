@@ -43,10 +43,13 @@ export function TicketingModal({
             <Label className="block text-sm text-text-secondary mb-2">External Ticket URL</Label>
             <Input
               type="url"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
               value={ticketUrl}
               onChange={(e) => setTicketUrl(e.target.value)}
               placeholder="https://tickets.example.com/your-event"
-              className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+              className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
             />
             <p className="text-xs text-text-tertiary mt-2">
               Link to your external ticketing page (e.g., Eventbrite, Quicket, etc.)
@@ -62,12 +65,14 @@ export function TicketingModal({
           </div>
         )}
 
-        <Button
-          onClick={onClose}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-        >
-          Done
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={onClose}
+            className="w-full py-3 h-12 bg-primary text-primary-foreground rounded-xl font-semibold"
+          >
+            Done
+          </Button>
+        </div>
       </div>
     </BottomSheetModal>
   );
