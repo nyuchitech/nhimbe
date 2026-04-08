@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ArrowLeft, CalendarDays, MapPin, Video } from "lucide-react";
+import { ArrowLeft, MapPin, Video, Bookmark, Globe, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Rating } from "@/components/ui/rating";
 import { AddToCalendarButton, GetDirectionsButton } from "./event-actions";
 import { EventThemeWrapper } from "./event-theme-wrapper";
@@ -38,6 +39,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   const [userReferral, setUserReferral] = useState<UserReferralCode | null>(null);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const [bookmarked, setBookmarked] = useState(false);
   const isPastEvent = new Date(event.startDate) < new Date();
   const isOnline = event.eventAttendanceMode === "OnlineEventAttendanceMode";
   const isInPerson = !isOnline && event.location.addressLocality !== "Online";
@@ -76,7 +78,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
       {/* Extra bottom padding on mobile for the sticky RSVP bar */}
-      <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:pb-10">
+      <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-10">
         <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-4 sm:mb-6">
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
@@ -87,7 +89,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12">
           {/* Main Content */}
           <div>
-            {/* Category badge - Luma style */}
+            {/* Featured in badge - Luma style */}
             {event.location.addressLocality && event.location.addressLocality !== "Online" && (
               <div className="flex items-center gap-2 mb-3">
                 <Badge
@@ -95,42 +97,25 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   className="text-xs font-medium border-0 px-0"
                   style={{ color: "var(--event-primary)" }}
                 >
-                  Featured in {event.location.addressLocality}
+                  Featured in {event.location.addressLocality} <ChevronRight className="w-3 h-3 inline" />
                 </Badge>
               </div>
             )}
 
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-4 sm:mb-6">{event.name}</h1>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-2">{event.name}</h1>
 
-            {/* Host Row - Clean, compact */}
-            <div className="flex items-center gap-3 mb-6 sm:mb-8">
+            {/* Compact host link under title */}
+            <Link href="#hosted-by" className="flex items-center gap-2 mb-5 sm:mb-6 group">
               <div
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-sm sm:text-base text-[#0A0A0A] shrink-0"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-[#0A0A0A] shrink-0"
                 style={{ background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))` }}
               >
                 {event.organizer.initials}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold truncate">{event.organizer.name}</h4>
-                  {event.organizer.eventCount > 5 && (
-                    <Badge variant="success" className="shrink-0">
-                      Trusted Host
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-foreground/60 flex-wrap">
-                  <span>{event.organizer.identifier}</span>
-                  {reviewStats && reviewStats.averageRating > 0 && (
-                    <>
-                      <span>·</span>
-                      <Rating value={reviewStats.averageRating} readOnly size="sm" showValue />
-                    </>
-                  )}
-                </div>
-              </div>
-              <Button variant="secondary" className="shrink-0 hidden sm:flex">Follow</Button>
-            </div>
+              <span className="text-sm text-foreground/60 group-hover:text-foreground transition-colors">
+                {event.organizer.name} <ChevronRight className="w-3 h-3 inline" />
+              </span>
+            </Link>
 
             {/* Date Row - Luma calendar block style */}
             <div className="flex items-center gap-4 mb-4">
@@ -165,7 +150,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   </p>
                 ) : (
                   <p className="text-sm text-foreground/60 truncate">
-                    {event.location.streetAddress && `${event.location.streetAddress}, `}{event.location.addressLocality}, {event.location.addressCountry}
+                    {event.location.addressLocality}, {event.location.addressCountry}
                   </p>
                 )}
               </div>
@@ -176,35 +161,97 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
               )}
             </div>
 
-            {/* Map & Weather */}
-            {isInPerson && (
-              <>
-                <div className="mb-6">
-                  <EventMap venue={event.location.name} address={event.location.streetAddress || ""} city={event.location.addressLocality} country={event.location.addressCountry} />
-                </div>
-                <div className="mb-8">
-                  <EventWeather city={event.location.addressLocality} eventDate={event.startDate} />
-                </div>
-              </>
-            )}
-
             {/* Description */}
-            <div className="mt-6 sm:mt-8">
+            <div>
               <h3 className="text-lg font-bold mb-4">About This Event</h3>
               {event.description.split("\n\n").map((paragraph, index) => (
                 <p key={index} className="text-[15px] leading-relaxed text-foreground/60 mb-4">{paragraph}</p>
               ))}
             </div>
 
+            {/* Location Section - Luma style: heading, venue, address, map */}
+            {isInPerson && (
+              <div className="mt-8">
+                <Separator className="mb-8" style={{ backgroundColor: "var(--event-surface)" }} />
+                <h3 className="text-sm font-medium text-foreground/50 mb-4">Location</h3>
+                <h4 className="text-lg font-bold mb-1">{event.location.name}</h4>
+                {event.location.streetAddress && (
+                  <p className="text-sm text-foreground/60 mb-1">{event.location.streetAddress}</p>
+                )}
+                <p className="text-sm text-foreground/60 mb-5">
+                  {event.location.addressLocality}, {event.location.addressCountry}
+                </p>
+                <EventMap
+                  venue={event.location.name}
+                  address={event.location.streetAddress || ""}
+                  city={event.location.addressLocality}
+                  country={event.location.addressCountry}
+                />
+              </div>
+            )}
+
+            {/* Weather for in-person events */}
+            {isInPerson && (
+              <div className="mt-6">
+                <EventWeather city={event.location.addressLocality} eventDate={event.startDate} />
+              </div>
+            )}
+
+            {/* Hosted By Section - Luma style */}
+            <div id="hosted-by" className="mt-10 scroll-mt-20">
+              <Separator className="mb-8" style={{ backgroundColor: "var(--event-surface)" }} />
+              <h3 className="text-sm font-medium text-foreground/50 mb-4">Hosted By</h3>
+              <div className="flex items-start gap-4">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-[#0A0A0A] shrink-0"
+                  style={{ background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))` }}
+                >
+                  {event.organizer.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h4 className="text-lg font-bold">{event.organizer.name}</h4>
+                    <Button variant="outline" size="sm" className="rounded-full text-xs h-8 px-4 shrink-0">
+                      Subscribe
+                    </Button>
+                  </div>
+                  {event.organizer.identifier && (
+                    <p className="text-sm text-foreground/60 mb-2">{event.organizer.identifier}</p>
+                  )}
+                  <div className="flex items-center gap-3 text-sm text-foreground/60 mb-3">
+                    <span>{event.organizer.eventCount} events hosted</span>
+                    {event.organizer.eventCount > 5 && (
+                      <Badge variant="success" className="text-[10px]">Trusted Host</Badge>
+                    )}
+                    {reviewStats && reviewStats.averageRating > 0 && (
+                      <>
+                        <span>·</span>
+                        <Rating value={reviewStats.averageRating} readOnly size="sm" showValue />
+                      </>
+                    )}
+                  </div>
+                  {/* Social links */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <Globe className="w-4 h-4 text-foreground/40" />
+                  </div>
+                  <button className="text-sm font-medium" style={{ color: "var(--event-primary)" }}>
+                    Contact the Host
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Ratings */}
             {isPastEvent && (
-              <div className="mt-8">
+              <div className="mt-10">
+                <Separator className="mb-8" style={{ backgroundColor: "var(--event-surface)" }} />
                 <EventRatings eventId={event.id} isPastEvent={true} userCanReview={true} />
               </div>
             )}
 
             {/* Referral Leaderboard */}
-            <div className="mt-8">
+            <div className="mt-10">
+              <Separator className="mb-8" style={{ backgroundColor: "var(--event-surface)" }} />
               <ReferralLeaderboard
                 eventId={event.id}
                 userReferralCode={userReferral?.code}
@@ -217,15 +264,24 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
         </div>
       </div>
 
-      {/* Sticky Mobile RSVP Bar - only visible on mobile, below lg breakpoint */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-background/90 backdrop-blur-xl border-t border-elevated z-40 lg:hidden">
-        <div className="max-w-250 mx-auto flex items-center gap-3">
+      {/* Sticky Mobile RSVP + Bookmark Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-background/90 backdrop-blur-xl border-t border-elevated z-40 lg:hidden">
+        <div className="max-w-250 mx-auto flex items-center gap-2.5">
+          {/* Bookmark / Interested button */}
+          <button
+            onClick={() => setBookmarked(!bookmarked)}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
+              bookmarked
+                ? "border-transparent"
+                : "border-elevated hover:bg-elevated"
+            }`}
+            style={bookmarked ? { backgroundColor: "var(--event-surface)", color: "var(--event-primary)" } : undefined}
+            aria-label={bookmarked ? "Remove bookmark" : "Bookmark event"}
+          >
+            <Bookmark className={`w-5 h-5 ${bookmarked ? "fill-current" : ""}`} />
+          </button>
+          {/* Price + RSVP */}
           <div className="flex-1 min-w-0">
-            <div className="text-lg font-bold truncate" style={{ color: "var(--event-primary)" }}>
-              {event.offers?.price ? `$${event.offers.price}` : "Free"}
-            </div>
-          </div>
-          <div className="flex-1">
             <RSVPButton eventId={event.id} price={event.offers} />
           </div>
         </div>
