@@ -7,7 +7,6 @@ import { ArrowLeft, CalendarDays, MapPin, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { Rating } from "@/components/ui/rating";
 import { AddToCalendarButton, GetDirectionsButton } from "./event-actions";
 import { EventThemeWrapper } from "./event-theme-wrapper";
@@ -15,6 +14,7 @@ import { EventMap } from "./event-map";
 import { EventWeather } from "./event-weather";
 import { EventCover } from "./event-cover";
 import { EventSidebar } from "./event-sidebar";
+import { RSVPButton } from "./rsvp-button";
 import { useAuth } from "@/components/auth/auth-context";
 import { getUserReferralCode, generateUserReferralCode, getEventStats, getEventReviews, type UserReferralCode, type EventStats, type ReviewStats } from "@/lib/api";
 import type { Event } from "@/lib/api";
@@ -75,8 +75,9 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
 
   return (
     <EventThemeWrapper coverGradient={event.coverGradient}>
-      <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-6">
+      {/* Extra bottom padding on mobile for the sticky RSVP bar */}
+      <div className="max-w-250 mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:pb-10">
+        <Link href="/" className="inline-flex items-center gap-2 text-foreground/60 text-sm hover:text-foreground mb-4 sm:mb-6">
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to events
         </Link>
@@ -86,29 +87,40 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12">
           {/* Main Content */}
           <div>
-            <h1 className="font-serif text-4xl font-bold leading-tight mb-6">{event.name}</h1>
+            {/* Category badge - Luma style */}
+            {event.location.addressLocality && event.location.addressLocality !== "Online" && (
+              <div className="flex items-center gap-2 mb-3">
+                <Badge
+                  variant="ghost"
+                  className="text-xs font-medium border-0 px-0"
+                  style={{ color: "var(--event-primary)" }}
+                >
+                  Featured in {event.location.addressLocality}
+                </Badge>
+              </div>
+            )}
 
-            {/* Host Row */}
-            <div className="flex items-center gap-3.5 py-4" style={{ borderColor: "var(--event-surface)" }}>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-4 sm:mb-6">{event.name}</h1>
+
+            {/* Host Row - Clean, compact */}
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-[#0A0A0A]"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-sm sm:text-base text-[#0A0A0A] shrink-0"
                 style={{ background: `linear-gradient(135deg, var(--event-primary), var(--event-secondary))` }}
               >
                 {event.organizer.initials}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold">{event.organizer.name}</h4>
+                  <h4 className="font-semibold truncate">{event.organizer.name}</h4>
                   {event.organizer.eventCount > 5 && (
-                    <Badge variant="success">
+                    <Badge variant="success" className="shrink-0">
                       Trusted Host
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-foreground/60">
+                <div className="flex items-center gap-1.5 text-sm text-foreground/60 flex-wrap">
                   <span>{event.organizer.identifier}</span>
-                  <span>·</span>
-                  <span>{event.organizer.eventCount} events hosted</span>
                   {reviewStats && reviewStats.averageRating > 0 && (
                     <>
                       <span>·</span>
@@ -117,32 +129,33 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                   )}
                 </div>
               </div>
-              <Button variant="secondary">Follow</Button>
+              <Button variant="secondary" className="shrink-0 hidden sm:flex">Follow</Button>
             </div>
 
-            <Separator style={{ backgroundColor: "var(--event-surface)" }} />
-
-            {/* Date Row */}
-            <div className="flex items-start gap-4 py-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}>
-                <CalendarDays className="w-5 h-5" />
+            {/* Date Row - Luma calendar block style */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 border" style={{ borderColor: "var(--event-surface)" }}>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-foreground/50 leading-none">
+                  {event.date.month.slice(0, 3)}
+                </div>
+                <div className="text-xl font-bold leading-none mt-0.5" style={{ color: "var(--event-primary)" }}>
+                  {event.date.day}
+                </div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h4 className="font-semibold">{event.date.full}</h4>
                 <p className="text-sm text-foreground/60">{event.date.time}</p>
               </div>
               <AddToCalendarButton event={event} />
             </div>
 
-            <Separator style={{ backgroundColor: "var(--event-surface)" }} />
-
-            {/* Location Row */}
-            <div className="flex items-start gap-4 py-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}>
+            {/* Location Row - Luma style with pin */}
+            <div className="flex items-center gap-4 mb-6 sm:mb-8">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: "var(--event-surface)", color: "var(--event-primary)" }}>
                 {isOnline ? <Video className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
               </div>
-              <div className="flex-1">
-                <h4 className="font-semibold">{event.location.name}</h4>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold truncate">{event.location.name}</h4>
                 {isOnline && event.meetingPlatform ? (
                   <p className="text-sm text-foreground/60">
                     {event.meetingPlatform === "zoom" && "Zoom Meeting"}
@@ -151,13 +164,13 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                     {event.meetingPlatform === "other" && "Online Meeting"}
                   </p>
                 ) : (
-                  <p className="text-sm text-foreground/60">
+                  <p className="text-sm text-foreground/60 truncate">
                     {event.location.streetAddress && `${event.location.streetAddress}, `}{event.location.addressLocality}, {event.location.addressCountry}
                   </p>
                 )}
               </div>
               {isOnline && event.meetingUrl ? (
-                <Button variant="secondary" onClick={() => window.open(event.meetingUrl, "_blank")}>Join</Button>
+                <Button variant="secondary" size="sm" onClick={() => window.open(event.meetingUrl, "_blank")}>Join</Button>
               ) : (
                 <GetDirectionsButton event={event} />
               )}
@@ -166,7 +179,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             {/* Map & Weather */}
             {isInPerson && (
               <>
-                <div className="mt-6 mb-6">
+                <div className="mb-6">
                   <EventMap venue={event.location.name} address={event.location.streetAddress || ""} city={event.location.addressLocality} country={event.location.addressCountry} />
                 </div>
                 <div className="mb-8">
@@ -176,7 +189,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
             )}
 
             {/* Description */}
-            <div className="mt-8">
+            <div className="mt-6 sm:mt-8">
               <h3 className="text-lg font-bold mb-4">About This Event</h3>
               {event.description.split("\n\n").map((paragraph, index) => (
                 <p key={index} className="text-[15px] leading-relaxed text-foreground/60 mb-4">{paragraph}</p>
@@ -201,6 +214,20 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
           </div>
 
           <EventSidebar event={event} stats={stats} reviewStats={reviewStats} />
+        </div>
+      </div>
+
+      {/* Sticky Mobile RSVP Bar - only visible on mobile, below lg breakpoint */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-background/90 backdrop-blur-xl border-t border-elevated z-40 lg:hidden">
+        <div className="max-w-250 mx-auto flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-lg font-bold truncate" style={{ color: "var(--event-primary)" }}>
+              {event.offers?.price ? `$${event.offers.price}` : "Free"}
+            </div>
+          </div>
+          <div className="flex-1">
+            <RSVPButton eventId={event.id} price={event.offers} />
+          </div>
         </div>
       </div>
     </EventThemeWrapper>
