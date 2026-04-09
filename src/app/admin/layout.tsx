@@ -15,6 +15,7 @@ import {
   X,
   Shield,
   ChevronDown,
+  Lock,
 } from "lucide-react";
 
 interface NavItem {
@@ -47,10 +48,11 @@ export default function AdminLayout({
   const userRole = user?.role || 'user';
   const canAccessAdmin = user && hasPermission(userRole, 'moderator');
 
-  // Filter nav items based on user's role
-  const visibleNavItems = navItems.filter(item =>
-    user && hasPermission(userRole, item.requiredRole)
-  );
+  // Show all nav items, marking inaccessible ones
+  const visibleNavItems = navItems.map(item => ({
+    ...item,
+    accessible: !!(user && hasPermission(userRole, item.requiredRole)),
+  }));
 
   useEffect(() => {
     if (!isLoading) {
@@ -124,6 +126,20 @@ export default function AdminLayout({
                 pathname === item.href ||
                 (item.href !== "/admin" && pathname.startsWith(item.href));
               const Icon = item.icon;
+
+              if (!item.accessible) {
+                return (
+                  <div
+                    key={item.href}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-tertiary/50 cursor-not-allowed"
+                    title={`Requires ${item.requiredRole} role`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium flex-1">{item.label}</span>
+                    <Lock className="w-3.5 h-3.5" />
+                  </div>
+                );
+              }
 
               return (
                 <Link

@@ -300,7 +300,7 @@ export default function EventsPage() {
                   <div className="text-sm text-text-tertiary">
                     Page {page} of {totalPages}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="secondary"
                       size="default"
@@ -309,6 +309,22 @@ export default function EventsPage() {
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const p = start + i;
+                      if (p > totalPages) return null;
+                      return (
+                        <Button
+                          key={p}
+                          variant={p === page ? "default" : "ghost"}
+                          size="default"
+                          onClick={() => setPage(p)}
+                          className="w-10"
+                        >
+                          {p}
+                        </Button>
+                      );
+                    })}
                     <Button
                       variant="secondary"
                       size="default"
