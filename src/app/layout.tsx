@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Noto_Serif } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -15,6 +15,14 @@ import { ErrorBoundary } from "@/components/error/error-boundary";
 import { WidgetErrorBoundary } from "@/components/error/widget-error-boundary";
 import { LiveRegionProvider } from "@/components/ui/live-region";
 import { ServiceWorkerRegister } from "@/components/pwa/sw-register";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nhimbe.com"),
@@ -162,7 +170,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
       </head>
-      <body className={`${plusJakarta.variable} ${notoSerif.variable} antialiased min-h-screen flex flex-col`}>
+      <body className={`${plusJakarta.variable} ${notoSerif.variable} antialiased min-h-dvh flex flex-col`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:font-semibold"
@@ -178,7 +186,10 @@ export default function RootLayout({
                   <WidgetErrorBoundary fallback={<MinimalNav />} name="Header">
                     <Header />
                   </WidgetErrorBoundary>
-                  <main id="main-content" className="flex-1 relative z-10">{children}</main>
+                  <main id="main-content" className="flex-1 relative z-10 pb-16 md:pb-0">{children}</main>
+                  <WidgetErrorBoundary fallback={null} name="MobileNav">
+                    <MobileBottomNav />
+                  </WidgetErrorBoundary>
                   <WidgetErrorBoundary fallback={null} name="Footer">
                     <Footer />
                   </WidgetErrorBoundary>

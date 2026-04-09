@@ -320,7 +320,7 @@ function ManageEventContent() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="w-full sm:w-auto overflow-x-auto">
+        <TabsList className="w-full sm:w-auto overflow-x-auto scrollbar-none flex-nowrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="guests">
             Guests
@@ -588,14 +588,12 @@ function ManageEventContent() {
                       <div className="font-medium truncate">{registration.name}</div>
                       <div className="text-sm text-text-secondary truncate">{registration.email}</div>
                     </div>
-                    <div className="hidden sm:block">
-                      <Badge variant={
-                        registration.status === "approved" || registration.status === "registered" ? "success" :
-                        registration.status === "pending" ? "warning" : "error"
-                      }>
-                        {registration.status}
-                      </Badge>
-                    </div>
+                    <Badge variant={
+                      registration.status === "approved" || registration.status === "registered" ? "success" :
+                      registration.status === "pending" ? "warning" : "error"
+                    }>
+                      {registration.status}
+                    </Badge>
                     <div className="hidden md:block text-sm text-text-tertiary">
                       {registration.date}
                     </div>
@@ -1162,7 +1160,7 @@ function ManageEventContent() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
           <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-2">Delete Event?</h3>
             <p className="text-text-secondary mb-6">
@@ -1190,7 +1188,7 @@ function ManageEventContent() {
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
           <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-2">Cancel Event?</h3>
             <p className="text-text-secondary mb-6">

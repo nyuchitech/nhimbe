@@ -117,7 +117,9 @@ export function RSVPButton({ eventId, price }: RSVPButtonProps) {
         {loading ? "Registering..." : price ? "Get Tickets" : "RSVP Now"}
       </Button>
       {error && (
-        <p className="text-red-400 text-sm mt-2 text-center">{error}</p>
+        <div className="flex items-center gap-2 mt-2 p-2 bg-red-500/10 rounded-lg">
+          <span className="text-red-400 text-sm">{error}</span>
+        </div>
       )}
     </div>
   );

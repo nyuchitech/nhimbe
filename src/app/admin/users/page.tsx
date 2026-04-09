@@ -44,6 +44,7 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ userId: string; action: "suspend" | "activate"; userName: string } | null>(null);
 
   const limit = 20;
 
@@ -93,7 +94,7 @@ export default function UsersPage() {
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -259,9 +260,10 @@ export default function UsersPage() {
                                 {user.status === "active" ? (
                                   <Button
                                     variant="ghost"
-                                    onClick={() =>
-                                      handleAction(user.id, "suspend")
-                                    }
+                                    onClick={() => {
+                                      setPendingAction({ userId: user.id, action: "suspend", userName: user.name || user.email });
+                                      setActionMenuOpen(null);
+                                    }}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-elevated rounded-none justify-start h-auto"
                                   >
                                     <Ban className="w-4 h-4" />
@@ -270,9 +272,10 @@ export default function UsersPage() {
                                 ) : (
                                   <Button
                                     variant="ghost"
-                                    onClick={() =>
-                                      handleAction(user.id, "activate")
-                                    }
+                                    onClick={() => {
+                                      setPendingAction({ userId: user.id, action: "activate", userName: user.name || user.email });
+                                      setActionMenuOpen(null);
+                                    }}
                                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-400 hover:bg-elevated rounded-none justify-start h-auto"
                                   >
                                     <Ban className="w-4 h-4" />
@@ -295,7 +298,7 @@ export default function UsersPage() {
                   <div className="text-sm text-text-tertiary">
                     Page {page} of {totalPages}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="secondary"
                       size="default"
@@ -304,6 +307,22 @@ export default function UsersPage() {
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                      const p = start + i;
+                      if (p > totalPages) return null;
+                      return (
+                        <Button
+                          key={p}
+                          variant={p === page ? "default" : "ghost"}
+                          size="default"
+                          onClick={() => setPage(p)}
+                          className="w-10"
+                        >
+                          {p}
+                        </Button>
+                      );
+                    })}
                     <Button
                       variant="secondary"
                       size="default"
@@ -319,6 +338,43 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Suspend/Activate Confirmation Modal */}
+      {pendingAction && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+          <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-2">
+              {pendingAction.action === "suspend" ? "Suspend User?" : "Activate User?"}
+            </h3>
+            <p className="text-text-secondary mb-6">
+              {pendingAction.action === "suspend"
+                ? `This will suspend "${pendingAction.userName}" and prevent them from accessing the platform.`
+                : `This will reactivate "${pendingAction.userName}" and restore their access.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingAction(null)}
+                className="flex-1 px-4 py-3 rounded-xl bg-surface hover:bg-foreground/10 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleAction(pendingAction.userId, pendingAction.action);
+                  setPendingAction(null);
+                }}
+                className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors text-white ${
+                  pendingAction.action === "suspend"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {pendingAction.action === "suspend" ? "Suspend" : "Activate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User Detail Modal */}
       {selectedUser && (

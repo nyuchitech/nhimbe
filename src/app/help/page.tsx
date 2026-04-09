@@ -105,7 +105,15 @@ const faqCategories: FAQCategory[] = [
 
 export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [openItems, setOpenItems] = useState<Set<string>>(new Set());
+  const [openItems, setOpenItems] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set<string>();
+    try {
+      const saved = localStorage.getItem("nhimbe-faq-open");
+      return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
 
   const toggleItem = (categoryIndex: number, itemIndex: number) => {
     const key = `${categoryIndex}-${itemIndex}`;
@@ -116,6 +124,7 @@ export default function HelpPage() {
       newOpenItems.add(key);
     }
     setOpenItems(newOpenItems);
+    try { localStorage.setItem("nhimbe-faq-open", JSON.stringify([...newOpenItems])); } catch {}
   };
 
   const filteredCategories = faqCategories

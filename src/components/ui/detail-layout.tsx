@@ -59,7 +59,7 @@ function DetailLayout({
         {sidebar && (
           <aside
             data-slot="detail-layout-sidebar"
-            className="lg:sticky lg:top-25 self-start space-y-6"
+            className="lg:sticky lg:top-[calc(4rem+env(safe-area-inset-top,0px))] self-start space-y-6"
           >
             {sidebar}
           </aside>

@@ -31,6 +31,8 @@ interface Settings {
 
 export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState("");
   const [settings, setSettings] = useState<Settings>({
     siteName: "nhimbe",
     supportEmail: "support@nhimbe.com",
@@ -194,6 +196,9 @@ export default function SettingsPage() {
               <div className="text-sm text-text-tertiary">
                 Allow users to RSVP for events
               </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, new registrations will be paused across all events
+              </div>
             </div>
             <Switch
               checked={settings.enableRegistrations}
@@ -208,6 +213,9 @@ export default function SettingsPage() {
               <div className="text-sm text-text-tertiary">
                 Allow users to leave reviews on past events
               </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, users will not be able to submit or view reviews
+              </div>
             </div>
             <Switch
               checked={settings.enableReviews}
@@ -221,6 +229,9 @@ export default function SettingsPage() {
               <div className="font-medium">Referral Program</div>
               <div className="text-sm text-text-tertiary">
                 Enable referral tracking and leaderboards
+              </div>
+              <div className="text-xs text-text-tertiary mt-1">
+                When disabled, referral codes and leaderboards will be hidden
               </div>
             </div>
             <Switch
@@ -319,11 +330,49 @@ export default function SettingsPage() {
             <Button
               variant="ghost"
               className="text-red-400 border border-red-500/20 hover:bg-red-500/10"
+              onClick={() => { setShowClearConfirm(true); setClearConfirmText(""); }}
             >
               <AlertTriangle className="w-4 h-4" />
               Clear All Data
             </Button>
           </div>
+
+          {/* Clear All Data confirmation modal */}
+          {showClearConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+              <div className="bg-elevated rounded-2xl p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold mb-2 text-red-400">Confirm Data Deletion</h3>
+                <p className="text-text-secondary mb-4">
+                  This will permanently delete <strong>all events, users, and data</strong>. This action cannot be undone.
+                </p>
+                <p className="text-sm text-text-tertiary mb-3">
+                  Type <strong>DELETE</strong> to confirm:
+                </p>
+                <Input
+                  type="text"
+                  value={clearConfirmText}
+                  onChange={(e) => setClearConfirmText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none mb-4 text-base"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-surface hover:bg-foreground/10 font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={clearConfirmText !== "DELETE"}
+                    className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    Clear All Data
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

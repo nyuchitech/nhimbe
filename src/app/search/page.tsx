@@ -119,13 +119,22 @@ export default function SearchPage() {
                 >
                   {/* Event Cover */}
                   <div
-                    className="w-16 h-16 rounded-lg shrink-0"
+                    className="w-16 h-16 rounded-lg shrink-0 overflow-hidden"
                     style={{
-                      background: event.image
-                        ? `url(${event.image}) center/cover`
-                        : event.coverGradient || "linear-gradient(135deg, #004D40, #64FFDA)",
+                      background: !event.image
+                        ? event.coverGradient || "linear-gradient(135deg, #004D40, #64FFDA)"
+                        : undefined,
                     }}
-                  />
+                  >
+                    {event.image && (
+                      <img
+                        src={event.image}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                   {/* Event Info */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground truncate">{event.name}</h3>
@@ -240,6 +249,15 @@ export default function SearchPage() {
                 </Link>
               ))}
             </div>
+            {events.length > 3 && (
+              <Link
+                href="/events"
+                className="flex items-center justify-center gap-2 mt-4 py-3 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                View all events
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
         </div>
       )}

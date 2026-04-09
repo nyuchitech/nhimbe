@@ -41,7 +41,7 @@ export function EventSidebar({ event, stats, reviewStats }: EventSidebarProps) {
     : null;
 
   return (
-    <aside data-slot="event-sidebar" className="lg:sticky lg:top-25 self-start space-y-6">
+    <aside data-slot="event-sidebar" className="lg:sticky lg:top-[calc(4rem+env(safe-area-inset-top,0px))] self-start space-y-6">
       {/* Ticket Card */}
       <Card className="border-0" style={{ backgroundColor: "var(--event-surface)" }}>
         <CardContent className="p-6">

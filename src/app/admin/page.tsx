@@ -128,8 +128,59 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div>
+          <div className="h-8 w-40 bg-elevated rounded animate-pulse" />
+          <div className="h-5 w-72 bg-elevated rounded animate-pulse mt-2" />
+        </div>
+        {/* Stat cards skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-elevated animate-pulse" />
+                  <div className="w-12 h-5 bg-elevated rounded animate-pulse" />
+                </div>
+                <div className="h-8 w-20 bg-elevated rounded animate-pulse mb-1" />
+                <div className="h-4 w-24 bg-elevated rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Content grid skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="h-6 w-32 bg-elevated rounded animate-pulse" />
+                <div className="h-4 w-16 bg-elevated rounded animate-pulse" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="flex items-center gap-3 p-3 rounded-lg bg-elevated">
+                    <div className="w-10 h-10 rounded-full bg-surface animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-3/4 bg-surface rounded animate-pulse" />
+                      <div className="h-3 w-1/2 bg-surface rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        {/* Support tickets skeleton */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="h-6 w-36 bg-elevated rounded animate-pulse" />
+            <div className="h-4 w-16 bg-elevated rounded animate-pulse" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-20 w-full bg-elevated rounded animate-pulse" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

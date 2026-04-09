@@ -33,17 +33,25 @@ interface EventActionsProps {
 }
 
 // Helper to create CalendarEvent from event data
+// The nhimbe event page is always the primary URL so people come back to the platform.
 function createCalendarEvent(event: EventActionsProps["event"]): CalendarEvent {
   const startDate = new Date(event.startDate);
   const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
+  const eventPageUrl = typeof window !== "undefined" ? `${window.location.origin}/e/${event.shortCode}` : undefined;
+
+  // Build a rich description that links back to nhimbe
+  const descLines = [event.description.slice(0, 500)];
+  descLines.push("");
+  descLines.push(`View event details, RSVP, and explore more: ${eventPageUrl || "https://nhimbe.com"}`);
+  descLines.push("Powered by nhimbe — Together we gather, together we grow");
 
   return {
     title: event.name,
-    description: event.description,
+    description: descLines.join("\n"),
     location: `${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}`,
     startDate,
     endDate,
-    url: typeof window !== "undefined" ? `${window.location.origin}/e/${event.shortCode}` : undefined,
+    url: eventPageUrl,
   };
 }
 
@@ -51,36 +59,7 @@ export function EventActions({ event }: EventActionsProps) {
   const [copySuccess, setCopySuccess] = useState(false);
 
   const handleAddToCalendar = () => {
-    // Generate ICS file content
-    const startDate = new Date(event.startDate);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
-
-    const formatDateForICS = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    };
-
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//nhimbe//Event//EN
-BEGIN:VEVENT
-DTSTART:${formatDateForICS(startDate)}
-DTEND:${formatDateForICS(endDate)}
-SUMMARY:${event.name}
-DESCRIPTION:${event.description.slice(0, 200).replace(/\n/g, "\\n")}
-LOCATION:${event.location.name}, ${event.location.streetAddress}, ${event.location.addressLocality}, ${event.location.addressCountry}
-END:VEVENT
-END:VCALENDAR`;
-
-    // Create and download ICS file
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${event.name.toLowerCase().replace(/\s+/g, "-")}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadICS(createCalendarEvent(event));
   };
 
   const handleGetDirections = () => {

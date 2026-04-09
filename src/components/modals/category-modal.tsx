@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 import type { Category } from "@/lib/api";
 
 interface CategoryModalProps {
@@ -33,7 +33,7 @@ export function CategoryModal({
   removeTag,
 }: CategoryModalProps) {
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Category & Tags">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Category & Tags">
       <div className="space-y-4">
         <div>
           <Label className="block text-sm text-text-secondary mb-2">Category</Label>
@@ -72,13 +72,22 @@ export function CategoryModal({
           <div className="flex gap-2 mb-2">
             <Input
               type="text"
+              inputMode="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              enterKeyHint="done"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addTag()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTag();
+                }
+              }}
               placeholder="Add a tag..."
-              className="flex-1 px-4 py-3 bg-surface rounded-xl border-none outline-none"
+              className="flex-1 px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
             />
-            <Button onClick={addTag} className="px-4 py-3 bg-primary text-primary-foreground rounded-xl">
+            <Button onClick={addTag} className="px-4 py-3 bg-primary text-primary-foreground rounded-xl shrink-0">
               Add
             </Button>
           </div>
@@ -95,13 +104,15 @@ export function CategoryModal({
             </div>
           )}
         </div>
-        <Button
-          onClick={onClose}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-        >
-          Done
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={onClose}
+            className="w-full py-3 h-12 bg-primary text-primary-foreground rounded-xl font-semibold"
+          >
+            Done
+          </Button>
+        </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }

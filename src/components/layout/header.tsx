@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore, useMemo } from "react";
+import { useState, useEffect, useSyncExternalStore, useMemo, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus, Search, User, LogIn } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/components/auth/auth-context";
@@ -64,6 +64,7 @@ function getPageTitleSnapshot(pathname: string): string | null {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const { resolvedTheme } = useTheme();
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -106,15 +107,31 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Cmd+K / Ctrl+K keyboard shortcut for search
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        router.push("/search");
+      }
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top,0px)] ${
         isScrolled
           ? "bg-background/70 backdrop-blur-xl border-b border-elevated/50 shadow-sm"
           : ""
       }`}
     >
-      <div className="max-w-300 mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-300 mx-auto px-6 py-3 sm:py-4 flex items-center justify-between">
         {/* Logo / Page Title */}
         <Link href="/" className="min-w-0 shrink flex items-center gap-3">
           {/* App Icon */}

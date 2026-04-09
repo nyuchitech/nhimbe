@@ -128,12 +128,22 @@
   --radius-badge: 9999px;
 }
 
+html {
+  /* Use dvh for proper mobile viewport handling (accounts for browser chrome) */
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  /* Prevent overscroll bounce on iOS that causes layout shift */
+  overscroll-behavior-y: none;
 }
 
 /* Touch target minimum size */
@@ -142,6 +152,55 @@ input,
 select,
 textarea {
   min-height: 44px;
+}
+
+/* Mobile input improvements - prevent zoom on iOS (font-size >= 16px) */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="url"],
+  input[type="email"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe area utilities for fixed/sticky elements */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/*
+ * Z-index stacking context (intentional layering):
+ *   z-30: Admin sub-headers (below main nav)
+ *   z-40: Sticky bottom bars (RSVP, create button), admin sidebar overlay
+ *   z-50: Header, all modals (dialog/drawer/sheet), overlays, dropdowns
+ * Sticky bars (z-40) sit below modals (z-50) so modals overlay them.
+ */
+
+/* Hide scrollbar for horizontal scroll containers (tabs, carousels) */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Link styling */
@@ -178,14 +237,27 @@ a {
   background-color: var(--primary-foreground);
 }
 
-/* Event Page Theme System */
-.event-themed-page {
+/* Event Page Theme System - defaults on :root so vars always resolve,
+   even if a component renders outside EventThemeWrapper context.
+   EventThemeWrapper overrides these via inline styles. */
+:root {
   --event-primary: #64FFDA;
   --event-secondary: #00796B;
   --event-accent: #004D40;
   --event-surface: rgba(0, 77, 64, 0.15);
   --event-surface-hover: rgba(0, 77, 64, 0.25);
   --event-gradient: linear-gradient(135deg, #004D40, #00796B);
+  --event-border: rgba(0, 77, 64, 0.2);
+}
+
+.light {
+  --event-primary: #00574B;
+  --event-secondary: #004D40;
+  --event-accent: #003D33;
+  --event-surface: rgba(0, 87, 75, 0.08);
+  --event-surface-hover: rgba(0, 87, 75, 0.15);
+  --event-gradient: linear-gradient(135deg, #003D33, #00574B);
+  --event-border: rgba(0, 87, 75, 0.12);
 }
 
 /* Event theme utilities */

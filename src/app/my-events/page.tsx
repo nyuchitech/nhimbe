@@ -94,11 +94,11 @@ function MyEventsContent() {
   }[activeTab];
 
   return (
-    <div className="max-w-300 mx-auto px-6 py-12">
+    <div className="max-w-300 mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Events</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Events</h1>
           <p className="text-text-secondary mt-1">
             {user?.name ? `Welcome back, ${user.name.split(" ")[0]}!` : "Manage your upcoming gatherings and see past events"}
           </p>
@@ -112,7 +112,7 @@ function MyEventsContent() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-elevated">
+      <div className="flex gap-1 sm:gap-2 mb-6 sm:mb-8 border-b border-elevated overflow-x-auto scrollbar-none">
         {tabs.map((tab) => (
           <Button
             key={tab.id}
@@ -139,7 +139,7 @@ function MyEventsContent() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : currentEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {currentEvents.map((event) => (
             <EventCard
               key={event.id}

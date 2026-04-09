@@ -30,7 +30,7 @@ export function EventThemeWrapper({ children, coverGradient, themeId }: EventThe
 
   return (
     <div
-      className="min-h-screen event-themed-page"
+      className="min-h-dvh event-themed-page"
       style={{
         "--event-primary": theme.primary,
         "--event-secondary": theme.secondary,

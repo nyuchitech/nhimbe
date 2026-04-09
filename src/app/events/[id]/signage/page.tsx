@@ -267,6 +267,7 @@ function HostSignageContent({ session }: { session: KioskSession }) {
   const [stats, setStats] = useState<CheckinStats | null>(null);
   const [recentCheckins, setRecentCheckins] = useState<Registration[]>([]);
   const { orientation, setOrientation } = useOrientation();
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const loadData = useCallback(async () => {
     const [eventData, checkinStats, regs] = await Promise.all([
@@ -287,9 +288,10 @@ function HostSignageContent({ session }: { session: KioskSession }) {
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
+    if (!autoRefresh) return;
     const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [loadData, autoRefresh]);
 
   if (!event) {
     return (
@@ -302,6 +304,17 @@ function HostSignageContent({ session }: { session: KioskSession }) {
   return (
     <>
       <OrientationToggle orientation={orientation} onChange={setOrientation} />
+      <button
+        onClick={() => setAutoRefresh(!autoRefresh)}
+        className="fixed top-4 right-16 z-40 bg-black/40 hover:bg-black/60 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+        title={autoRefresh ? "Pause auto-refresh" : "Resume auto-refresh"}
+      >
+        {autoRefresh ? (
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+        )}
+      </button>
       {orientation === "horizontal" ? (
         <CoverBackground event={event} className="min-h-screen flex flex-col">
           <header className="px-12 py-6 flex items-center justify-between">

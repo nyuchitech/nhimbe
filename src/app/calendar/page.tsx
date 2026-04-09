@@ -111,20 +111,39 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-6">
         <Button
           variant="ghost"
-          size="icon"
           onClick={goToPreviousMonth}
           aria-label="Previous month"
+          className="w-11 h-11 p-0"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <h2 className="text-xl font-semibold">
-          {MONTHS[month]} {year}
-        </h2>
+        <div className="flex items-center gap-2">
+          <select
+            value={month}
+            onChange={(e) => setCurrentDate(new Date(year, Number(e.target.value), 1))}
+            className="text-xl font-semibold bg-transparent border-none outline-none cursor-pointer appearance-none pr-1"
+            aria-label="Select month"
+          >
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={year}
+            onChange={(e) => setCurrentDate(new Date(Number(e.target.value), month, 1))}
+            className="text-xl font-semibold bg-transparent border-none outline-none cursor-pointer appearance-none"
+            aria-label="Select year"
+          >
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
         <Button
           variant="ghost"
-          size="icon"
           onClick={goToNextMonth}
           aria-label="Next month"
+          className="w-11 h-11 p-0"
         >
           <ChevronRight className="w-5 h-5" />
         </Button>

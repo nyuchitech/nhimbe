@@ -54,7 +54,8 @@ function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: C
     <div className="flex flex-wrap items-center gap-4 py-3 px-4 bg-surface rounded-xl mb-6">
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Flame className="w-4 h-4 text-primary" />
+          <Flame className="w-4 h-4 text-primary" aria-hidden="true" />
+          <span className="sr-only">Active events</span>
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Active Events</div>
@@ -64,7 +65,8 @@ function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: C
       <div className="h-8 w-px bg-elevated hidden sm:block" />
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
-          <TrendingUp className="w-4 h-4 text-accent" />
+          <TrendingUp className="w-4 h-4 text-accent" aria-hidden="true" />
+          <span className="sr-only">Trending category</span>
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Trending</div>
@@ -74,7 +76,8 @@ function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: C
       <div className="h-8 w-px bg-elevated hidden sm:block" />
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-secondary/20 flex items-center justify-center">
-          <Clock className="w-4 h-4 text-secondary" />
+          <Clock className="w-4 h-4 text-secondary" aria-hidden="true" />
+          <span className="sr-only">Peak time</span>
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Peak Time</div>
@@ -84,7 +87,8 @@ function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: C
       <div className="h-8 w-px bg-elevated hidden sm:block" />
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-          <Users className="w-4 h-4 text-green-400" />
+          <Users className="w-4 h-4 text-green-400" aria-hidden="true" />
+          <span className="sr-only">Community size</span>
         </div>
         <div>
           <div className="text-xs text-text-tertiary">Community</div>

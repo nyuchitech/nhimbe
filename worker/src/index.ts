@@ -29,6 +29,7 @@ import { waitlist } from "./routes/waitlist";
 import { checkin } from "./routes/checkin";
 import { kiosk } from "./routes/kiosk";
 import { payments } from "./routes/payments";
+import { links } from "./routes/links";
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -137,6 +138,7 @@ app.route("/api", waitlist);
 app.route("/api", checkin);
 app.route("/api/kiosk", kiosk);
 app.route("/api/payments", payments);
+app.route("/api/links", links);
 
 // Global error handler
 app.onError((err, c) => {

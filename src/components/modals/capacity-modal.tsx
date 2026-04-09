@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BottomSheetModal } from "./bottom-sheet-modal";
+import { ResponsiveModal } from "@/components/ui/responsive-modal";
 
 interface CapacityModalProps {
   isOpen: boolean;
@@ -18,28 +18,41 @@ export function CapacityModal({
   capacity,
   setCapacity,
 }: CapacityModalProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!raw) {
+      setCapacity(null);
+      return;
+    }
+    const num = Math.max(1, Math.floor(Number(raw)));
+    setCapacity(Number.isNaN(num) ? null : num);
+  };
+
   return (
-    <BottomSheetModal isOpen={isOpen} onClose={onClose} title="Capacity">
+    <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Capacity">
       <div className="space-y-4">
         <div>
           <Label className="block text-sm text-text-secondary mb-2">Maximum Attendees</Label>
           <Input
             type="number"
+            inputMode="numeric"
             value={capacity || ""}
-            onChange={(e) => setCapacity(e.target.value ? Number(e.target.value) : null)}
+            onChange={handleChange}
             placeholder="Leave empty for unlimited"
             min={1}
-            className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none"
+            className="w-full px-4 py-3 bg-surface rounded-xl border-none outline-none text-base"
           />
         </div>
         <p className="text-sm text-text-tertiary">Leave empty for unlimited capacity</p>
-        <Button
-          onClick={onClose}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-        >
-          Done
-        </Button>
+        <div className="pt-2">
+          <Button
+            onClick={onClose}
+            className="w-full py-3 h-12 bg-primary text-primary-foreground rounded-xl font-semibold"
+          >
+            Done
+          </Button>
+        </div>
       </div>
-    </BottomSheetModal>
+    </ResponsiveModal>
   );
 }
