@@ -585,6 +585,31 @@ export async function getEventStats(eventId: string): Promise<EventStats> {
   return response.stats;
 }
 
+// Tracked Links — masked URLs with click analytics
+export interface TrackedLink {
+  code: string;
+  url: string; // relative: /r/{code}
+}
+
+// Create a tracked link that redirects through nhimbe for click analytics
+export async function createTrackedLink(data: {
+  targetUrl: string;
+  eventId: string;
+  linkType: "meeting_url" | "directions" | "ticket" | "website";
+  createdBy?: string;
+}): Promise<TrackedLink> {
+  return apiFetch<TrackedLink>("/api/links", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// Get the full tracked URL for a code
+export function getTrackedUrl(code: string): string {
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://nhimbe.com");
+  return `${siteUrl}/r/${code}`;
+}
+
 // Check-in Types
 export interface CheckinStats {
   eventId: string;

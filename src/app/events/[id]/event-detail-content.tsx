@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ArrowLeft, MapPin, Video, Bookmark, Globe, ChevronRight } from "lucide-react";
+import { useTrackedLink } from "@/lib/use-tracked-link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,18 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
   const isPastEvent = new Date(event.startDate) < new Date();
   const isOnline = event.eventAttendanceMode === "OnlineEventAttendanceMode";
   const isInPerson = !isOnline && event.location.addressLocality !== "Online";
+
+  // Tracked links for click analytics — all external links route through /r/[code]
+  const trackedMeetingUrl = useTrackedLink(
+    isOnline ? event.meetingUrl : undefined,
+    event.id,
+    "meeting_url"
+  );
+  const trackedTicketUrl = useTrackedLink(
+    event.offers?.url,
+    event.id,
+    "ticket"
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -155,7 +168,7 @@ export function EventDetailContent({ event }: EventDetailContentProps) {
                 )}
               </div>
               {isOnline && event.meetingUrl ? (
-                <Button variant="secondary" size="sm" onClick={() => window.open(event.meetingUrl, "_blank")}>Join</Button>
+                <Button variant="secondary" size="sm" onClick={() => window.open(trackedMeetingUrl || event.meetingUrl, "_blank")}>Join</Button>
               ) : (
                 <GetDirectionsButton event={event} />
               )}
