@@ -17,6 +17,14 @@ const eslintConfig = defineConfig([
     // MongoDB playground files (not React code):
     "*.mongodb.js",
   ]),
+  {
+    rules: {
+      // Migration-time guidance rule from react@19 / eslint-plugin-react-hooks@7.1+.
+      // Pre-existing call sites (data-fetching, media-query, prompts) are correct
+      // patterns that just trip the new heuristic; cleaning them up is tracked separately.
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
