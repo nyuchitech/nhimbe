@@ -50,14 +50,18 @@ export function LocationModal({
   return (
     <ResponsiveModal open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} title="Event Location">
       <div className="space-y-4">
-        <div className="flex items-center gap-3 p-3 bg-surface rounded-xl">
+        <label
+          htmlFor="online-event-toggle"
+          className="flex items-center gap-3 p-3 bg-surface rounded-xl cursor-pointer select-none"
+        >
           <Globe className="w-5 h-5 text-text-secondary" />
           <span className="flex-1">Online Event</span>
           <Switch
+            id="online-event-toggle"
             checked={isOnline}
             onCheckedChange={setIsOnline}
           />
-        </div>
+        </label>
         {isOnline && (
           <>
             {/* Meeting Platform */}

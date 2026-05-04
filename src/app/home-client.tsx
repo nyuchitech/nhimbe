@@ -95,12 +95,6 @@ function CommunityStatsBar({ eventCount, stats }: { eventCount: number; stats: C
           <div className="font-semibold">{communitySize} attendees</div>
         </div>
       </div>
-      <Link
-        href="/insights"
-        className="ml-auto text-xs text-primary font-medium hover:underline hidden md:block"
-      >
-        View all insights →
-      </Link>
     </div>
   );
 }
