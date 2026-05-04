@@ -57,8 +57,11 @@ export function EventCard({
 
   const isAlmostFull = spotsLeft !== undefined && capacity !== undefined && spotsLeft < capacity * 0.2;
 
+  // Pulse-dot strip — visual "live attendance" cue.
+  const pulseDots = Math.min(5, Math.max(0, Math.round(Math.log10(Math.max(attendeeCount, 1)) * 2)));
+
   return (
-    <article className="rounded-(--radius-card) overflow-hidden bg-surface transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
+    <article className="rounded-(--radius-card) overflow-hidden bg-surface transition-all duration-[var(--motion-emphasis)] ease-[var(--easing-spring)] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40">
     <Link href={`/events/${id}`} className="block cursor-pointer">
       <div>
         {/* Cover */}
@@ -122,12 +125,26 @@ export function EventCard({
 
         {/* Info */}
         <div className="p-5">
-          <h3 className="text-lg font-bold mb-2.5 leading-tight">{title}</h3>
+          <h3 className="font-serif text-lg font-bold mb-2.5 leading-tight tracking-tight">{title}</h3>
 
-          <div className="flex items-center gap-2 text-sm text-foreground/60 mb-4">
-            <MapPin className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-sm text-foreground/60 mb-3">
+            <MapPin className="w-4 h-4" aria-hidden />
             <span>{location.addressLocality}, {location.addressCountry}</span>
           </div>
+
+          {pulseDots > 0 && (
+            <div className="flex items-center gap-1 mb-3" aria-label={`${attendeeCount} attending`}>
+              {Array.from({ length: pulseDots }).map((_, i) => (
+                <span
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-pulse"
+                  style={{ animationDelay: `${i * 120}ms` }}
+                  aria-hidden
+                />
+              ))}
+              <span className="text-[11px] text-foreground/50 ml-1.5 uppercase tracking-wider font-semibold">live</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
