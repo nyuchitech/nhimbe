@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Noto_Serif } from "next/font/google";
+import { Noto_Sans, Noto_Serif } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const notoSerif = Noto_Serif({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -170,7 +170,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
       </head>
-      <body className={`${plusJakarta.variable} ${notoSerif.variable} antialiased min-h-dvh flex flex-col`}>
+      <body className={`${notoSans.variable} ${notoSerif.variable} antialiased min-h-dvh flex flex-col`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:font-semibold"
