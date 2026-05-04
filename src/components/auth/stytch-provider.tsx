@@ -1,7 +1,6 @@
 "use client";
 
-import { StytchProvider as StytchProviderSDK } from "@stytch/nextjs";
-import { createStytchUIClient } from "@stytch/nextjs/ui";
+import { StytchProvider as StytchProviderSDK, createStytchUIClient } from "@stytch/nextjs";
 import { ReactNode } from "react";
 
 // Lazy-initialize Stytch client to avoid build-time errors

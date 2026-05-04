@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 
-// Declare Google Maps types
 declare global {
   interface Window {
     google: typeof google;

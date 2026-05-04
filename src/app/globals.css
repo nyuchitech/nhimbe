@@ -8,7 +8,82 @@
  */
 
 :root {
-  /* Design Tokens - Shared */
+  /* ─────────────────────────────────────────────────────────────────────
+   * Nyuchi Design System — design.nyuchi.com (portal v4.0.2 — Apr 2026)
+   * Layered alongside nhimbe's existing tokens. Components may use either.
+   * ───────────────────────────────────────────────────────────────────── */
+
+  /* Five African Minerals (theme-adaptive raw values for marks) */
+  --mineral-cobalt-raw:      #0047AB;
+  --mineral-tanzanite-raw:   #B388FF;
+  --mineral-malachite-raw:   #64FFDA;
+  --mineral-gold-raw:        #FFD740;
+  --mineral-terracotta-raw:  #D4A574;
+
+  /* Mineral surface containers (light defaults) */
+  --container-cobalt:     #E3F2FD;
+  --container-tanzanite:  #F3E5F5;
+  --container-malachite:  #E0F2F1;
+  --container-gold:       #FFF8E1;
+  --container-terracotta: #FBE9E7;
+  --on-container-cobalt:     #002966;
+  --on-container-tanzanite:  #2E004D;
+  --on-container-malachite:  #00332B;
+  --on-container-gold:       #3E2723;
+  --on-container-terracotta: #5D2906;
+
+  /* Five Heritage colours (atmospheric, theme-adaptive) */
+  --heritage-indigo:   #1A237E;
+  --heritage-savanna:  #5D4037;
+  --heritage-baobab:   #2E4A2E;
+  --heritage-sunset:   #8B2500;
+  --heritage-river:    #00525A;
+  --color-indigo:   var(--heritage-indigo);
+  --color-savanna:  var(--heritage-savanna);
+  --color-baobab:   var(--heritage-baobab);
+  --color-sunset:   var(--heritage-sunset);
+  --color-river:    var(--heritage-river);
+
+  /* Spacing scale */
+  --space-xs:  0.25rem;
+  --space-sm:  0.5rem;
+  --space-md:  0.75rem;
+  --space-base: 1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* Motion */
+  --motion-quick:    100ms;
+  --motion-standard: 200ms;
+  --motion-emphasis: 350ms;
+  --motion-dramatic: 500ms;
+  --easing-entrance: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --easing-exit:     cubic-bezier(0.4, 0.0, 1, 1);
+  --easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --easing-spring:   cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Touch targets / component sizing */
+  --touch-target:    56px;
+  --touch-target-sm: 48px;
+  --min-touch:       48px;
+  --header-height:    56px;
+  --bottom-nav-height: 80px;
+  --page-max-width:    1280px;
+  --page-margin:       20px;
+  --mineral-strip-width: 4px;
+
+  /* Z-index ladder (mirrors design system; keeps existing comment below) */
+  --z-base:     0;
+  --z-dropdown: 10;
+  --z-sticky:   20;
+  --z-overlay:  30;
+  --z-modal:    40;
+  --z-toast:    50;
+  --z-tooltip:  60;
+
+  /* Existing nhimbe tokens — preserved */
   --charcoal: #0A0A0A;
   --cream: #FAF9F5;
 
@@ -43,6 +118,23 @@
 
 /* Dark Theme - WCAG AAA Compliant */
 .dark {
+  /* Nyuchi heritage / mineral container overrides for dark surfaces */
+  --container-cobalt:     #001F3F;
+  --container-tanzanite:  #1A0033;
+  --container-malachite:  #00251A;
+  --container-gold:       #332200;
+  --container-terracotta: #3E1A00;
+  --on-container-cobalt:     #B3E5FC;
+  --on-container-tanzanite:  #E1BEE7;
+  --on-container-malachite:  #A7FFEB;
+  --on-container-gold:       #FFECB3;
+  --on-container-terracotta: #FFCCBC;
+  --heritage-indigo:  #8C9EFF;
+  --heritage-savanna: #FFCC80;
+  --heritage-baobab:  #A5D6A7;
+  --heritage-sunset:  #FF8A80;
+  --heritage-river:   #80DEEA;
+
   --background: #0A0A0A;
   --foreground: #F5F5F4;
   --surface: #141414;
@@ -118,7 +210,7 @@
   --color-text-tertiary: var(--text-tertiary);
 
   /* Typography */
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Noto Serif", ui-serif, Georgia, serif;
 
   /* Design Tokens */

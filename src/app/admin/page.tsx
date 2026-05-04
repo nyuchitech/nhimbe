@@ -71,29 +71,27 @@ export default function AdminDashboard() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  async function fetchDashboardData() {
-    try {
-      // Fetch admin stats from API
-      const response = await fetch(`${API_URL}/api/admin/stats`, {
-        credentials: "include",
-      });
-
-      if (response.ok) {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/stats`, {
+          credentials: "include",
+        });
+        if (!response.ok || cancelled) return;
         const data = await response.json();
-        setStats(data.stats || stats);
+        if (cancelled) return;
+        setStats((prev) => data.stats || prev);
         setRecentEvents(data.recentEvents || []);
         setRecentUsers(data.recentUsers || []);
         setTickets(data.tickets || []);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const statCards = [
     {

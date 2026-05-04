@@ -47,6 +47,20 @@ const translations: Record<Locale, TranslationMap> = {
     "common.edit": "Edit",
     "common.copied": "Copied!",
     "common.seeAll": "See All",
+
+    // Brand
+    "brand.tagline": "Together we gather, together we grow.",
+
+    // Kraal (formerly known as circles)
+    "kraal.title": "Kraal",
+    "kraal.subtitle": "Where the gathering circle keeps the fire alive between events.",
+    "kraal.viewKraal": "View kraal",
+    "kraal.join": "Join kraal",
+    "kraal.tabs.stream": "Stream",
+    "kraal.tabs.members": "Members",
+    "kraal.tabs.archive": "Archive",
+    "kraal.compose.placeholder": "Share something with the kraal…",
+    "kraal.empty": "No posts yet — be the first to spark the fire.",
   },
   sn: {
     // Navigation
@@ -86,6 +100,20 @@ const translations: Record<Locale, TranslationMap> = {
     "common.edit": "Shandura",
     "common.copied": "Yakopiswa!",
     "common.seeAll": "Ona Zvose",
+
+    // Brand
+    "brand.tagline": "Tose tinosangana, tose tinokura.",
+
+    // Kraal
+    "kraal.title": "Kraal",
+    "kraal.subtitle": "Pekuchengetedza moto wedanho pakati pezviitiko.",
+    "kraal.viewKraal": "Ona Kraal",
+    "kraal.join": "Pinda muKraal",
+    "kraal.tabs.stream": "Mhepo",
+    "kraal.tabs.members": "Vagari",
+    "kraal.tabs.archive": "Zvakachengetwa",
+    "kraal.compose.placeholder": "Govera neKraal…",
+    "kraal.empty": "Hapana zvakanyorwa — iva wekutanga kubatidza moto.",
   },
 };
 
