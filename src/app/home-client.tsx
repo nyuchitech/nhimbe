@@ -226,25 +226,46 @@ export function HomeClient({ initialEvents, initialCategories }: HomeClientProps
 
       {/* Hero Section — public only */}
       {!isAuthenticated && (
-        <section className="py-16 md:py-24">
+        <section className="py-16 md:py-24 relative overflow-hidden">
+          {/* Mineral wash backdrop — malachite → tanzanite */}
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 opacity-[0.07] dark:opacity-[0.12]"
+            style={{
+              backgroundImage:
+                "radial-gradient(800px 400px at 12% 0%, var(--mineral-malachite-raw) 0%, transparent 60%), radial-gradient(700px 350px at 88% 30%, var(--mineral-tanzanite-raw) 0%, transparent 60%)",
+            }}
+          />
           <div className="max-w-300 mx-auto px-6">
-            <p className="font-serif italic text-lg text-text-secondary mb-4">
-              &ldquo;Together we gather, together we grow&rdquo;
+            <p
+              className="font-serif italic text-lg md:text-xl mb-4"
+              style={{ color: "color-mix(in srgb, var(--foreground) 70%, transparent)" }}
+            >
+              &ldquo;Together we gather, together we grow.&rdquo;
             </p>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
+            <h1 className="font-serif text-4xl md:text-6xl font-bold text-foreground mb-4 leading-[1.05] tracking-tight">
               Discover <span className="text-primary">gatherings</span>
               <br />
               that move you
             </h1>
             <p className="text-lg text-text-secondary max-w-150 mb-8">
-              From tech meetups to cultural celebrations, find events that bring your community together. Powered by Ubuntu philosophy.
+              From cultural celebrations and faith gatherings to tech meetups, comedy nights, music festivals and family days — find what brings your community together. Powered by Ubuntu philosophy.
             </p>
-            <Button asChild className="rounded-full">
-              <Link href="/events/create">
-                Create Your First Event
-                <ArrowRight className="w-4 h-4" />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild className="rounded-full h-[var(--touch-target)] px-6">
+                <Link href="/events/create">
+                  Create Your First Event
+                  <ArrowRight className="w-4 h-4" aria-hidden />
+                </Link>
+              </Button>
+              <Link
+                href="/search"
+                className="inline-flex items-center gap-2 px-5 h-[var(--touch-target)] rounded-full border border-elevated bg-surface/60 backdrop-blur-md text-sm font-medium hover:bg-surface transition-colors"
+              >
+                <span aria-hidden>✨</span>
+                Ask Shamwari to find an event
               </Link>
-            </Button>
+            </div>
           </div>
         </section>
       )}
