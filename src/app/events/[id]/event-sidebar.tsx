@@ -1,12 +1,14 @@
 "use client";
 
-import { TrendingUp, Eye, Users, Star, Share2, QrCode } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, Eye, Users, Star, Share2, QrCode, Flame, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EventQRCode } from "./event-qr-code";
 import { ShareButton } from "./event-actions";
 import { RSVPButton } from "./rsvp-button";
 import { HostReputation } from "@/components/ui/host-reputation";
+import { t } from "@/lib/i18n";
 import type { Event, EventStats, ReviewStats } from "@/lib/api";
 
 interface EventSidebarProps {
@@ -159,6 +161,41 @@ export function EventSidebar({ event, stats, reviewStats }: EventSidebarProps) {
         }}
         variant="compact"
       />
+
+      {/* View Kraal */}
+      <Card
+        className="border-0 overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, color-mix(in srgb, var(--heritage-savanna) 22%, var(--surface)), color-mix(in srgb, var(--heritage-baobab) 18%, var(--surface)))",
+        }}
+      >
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3 mb-3">
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-primary-foreground shrink-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--heritage-savanna), var(--heritage-baobab))",
+              }}
+              aria-hidden
+            >
+              <Flame className="w-4.5 h-4.5" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm">{t("kraal.title")}</h4>
+              <p className="text-xs text-foreground/60">{t("kraal.subtitle")}</p>
+            </div>
+          </div>
+          <Link
+            href={event.eventCircleId ? `/kraal/${event.eventCircleId}` : "/kraal"}
+            className="inline-flex items-center justify-center gap-1.5 w-full h-[var(--touch-target-sm)] rounded-full bg-primary text-primary-foreground text-sm font-semibold transition-transform duration-[var(--motion-quick)] hover:-translate-y-px"
+          >
+            {t("kraal.viewKraal")}
+            <ArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </CardContent>
+      </Card>
     </aside>
   );
 }

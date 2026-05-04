@@ -65,6 +65,12 @@ export interface Event {
   friends?: { name: string; gradient: string }[];
   dateCreated?: string;
   dateModified?: string;
+  /**
+   * UUID of the linked Kraal circle (events.event.event_circle_id in the
+   * platform DB). Populated once the backend exposes it; until then the
+   * sidebar's "View kraal" CTA falls back to the Kraal index.
+   */
+  eventCircleId?: string;
 }
 
 export interface EventsResponse {

@@ -7,11 +7,15 @@
 
 import { getSupabaseBrowserClient } from "./client";
 import type {
+  CircleMembershipRow,
+  CirclePostRow,
+  CircleRow,
   EventInsert,
   EventRow,
   InterestCategoryRow,
-  PlaceRow,
   OrganizationRow,
+  PersonRow,
+  PlaceRow,
 } from "./types";
 
 // ─── Categories ───────────────────────────────────────────────────────────
@@ -151,4 +155,167 @@ export async function createEventOnSupabase(input: CreateEventOnSupabaseInput): 
     throw new Error(`[mukoko] createEventOnSupabase failed: ${error.message}`);
   }
   return data as EventRow;
+}
+
+// ─── Kraal (circles.* schema) ────────────────────────────────────────────
+// Kraal is the user-facing name; the schema stays `circles`. Each circle
+// can be linked to a parent event via circles.circle.linked_event_id, and
+// each event references its kraal via events.event.event_circle_id.
+
+export async function getCirclesForPerson(personId: string): Promise<CircleRow[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .schema("circles")
+    .from("circle_membership")
+    .select("circle:circle_id(id, name, description, avatar_url, circle_purpose, circle_type, visibility, member_count, post_count, linked_event_id, organization_id, created_at)")
+    .eq("person_id", personId)
+    .eq("status", "active");
+  if (error) {
+    console.warn("[mukoko] getCirclesForPerson failed:", error.message);
+    return [];
+  }
+  type Row = { circle: CircleRow | null };
+  return ((data as unknown as Row[]) ?? [])
+    .map((r) => r.circle)
+    .filter((c): c is CircleRow => Boolean(c));
+}
+
+export async function getCircle(circleId: string): Promise<CircleRow | null> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .schema("circles")
+    .from("circle")
+    .select("*")
+    .eq("id", circleId)
+    .single();
+  if (error) {
+    console.warn("[mukoko] getCircle failed:", error.message);
+    return null;
+  }
+  return data as CircleRow;
+}
+
+export type KraalPostWithAuthor = CirclePostRow & {
+  author: Pick<PersonRow, "id" | "display_name" | "given_name" | "family_name" | "image"> | null;
+};
+
+export async function getCirclePosts(circleId: string, limit = 20, archived = false): Promise<KraalPostWithAuthor[]> {
+  const supabase = getSupabaseBrowserClient();
+  const query = supabase
+    .schema("circles")
+    .from("post")
+    .select("*, author:author_id(id, display_name, given_name, family_name, image)")
+    .eq("circle_id", circleId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (archived) {
+    query.eq("moderation_status", "archived");
+  } else {
+    query.neq("moderation_status", "archived");
+  }
+  const { data, error } = await query;
+  if (error) {
+    console.warn("[mukoko] getCirclePosts failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as KraalPostWithAuthor[];
+}
+
+export type KraalMember = CircleMembershipRow & {
+  person: Pick<PersonRow, "id" | "display_name" | "given_name" | "family_name" | "image"> | null;
+};
+
+export async function getCircleMembers(circleId: string, limit = 50): Promise<KraalMember[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .schema("circles")
+    .from("circle_membership")
+    .select("circle_id, person_id, role, status, joined_at, notification_pref, person:person_id(id, display_name, given_name, family_name, image)")
+    .eq("circle_id", circleId)
+    .eq("status", "active")
+    .order("joined_at", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.warn("[mukoko] getCircleMembers failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as KraalMember[];
+}
+
+export async function createCirclePost(input: {
+  circleId: string;
+  authorId: string;
+  text: string;
+  postType?: string;
+}): Promise<CirclePostRow> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .schema("circles")
+    .from("post")
+    .insert({
+      circle_id: input.circleId,
+      author_id: input.authorId,
+      text: input.text,
+      post_type: input.postType ?? "text",
+      moderation_status: "approved",
+    })
+    .select("*")
+    .single();
+  if (error) {
+    throw new Error(`[mukoko] createCirclePost failed: ${error.message}`);
+  }
+  return data as CirclePostRow;
+}
+
+export async function togglePostReaction(input: {
+  postId: string;
+  personId: string;
+  reaction?: string;
+}): Promise<"added" | "removed"> {
+  const supabase = getSupabaseBrowserClient();
+  const reaction = input.reaction ?? "like";
+  const { data: existing } = await supabase
+    .schema("circles")
+    .from("post_reaction")
+    .select("post_id")
+    .eq("post_id", input.postId)
+    .eq("person_id", input.personId)
+    .eq("reaction", reaction)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .schema("circles")
+      .from("post_reaction")
+      .delete()
+      .eq("post_id", input.postId)
+      .eq("person_id", input.personId)
+      .eq("reaction", reaction);
+    if (error) throw new Error(`[mukoko] togglePostReaction remove failed: ${error.message}`);
+    return "removed";
+  }
+
+  const { error } = await supabase
+    .schema("circles")
+    .from("post_reaction")
+    .insert({ post_id: input.postId, person_id: input.personId, reaction });
+  if (error) throw new Error(`[mukoko] togglePostReaction add failed: ${error.message}`);
+  return "added";
+}
+
+export async function joinCircle(input: { circleId: string; personId: string }): Promise<void> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase
+    .schema("circles")
+    .from("circle_membership")
+    .upsert(
+      {
+        circle_id: input.circleId,
+        person_id: input.personId,
+        role: "member",
+        status: "active",
+      },
+      { onConflict: "circle_id,person_id" },
+    );
+  if (error) throw new Error(`[mukoko] joinCircle failed: ${error.message}`);
 }
