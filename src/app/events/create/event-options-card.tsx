@@ -30,6 +30,7 @@ export function EventOptionsCard({
       <Card className="divide-y divide-elevated border-0 bg-surface">
         {/* Ticketing */}
         <button
+          type="button"
           onClick={onOpenTicketing}
           className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-elevated transition-colors"
         >
@@ -42,17 +43,22 @@ export function EventOptionsCard({
         </button>
 
         {/* Require Approval */}
-        <div className="px-4 py-3.5 flex items-center gap-3">
+        <label
+          htmlFor="require-approval-toggle"
+          className="px-4 py-3.5 flex items-center gap-3 cursor-pointer select-none"
+        >
           <Users className="w-5 h-5 text-text-secondary" />
           <span className="flex-1">Require Approval</span>
           <Switch
+            id="require-approval-toggle"
             checked={requireApproval}
             onCheckedChange={onRequireApprovalChange}
           />
-        </div>
+        </label>
 
         {/* Capacity */}
         <button
+          type="button"
           onClick={onOpenCapacity}
           className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-elevated transition-colors"
         >

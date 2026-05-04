@@ -45,8 +45,10 @@ export function ResponsiveModal({
           {/* Header with close button */}
           <DrawerHeader className="relative">
             <DrawerTitle>{title}</DrawerTitle>
-            {description && (
+            {description ? (
               <DrawerDescription>{description}</DrawerDescription>
+            ) : (
+              <DrawerDescription className="sr-only">{title}</DrawerDescription>
             )}
             <DrawerClose className="absolute right-4 top-4 rounded-full w-8 h-8 flex items-center justify-center bg-surface hover:bg-elevated transition-colors">
               <X className="w-4 h-4" />
@@ -70,8 +72,10 @@ export function ResponsiveModal({
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && (
+          {description ? (
             <DialogDescription>{description}</DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">{title}</DialogDescription>
           )}
         </DialogHeader>
         <div className="flex-1 overflow-y-auto">{children}</div>
